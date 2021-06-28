@@ -1,0 +1,145 @@
+/*
+ *
+ *  * This file is part of OpenTSDB.
+ *  * Copyright (C) 2021  Yahoo.
+ *  *
+ *  * Licensed under the Apache License, Version 2.0 (the "License");
+ *  * you may not use this file except in compliance with the License.
+ *  * You may obtain a copy of the License at
+ *  *
+ *  *   http://www.apache.org/licenses/LICENSE-2.0
+ *  *
+ *  * Unless required by applicable law or agreed to in writing, software
+ *  * distributed under the License is distributed on an "AS IS" BASIS,
+ *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  * See the License for the specific language governing permissions and
+ *  * limitations under the License.
+ *
+ */
+
+use rusoto_s3::{
+    GetObjectRequest, ListObjectsRequest, PutObjectRequest, S3Client, StreamingBody, S3,
+};
+use std::{
+    io,
+    io::{Error, ErrorKind},
+    sync::Arc,
+    time::SystemTime,
+};
+use tokio::io::AsyncReadExt;
+// Ideally, we should have MystSegment implement the std::io::Read interface.
+// This is the next best thing.
+#[derive(Clone)]
+pub struct RemoteStore {
+    s3_client: Arc<S3Client>,
+    bucket: Arc<String>,
+}
+
+impl RemoteStore {
+    pub fn new(s3_client: Arc<S3Client>, bucket: Arc<String>) -> RemoteStore {
+        Self { s3_client, bucket }
+    }
+
+    pub async fn upload(self, file_name: String, data: Vec<u8>) -> Result<i32, Error> {
+        let b = std::path::Path::new(&file_name).exists();
+        println!("Upload Path exists: {} {}", &file_name, b);
+        //let stream_from_file = fs::read(file_name.to_string().to_owned())
+        //.into_stream()
+        //.map_ok(|b| Bytes::from(b));
+        let put_request = PutObjectRequest {
+            bucket: self.bucket.clone().to_string(),
+            key: file_name.clone().to_string(),
+            body: Some(StreamingBody::from(data)),
+            ..Default::default()
+        };
+        let result = self.s3_client.put_object(put_request).await;
+
+        match result {
+            Err(e) => {
+                println!("Error uploading to S3 {:?}", e);
+                return Err(Error::new(ErrorKind::Other, "Error fetching from s3"));
+            }
+            Ok(_) => {}
+        }
+        Ok(0)
+    }
+
+    //Downloads to a file and returns the buffer.
+    //Consider making this a BufReader
+    pub async fn download<W: io::Write>(
+        &self,
+        file_name: String,
+        output: &mut W,
+    ) -> Result<(), Error> {
+        let mut get_object_request = GetObjectRequest::default();
+        get_object_request.bucket = self.bucket.to_string().to_owned();
+        get_object_request.key = file_name.to_owned();
+
+        let result = self.s3_client.get_object(get_object_request).await;
+
+        let object = match result {
+            Ok(obj) => obj,
+            Err(e) => {
+                println!("Error downloading object for: {} {:?}", file_name, e);
+                return Err(Error::new(ErrorKind::Other, "Error downloading object"));
+            }
+        };
+
+        let len = object.content_length.unwrap();
+        let now = SystemTime::now();
+        println!(
+            "Downloading Object: {:?} and length: {}",
+            object.metadata, len
+        );
+        let mut stream = object.body.unwrap().into_async_read();
+
+        let mut buf = vec![0u8; 1024];
+        //Naive Stream read + write
+        loop {
+            let number = stream.read(&mut buf).await?;
+            if number == 0 {
+                output.flush()?;
+                println!(
+                    "Finished Object download: {:?} in: {:?} seconds",
+                    object.metadata,
+                    now.elapsed().unwrap().as_secs()
+                );
+                break;
+            }
+            output.write(&buf[0..number]);
+        }
+        return Ok(());
+    }
+
+    pub async fn list_files(&self, file_prefix: String) -> Result<Option<Vec<String>>, Error> {
+        let mut list_request = ListObjectsRequest::default();
+
+        list_request.bucket = self.bucket.to_string().to_owned();
+
+        list_request.prefix = Some(file_prefix.to_owned());
+
+        let result = self.s3_client.list_objects(list_request).await;
+
+        let object_list = match result {
+            Ok(output) => match output.contents {
+                Some(obj) => obj,
+                None => {
+                    println!("Didnt find anything in S3 for {}", file_prefix);
+                    return Ok(None);
+                }
+            },
+            Err(e) => {
+                println!("Error listing files for: {} {:?}", file_prefix, e);
+                return Err(Error::new(ErrorKind::Other, "Error listing files"));
+            }
+        };
+
+        let list_of_objects = object_list
+            .iter()
+            .filter(|x| x.key.as_ref().is_some())
+            .map(|x| x.key.as_ref().unwrap().to_string())
+            .collect::<Vec<_>>();
+
+        Ok(Some(list_of_objects))
+    }
+}
