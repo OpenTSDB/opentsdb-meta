@@ -69,7 +69,6 @@ impl SegmentDownload {
 
     async fn download(self) -> Result<(), Error> {
         info!("In download function for {}", &self.prefix_i);
-
         let prefix = Arc::clone(&self.prefix_i);
 
         let mut downloaded_set_original: HashSet<String> = HashSet::new();
