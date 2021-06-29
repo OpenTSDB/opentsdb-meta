@@ -1,15 +1,15 @@
 shared:
-  image: rust:1-slim-buster
+  image: rust:1.51
 
 jobs:
   pr:
     requires: [~pr]
     steps:
-      - run_arbitrary_script: cargo build
+      - run_arbitrary_script: apt-get update && apt-get -y install clang openssl && cargo build
   main:
     requires: [~commit]
     steps:
-      - run_arbitrary_script: cargo build
+      - run_arbitrary_script: apt-get update && apt-get -y install clang openssl && cargo build
     secrets:
       - CI_DEPLOY_USERNAME
       - CI_DEPLOY_PASSWORD
