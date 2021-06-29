@@ -9,7 +9,7 @@ jobs:
   main:
     requires: [~commit]
     steps:
-      - run_arbitrary_script: apt-get update && apt-get -y install clang openssl && rustup component add rustfmt && cargo build
+      - run_arbitrary_script: apt-get update && apt-get -y install clang openssl && rustup component add rustfmt && cargo test -- --test-threads=1 && cargo build
     secrets:
       - CI_DEPLOY_USERNAME
       - CI_DEPLOY_PASSWORD
@@ -20,9 +20,10 @@ jobs:
       - DOCKER_USERNAME
     annotations:
       screwdriver.cd/dockerEnabled: true
-   publish:
-     requires: [~main]
-     steps: docker build . -t opentsdb-meta
-     annotations:
-       screwdriver.cd/dockerEnabled: true
+  publish:
+    requires: [~main]
+    steps:
+      - build_image: docker build . -t opentsdb-meta
+    annotations:
+      screwdriver.cd/dockerEnabled: true
 
