@@ -25,21 +25,15 @@ extern crate tonic;
 
 use std::time::Duration;
 
-use yamas_metrics_rs::yamas::YamasRegistryBuilder;
-
 use crate::utils::config::Config;
 
 pub mod client;
-//pub mod event;
 pub mod myst_grpc;
 pub mod query;
-// pub mod s3;
-//pub mod lru_cache;
+
 pub mod s3;
 pub mod segment;
-//pub mod server;
 pub mod utils;
-//pub mod yamas_kafka_consumer;
 
 pub fn setup_logger(filename: String) -> Result<(), fern::InitError> {
     fern::Dispatch::new()
@@ -57,21 +51,4 @@ pub fn setup_logger(filename: String) -> Result<(), fern::InitError> {
         // .chain(std::io::stdout())
         .apply()?;
     Ok(())
-}
-
-pub fn init_yamas_metrics(config: &Config) {
-    //Create boxed Yamas registry.
-    let registry = Box::new(
-        YamasRegistryBuilder::new()
-            .namespace("Yamas")
-            .application("meta")
-            .key_cert_pair((&config.ssl_key, &config.ssl_cert))
-            .ca_cert(&config.ca_cert)
-            .report_frequency(Duration::from_secs(60))
-            .build()
-            .expect("cannot build YamasRegistry"),
-    );
-
-    //Initialize global registry with our Yamas registry.
-    yamas_metrics_rs::set_boxed_registry(registry);
 }

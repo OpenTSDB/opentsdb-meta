@@ -25,7 +25,6 @@ use std::{fs, path::Path, thread, time::SystemTime};
 use log::{error, info};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Receiver;
-use yamas_metrics_rs::gauge;
 
 use crate::query::cache::Cache;
 use crate::segment::myst_segment::MystSegment;
@@ -167,9 +166,6 @@ impl ShardQueryRunner {
         let mut query_runner = QueryRunner::new(segment_readers, query, config);
         query_runner.search_timeseries(segment_pool, timeseries_response)?;
 
-        gauge!("shard.query.latency", SystemTime::now().duration_since(curr_time).unwrap().as_millis() as i64,
-         "shard" => shard_id.to_string(),
-         "host" => sys_info::hostname().unwrap());
         info!(
             "Time taken to query in shard: {:?} is {:?} in thread {:?}",
             shard_id,
