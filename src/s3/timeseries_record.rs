@@ -47,7 +47,7 @@ impl ParseRecord for Record {
         i += 1;
         //Read hash
         self.xx_hash = Record::read_long(buf, i);
-        //println!("Hash: {} {}", self.xx_hash, i);
+        //info!("Hash: {} {}", self.xx_hash, i);
         i += 8;
         i += 1;
         i += 1;
@@ -55,12 +55,12 @@ impl ParseRecord for Record {
         self.tags = HashMap::new();
 
         loop {
-            //println!("Reading next tag: {} buf len: {}", i,buf.len());
+            //info!("Reading next tag: {} buf len: {}", i,buf.len());
             let key = Record::get_next_string(buf, i)?;
             i += key.len();
             i += 1;
             let value = Record::get_next_string(buf, i)?;
-            //println!("Read tag: {} {}", key, value);
+            //info!("Read tag: {} {}", key, value);
             i += value.len();
             i += 1;
             self.tags.insert(key, value);
@@ -77,9 +77,9 @@ impl ParseRecord for Record {
 
         i += 1;
         i += 1;
-        //println!("Reading next metric: {} buf len: {}", i,buf.len());
+        //info!("Reading next metric: {} buf len: {}", i,buf.len());
         let metric = Record::get_next_string(buf, i)?;
-        //println!("Read metric: {} {}", metric, i);
+        //info!("Read metric: {} {}", metric, i);
         self.metric = metric;
         Ok(0)
     }
@@ -95,13 +95,13 @@ impl Record {
             Err(_e) => return Err(Error::new(ErrorKind::Other, "Utf8 error")),
             Ok(next_string) => return Ok(next_string),
         }
-        //println!("Parsed result {:?} len: {}", result, str_len);
+        //info!("Parsed result {:?} len: {}", result, str_len);
     }
 
     pub fn get_len(buf: &mut [u8], pos: usize) -> Result<usize, std::io::Error> {
         let mut index = pos;
         if index >= buf.len() {
-            //println!("index: {} len: {}", index, buf.len());
+            //info!("index: {} len: {}", index, buf.len());
             return Err(Error::new(ErrorKind::Other, "Index out of bounds"));
         }
         while buf[index] != 0x0 {

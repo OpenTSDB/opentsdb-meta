@@ -17,6 +17,7 @@
  *
  */
 
+use log::info;
 use rusoto_s3::{
     GetObjectRequest, ListObjectsRequest, PutObjectRequest, S3Client, StreamingBody, S3,
 };
@@ -27,6 +28,7 @@ use std::{
     time::SystemTime,
 };
 use tokio::io::AsyncReadExt;
+
 // Ideally, we should have MystSegment implement the std::io::Read interface.
 // This is the next best thing.
 #[derive(Clone)]
@@ -42,7 +44,7 @@ impl RemoteStore {
 
     pub async fn upload(self, file_name: String, data: Vec<u8>) -> Result<i32, Error> {
         let b = std::path::Path::new(&file_name).exists();
-        println!("Upload Path exists: {} {}", &file_name, b);
+        info!("Upload Path exists: {} {}", &file_name, b);
         //let stream_from_file = fs::read(file_name.to_string().to_owned())
         //.into_stream()
         //.map_ok(|b| Bytes::from(b));
@@ -56,7 +58,7 @@ impl RemoteStore {
 
         match result {
             Err(e) => {
-                println!("Error uploading to S3 {:?}", e);
+                info!("Error uploading to S3 {:?}", e);
                 return Err(Error::new(ErrorKind::Other, "Error fetching from s3"));
             }
             Ok(_) => {}
@@ -80,14 +82,14 @@ impl RemoteStore {
         let object = match result {
             Ok(obj) => obj,
             Err(e) => {
-                println!("Error downloading object for: {} {:?}", file_name, e);
+                info!("Error downloading object for: {} {:?}", file_name, e);
                 return Err(Error::new(ErrorKind::Other, "Error downloading object"));
             }
         };
 
         let len = object.content_length.unwrap();
         let now = SystemTime::now();
-        println!(
+        info!(
             "Downloading Object: {:?} and length: {}",
             object.metadata, len
         );
@@ -99,7 +101,7 @@ impl RemoteStore {
             let number = stream.read(&mut buf).await?;
             if number == 0 {
                 output.flush()?;
-                println!(
+                info!(
                     "Finished Object download: {:?} in: {:?} seconds",
                     object.metadata,
                     now.elapsed().unwrap().as_secs()
@@ -124,12 +126,12 @@ impl RemoteStore {
             Ok(output) => match output.contents {
                 Some(obj) => obj,
                 None => {
-                    println!("Didnt find anything in S3 for {}", file_prefix);
+                    info!("Didnt find anything in S3 for {}", file_prefix);
                     return Ok(None);
                 }
             },
             Err(e) => {
-                println!("Error listing files for: {} {:?}", file_prefix, e);
+                info!("Error listing files for: {} {:?}", file_prefix, e);
                 return Err(Error::new(ErrorKind::Other, "Error listing files"));
             }
         };
