@@ -9,7 +9,7 @@ jobs:
   main:
     requires: [~commit]
     steps:
-      - run_arbitrary_script: apt-get update && apt-get -y install clang openssl && cargo build
+      - run_arbitrary_script: apt-get update && apt-get -y install clang openssl && rustup component add rustfmt && cargo build
     secrets:
       - CI_DEPLOY_USERNAME
       - CI_DEPLOY_PASSWORD
