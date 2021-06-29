@@ -23,7 +23,7 @@ use std::{collections::HashMap, io::Read, io::Write};
 use byteorder::{NativeEndian, WriteBytesExt};
 use croaring::Bitmap;
 
-use super::yamas_fst::YamasFST;
+use super::myst_fst::MystFST;
 use crate::segment::persistence::Builder;
 use crate::segment::persistence::Loader;
 use crate::utils::myst_error::{MystError, Result};
@@ -33,7 +33,7 @@ use std::io::Seek;
 #[derive(Debug, Default)]
 pub struct MetricBitmap {
     pub metrics_bitmap: HashMap<Rc<String>, Bitmap>,
-    pub fsts: Option<HashMap<Rc<String>, YamasFST>>,
+    pub fsts: Option<HashMap<Rc<String>, MystFST>>,
 }
 
 impl<W: Write> Builder<W> for MetricBitmap {
@@ -51,7 +51,7 @@ impl<W: Write> Builder<W> for MetricBitmap {
             let metric_val = fst.buf.get(k).ok_or(MystError::new_query_error(
                 "Metric not found in FST. Something is wrong",
             ))?;
-            let metric_id = YamasFST::get_id(*metric_val);
+            let metric_id = MystFST::get_id(*metric_val);
 
             fst.insert_with_id_and_offset(Rc::clone(&k), metric_id, tmp_offset);
             length = v.get_serialized_size_in_bytes() as u32;

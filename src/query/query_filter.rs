@@ -77,7 +77,6 @@ impl QueryFilter {
             }
             "explicittags" => {
                 let filters = &value["filter"];
-                //.ok_or(YamasError::new_query_error("Error converting to filter"))?;
                 let filter = QueryFilter::from_json(filters)?;
                 let count = QueryFilter::count_tag_filters(&filter, 0);
                 let explicit_filter = QueryFilter::ExplicitTags {
@@ -88,7 +87,6 @@ impl QueryFilter {
             }
             "not" => {
                 let filters = &value["filter"];
-                //.ok_or(YamasError::new_query_error("Error converting to filter"))?;
                 let not_filter = QueryFilter::NOT {
                     filter: Box::new(QueryFilter::from_json(filters)?),
                 };

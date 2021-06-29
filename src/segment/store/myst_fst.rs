@@ -36,23 +36,23 @@ use crate::segment::segment_reader::SegmentReader;
 use std::fmt;
 
 /// Maintains the FST for each `_type`
-pub struct YamasFST {
+pub struct MystFST {
     pub map: Option<MapBuilder<Vec<u8>>>,
     pub buf: BTreeMap<Rc<String>, u64>,
     pub writeable: Arc<AtomicBool>,
     pub _type: Rc<String>,
 }
 
-impl fmt::Debug for YamasFST {
+impl fmt::Debug for MystFST {
     fn fmt(&self, f: &mut fmt::Formatter) -> core::fmt::Result {
         write!(f, "file: {}", self._type)
     }
 }
 
-/// Encaupsulates YamasFst.
+/// Encaupsulates MystFst.
 #[derive(Debug)]
-pub struct YamasFSTContainer {
-    pub fsts: HashMap<Rc<String>, YamasFST>,
+pub struct MystFSTContainer {
+    pub fsts: HashMap<Rc<String>, MystFST>,
     pub header: FSTHeader,
 }
 
@@ -78,7 +78,7 @@ impl<W: Write> Builder<W> for FSTHeader {
     }
 }
 
-impl<W: Write> Builder<W> for YamasFSTContainer {
+impl<W: Write> Builder<W> for MystFSTContainer {
     fn build(mut self, buf: &mut W, offset: &mut u32) -> Result<Option<Self>> {
         let mut serialized = Vec::new();
 
@@ -93,15 +93,15 @@ impl<W: Write> Builder<W> for YamasFSTContainer {
     }
 }
 
-impl<R: Read + Seek> Loader<R, YamasFSTContainer> for YamasFSTContainer {
-    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<YamasFSTContainer>> {
+impl<R: Read + Seek> Loader<R, MystFSTContainer> for MystFSTContainer {
+    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<MystFSTContainer>> {
         let fst_header = SegmentReader::read_fst_header(buf, offset)?;
         self.header = FSTHeader::default();
         self.fsts = HashMap::new();
 
         for (k, v) in fst_header {
             let key = Rc::new(k);
-            let mut yamas_fst = YamasFST::new(key.clone());
+            let mut myst_fst = MystFST::new(key.clone());
 
             buf.seek(SeekFrom::Start(v as u64))?;
             let fst = SegmentReader::read_fst_from_reader(buf)?;
@@ -111,14 +111,14 @@ impl<R: Read + Seek> Loader<R, YamasFSTContainer> for YamasFSTContainer {
             while let Some((k, v)) = stream.next() {
                 map.insert(Rc::new(String::from_utf8(k.to_vec())?), v);
             }
-            yamas_fst.buf = map;
-            self.fsts.insert(key.clone(), yamas_fst);
+            myst_fst.buf = map;
+            self.fsts.insert(key.clone(), myst_fst);
         }
         Ok(Some(self))
     }
 }
 
-impl YamasFSTContainer {
+impl MystFSTContainer {
     pub fn new() -> Self {
         Self {
             fsts: HashMap::default(),
@@ -141,7 +141,7 @@ impl YamasFSTContainer {
     }
 }
 
-impl YamasFST {
+impl MystFST {
     fn new(_type: Rc<String>) -> Self {
         Self {
             map: Some(MapBuilder::memory()),
@@ -151,11 +151,11 @@ impl YamasFST {
         }
     }
 
-    /// Initialize YamasFst for a type and return
+    /// Initialize MystFst for a type and return
     /// # Arguments
     /// * `_type` - Type of the FST.
     pub fn init(_type: Rc<String>) -> Self {
-        let fst = YamasFST::new(_type);
+        let fst = MystFST::new(_type);
         return fst;
     }
 
@@ -167,8 +167,7 @@ impl YamasFST {
         let ret = self
             .buf
             .entry(term)
-            .or_insert(YamasFST::generate_val(uid, 0));
-        //let ret = self.buf.insert(term, YamasFST::generate_val(uid, 0));
+            .or_insert(MystFST::generate_val(uid, 0));
         ret
     }
 
@@ -183,7 +182,7 @@ impl YamasFST {
         uid: u32,
         offset: u32,
     ) -> Option<u64> {
-        let val = YamasFST::generate_val(uid, offset);
+        let val = MystFST::generate_val(uid, offset);
         let ret = self.buf.insert(term, val);
         ret
     }

@@ -22,8 +22,8 @@ use crate::segment::persistence::Loader;
 use crate::segment::store::dict::Dict;
 use crate::segment::store::docstore::{DocStore, Timeseries};
 use crate::segment::store::metric_bitmap::MetricBitmap;
+use crate::segment::store::myst_fst::{MystFST, MystFSTContainer};
 use crate::segment::store::tag_bitmap::{TagKeysBitmap, TagValuesBitmap};
-use crate::segment::store::yamas_fst::{YamasFST, YamasFSTContainer};
 
 use crate::utils::myst_error::{MystError, Result};
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
@@ -45,13 +45,12 @@ use num::ToPrimitive;
 use num_derive::FromPrimitive;
 use num_derive::ToPrimitive;
 use std::io::{Seek, SeekFrom};
-use yamas_metrics_rs::count;
 
 /// Segment for an epoch and shard.
 /// When built, it writes all datastructures into a Writer `W`
 /// and stores the offset of each datasturctures in a header `MystSegmentHeader`
 pub struct MystSegment {
-    pub fsts: YamasFSTContainer,
+    pub fsts: MystFSTContainer,
     pub dict: Dict,
     pub tag_keys_bitmap: TagKeysBitmap,
     pub tag_vals_bitmap: TagValuesBitmap,
@@ -246,13 +245,13 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
         let fst_offset = segment_header
             .get(&ToPrimitive::to_u32(&MystSegmentHeaderKeys::FstHeader).unwrap())
             .unwrap();
-        let mut fst_container = YamasFSTContainer::new();
+        let mut fst_container = MystFSTContainer::new();
         fst_container = fst_container.load(buf, fst_offset)?.unwrap();
         // load metric bit map
         let mut metrics_bitmap = MetricBitmap::new();
         let metric_fst = fst_container.fsts.get(&self.metric_prefix).unwrap();
         for (metric_name, offset_id) in &metric_fst.buf {
-            let offset = YamasFST::get_offset(*offset_id);
+            let offset = MystFST::get_offset(*offset_id);
             let bitmap = SegmentReader::get_bitmap_from_reader(buf, offset as u64)?;
             metrics_bitmap
                 .metrics_bitmap
@@ -262,7 +261,7 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
         let mut tag_keys_bitmap = TagKeysBitmap::new();
         let tag_key_fst = fst_container.fsts.get(&self.tag_key_prefix).unwrap();
         for (tag_key, offset_id) in &tag_key_fst.buf {
-            let offset = YamasFST::get_offset(*offset_id);
+            let offset = MystFST::get_offset(*offset_id);
             let bitmap = SegmentReader::get_bitmap_from_reader(buf, offset as u64)?;
             tag_keys_bitmap
                 .tag_keys_bitmap
@@ -275,7 +274,7 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
             let tag_val_fst = fst_container.fsts.get(tag_key).unwrap();
             let mut curr_tag_vals_bitmaps = HashMap::new();
             for (tag_val, offset_id) in &tag_val_fst.buf {
-                let offset = YamasFST::get_offset(*offset_id);
+                let offset = MystFST::get_offset(*offset_id);
                 let bitmap = SegmentReader::get_bitmap_from_reader(buf, offset as u64)?;
                 curr_tag_vals_bitmaps.insert(tag_val.clone(), bitmap);
             }
@@ -343,7 +342,7 @@ impl MystSegment {
             shard_id,
             epoch,
 
-            fsts: YamasFSTContainer::new(),
+            fsts: MystFSTContainer::new(),
             dict: Dict::new(),
             tag_keys_bitmap: TagKeysBitmap::new(),
             tag_vals_bitmap: TagValuesBitmap::new(),
@@ -367,7 +366,7 @@ impl MystSegment {
             .fsts
             .fsts
             .entry(key.clone())
-            .or_insert_with(|| YamasFST::init(key.clone()));
+            .or_insert_with(|| MystFST::init(key.clone()));
 
         if !fst.buf.contains_key(&val) {
             fst.insert(val.clone(), self.uid);
@@ -375,7 +374,7 @@ impl MystSegment {
 
             self.uid += 1;
         }
-        let tagval_id = YamasFST::get_id(*fst.buf.get_mut(&val).unwrap());
+        let tagval_id = MystFST::get_id(*fst.buf.get_mut(&val).unwrap());
 
         tagval_id
     }
@@ -386,14 +385,14 @@ impl MystSegment {
             .fsts
             .fsts
             .entry(tagkey_prefix.clone())
-            .or_insert_with(|| YamasFST::init(tagkey_prefix));
+            .or_insert_with(|| MystFST::init(tagkey_prefix));
 
         if !fst.buf.contains_key(&key) {
             fst.insert(key.clone(), self.uid);
             self.dict.dict.insert(self.uid, key.clone());
             self.uid += 1;
         }
-        let id = YamasFST::get_id(*fst.buf.get(&key).unwrap());
+        let id = MystFST::get_id(*fst.buf.get(&key).unwrap());
 
         id
     }
@@ -404,14 +403,14 @@ impl MystSegment {
             .fsts
             .fsts
             .entry(metric_prefix.clone())
-            .or_insert_with(|| YamasFST::init(metric_prefix));
+            .or_insert_with(|| MystFST::init(metric_prefix));
 
         if !fst.buf.contains_key(&metric) {
             fst.insert(metric.clone(), self.uid);
             self.dict.dict.insert(self.uid, metric.clone());
             self.uid += 1;
         }
-        let id = YamasFST::get_id(*fst.buf.get(&metric).unwrap());
+        let id = MystFST::get_id(*fst.buf.get(&metric).unwrap());
 
         id
     }
@@ -484,10 +483,7 @@ impl MystSegment {
         xxhash: u64,
         timestamp: u64,
     ) {
-        count!("timeseries_ingested", "host" => "eventsdb-3.yms.gq1.yahoo.com", "shard" => self.shard_id.to_string());
         if !self.dedup.contains(&xxhash) {
-            count!("timeseries_ingested_dedup", "host" => "eventsdb-3.yms.gq1.yahoo.com", "shard" => self.shard_id.to_string());
-            count!("dedup_size", "host" => "eventsdb-3.yms.gq1.yahoo.com", "shard" => self.shard_id.to_string());
             let _metric_id = self.add_metric(metric.clone(), self.segment_timeseries_id);
             let mut tags_ids = HashMap::new();
             for (k, v) in tags {

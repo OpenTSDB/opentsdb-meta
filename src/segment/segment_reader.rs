@@ -21,9 +21,8 @@ use super::store::docstore::DocStore;
 use crate::query::cache::Cache;
 use crate::segment::myst_segment::{MystSegment, MystSegmentHeader, MystSegmentHeaderKeys};
 use crate::segment::store::docstore::DeserializedDocStore;
-use crate::segment::store::yamas_fst::YamasFST;
+use crate::segment::store::myst_fst::MystFST;
 use crate::utils::myst_error::{MystError, Result};
-use yamas_metrics_rs::count;
 
 use byteorder::{NativeEndian, ReadBytesExt};
 use croaring::Bitmap;
@@ -237,7 +236,7 @@ impl<R: Read + Seek> SegmentReader<R> {
     }
 
     pub fn get_bitmap_from_reader(reader: &mut R, val: u64) -> Result<Bitmap> {
-        let offset = YamasFST::get_offset(val);
+        let offset = MystFST::get_offset(val);
         reader.seek(SeekFrom::Start(offset as u64))?;
 
         let length = reader.read_u32::<NativeEndian>()?;
@@ -370,7 +369,6 @@ impl<R: Read + Seek> SegmentReader<R> {
         let docstore = docstore_lock.get(&(self.created, id));
         match docstore {
             Some(docstore) => {
-                count!("docstore.cache.hit",  "host" => sys_info::hostname().unwrap());
                 debug!(
                     "Time took to get doc store from cache {:?} for shard: {} segment: {} block: {}",
                     SystemTime::now().duration_since(curr_time).unwrap(),
@@ -383,7 +381,6 @@ impl<R: Read + Seek> SegmentReader<R> {
                 Ok(d)
             } //Yikes: TODO
             None => {
-                count!("docstore.cache.miss", "host" => sys_info::hostname().unwrap());
                 drop(docstore_lock);
                 let docstore = self.get_docstore(id)?;
                 debug!(
@@ -474,7 +471,6 @@ impl<R: Read + Seek> SegmentReader<R> {
         let dict = lock.get(&self.created);
         match dict {
             Some(dict) => {
-                count!("dict.cache.hit",  "host" => sys_info::hostname().unwrap());
                 debug!(
                     "Time took to get dict from cache {:?} for shard: {} segment: {}",
                     SystemTime::now().duration_since(curr_time).unwrap(),
@@ -486,7 +482,6 @@ impl<R: Read + Seek> SegmentReader<R> {
                 Ok(d)
             } //Yikes: TODO
             None => {
-                count!("dict.cache.miss",  "host" => sys_info::hostname().unwrap());
                 drop(lock);
                 let dict = self.get_dict()?;
                 debug!(

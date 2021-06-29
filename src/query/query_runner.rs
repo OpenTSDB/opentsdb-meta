@@ -28,8 +28,6 @@ use std::{
     time::SystemTime,
 };
 
-use yamas_metrics_rs::gauge;
-
 use croaring::Bitmap;
 use rayon::prelude::*;
 
@@ -40,7 +38,7 @@ use super::{filter::FilterType, query::Query, query::QueryType, query_filter::Qu
 use crate::myst_grpc::Dictionary;
 use crate::myst_grpc::GroupedTimeseries;
 use crate::segment::store::docstore::{DeserializedDocStore, DocStore};
-use crate::segment::store::yamas_fst::YamasFST;
+use crate::segment::store::myst_fst::MystFST;
 use fasthash::xx::Hash64;
 use fasthash::FastHash;
 
@@ -94,10 +92,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
             self.config.docstore_block_size,
             timeseries_response,
         )?;
-        gauge!("segment.query.latency", SystemTime::now().duration_since(curr_time).unwrap().as_millis() as i64,
-        "shard" => self.segment_readers.get(0).unwrap().shard_id.to_string(),
-        "segment" => self.segment_readers.get(0).unwrap().created.to_string(),
-         "host" => sys_info::hostname().unwrap());
+
         Ok(())
     }
 
@@ -226,7 +221,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         for group in group_by {
             let keys = segment_reader.search_literal(crate::utils::config::TAG_KEYS, group)?;
             for key in keys {
-                group_key_ids.push(YamasFST::get_id(key.1));
+                group_key_ids.push(MystFST::get_id(key.1));
             }
         }
         let fil_time = SystemTime::now();
@@ -513,10 +508,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                 return Err(MystError::new_query_error("Unknown query type"));
             }
         };
-        gauge!("segment.query.latency", SystemTime::now().duration_since(curr_time).unwrap().as_millis() as i64, 
-        "shard" => self.segment_readers.get(0).unwrap().shard_id.to_string(), 
-        "segment" => self.segment_readers.get(0).unwrap().created.to_string(),
-        "host" => sys_info::hostname().unwrap());
+
         Ok(())
     }
 
