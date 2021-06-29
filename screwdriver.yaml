@@ -1,0 +1,22 @@
+shared:
+  image: rust:1-slim-buster
+
+jobs:
+  pr:
+    requires: [~pr]
+    steps:
+      - run_arbitrary_script: cargo build
+  main:
+    requires: [~commit]
+    steps:
+      - run_arbitrary_script: cargo build
+    secrets:
+      - CI_DEPLOY_USERNAME
+      - CI_DEPLOY_PASSWORD
+      - DOCKER_EMAIL
+      - DOCKER_REPO
+      - DOCKER_PASSWORD
+      - DOCKER_REPOSITORY
+      - DOCKER_USERNAME
+    annotations:
+      screwdriver.cd/dockerEnabled: true
