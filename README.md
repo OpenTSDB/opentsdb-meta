@@ -1,5 +1,6 @@
 OpenTSDB Metadata Store
 ===============================
+[![Build Status][status-image]][status-url]
 
 Myst is OpenTSDB's persistent Metadata Store. Myst has the capability to read raw timeseries Metadata from any remote storage system and also flush segments to any remote storage system.  
 
