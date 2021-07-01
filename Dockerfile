@@ -3,7 +3,7 @@ RUN apt-get update \
     && apt-get -y install clang
 WORKDIR ./dep-download
 COPY . .
-RUN rm ./Cargo.lock \
+RUN rm -f ./Cargo.lock \
     && rm -rf ./target
 RUN rustup override set stable \
     && rustup default stable \
