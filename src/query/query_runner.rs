@@ -32,6 +32,7 @@ use croaring::Bitmap;
 use rayon::prelude::*;
 
 use crate::segment::segment_reader::SegmentReader;
+use crate::segment::store::dict::DictHolder;
 use crate::utils::myst_error::{MystError, Result};
 
 use super::{filter::FilterType, query::Query, query::QueryType, query_filter::QueryFilter};
@@ -273,7 +274,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                         cache,
                         explicit_filter,
                         explicit_tags_count,
-                        &dict,
+                        &dict.dict,
                         &group_key_ids,
                         docstore_block_size,
                         ts_data_time.clone(),
@@ -329,7 +330,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                 .or_insert_with(|| Vec::new())
                 .push(element);
         }
-        result
+        result 
     }
 
     fn process_docstore_block(
@@ -338,7 +339,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         cache: &Vec<String>,
         explicit_filter: bool,
         explicit_tags_count: u32,
-        dict: &HashMap<u32, String>,
+        dict: &HashMap<u32,String>,
         group_key_ids: &Vec<u32>,
         docstore_block_size: usize,
         ts_data_time: Arc<AtomicU32>,

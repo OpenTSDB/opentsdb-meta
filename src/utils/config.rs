@@ -31,6 +31,7 @@ pub struct Config {
     // myst properties
     pub shards: usize,
     pub data_path: String,
+    pub segment_gen_data_path: String,
     pub cache: Vec<String>,
     pub docstore_block_size: usize,
     pub log_file: String,
@@ -39,6 +40,7 @@ pub struct Config {
     pub ca_cert: String,
     pub polling_interval: u64,
     pub segment_duration: u64,
+    pub segment_full_duration: u64,
     pub namespace: String,
     pub start_epoch: u64,
     pub input_bucket: String,
@@ -68,7 +70,10 @@ impl Config {
                 .get_str("data_path")
                 .unwrap_or(String::from("/var/myst/data/"))
                 .to_string(),
-
+            segment_gen_data_path: config
+                .get_str("segment_gen_data_path")
+                .unwrap_or(String::from("/var/myst/segment_gen/data/"))
+                .to_string(),
             cache,
             docstore_block_size: config.get_int("docstore_block_size").unwrap_or(200) as usize,
             log_file: config
@@ -82,6 +87,7 @@ impl Config {
 
             polling_interval: config.get_int("polling_interval").unwrap() as u64,
             segment_duration: config.get_int("segment_duration").unwrap() as u64,
+            segment_full_duration: config.get_int("segment_full_duration").unwrap() as u64,
             namespace: config.get_str("namespace").unwrap().to_string(),
             start_epoch: config.get_int("start_epoch").unwrap() as u64,
             input_bucket: config.get_str("input_bucket").unwrap().to_string(),

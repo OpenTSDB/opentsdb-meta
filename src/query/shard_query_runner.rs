@@ -21,6 +21,7 @@ use std::fs::File;
 use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 use std::{fs, path::Path, thread, time::SystemTime};
+use std::io::{Read, BufReader};
 
 use log::{error, info};
 use tokio::sync::mpsc;
@@ -33,7 +34,6 @@ use crate::utils::config::Config;
 use crate::utils::myst_error::{MystError, Result};
 
 use super::{query::Query, query_runner::QueryRunner};
-use std::io::BufReader;
 
 /// Runs a query for all shards
 pub struct ShardQueryRunner {}
@@ -136,9 +136,28 @@ impl ShardQueryRunner {
             let d = dir.unwrap();
             let mut path = d.path();
             path.push(".lock");
+            let mut duration_file = d.path();
+            duration_file.push("duration");
             if Path::new(&path).exists() {
                 let created = d.file_name().to_str().unwrap().parse::<u64>().unwrap();
-                if query.start <= created && query.end >= created {
+
+                let duration = if duration_file.exists() {
+                    let mut dur = File::open(duration_file.as_path());
+                    let mut dur_str = String::new();
+                    if dur.is_ok() {
+                        dur.unwrap().read_to_string(&mut dur_str);
+                        let fduration = dur_str.parse().unwrap_or(0 as i32);
+                        fduration
+                    } else {
+                        0
+                    }
+                } else {
+                    0
+                };
+                info!("Duration read for {:?} as {}", &duration_file, duration);
+            
+                if query.start <= created && query.end >= created || 
+                (duration > 0 && query.start <= (created + duration as u64) && query.end >= (created + duration as u64) ) {
                     let file_path = MystSegment::get_segment_filename(
                         &shard_id,
                         &created,
@@ -146,7 +165,7 @@ impl ShardQueryRunner {
                     );
                     let reader = BufReader::new(File::open(file_path.clone())?);
                     let segment_reader =
-                        SegmentReader::new(shard_id, created, reader, cache.clone(), file_path)?;
+                        SegmentReader::new(shard_id, created, reader, cache.clone(), file_path, duration)?;
                     segment_readers.push(segment_reader);
                     timeseries_response.streams = segment_readers.len() as i32;
                 }

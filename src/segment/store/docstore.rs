@@ -30,6 +30,7 @@ use std::{
 
 use crate::segment::persistence::Builder;
 use crate::segment::persistence::Loader;
+use crate::segment::persistence::TimeSegmented;
 use crate::segment::segment_reader::SegmentReader;
 use crate::utils::myst_error::{MystError, Result};
 use lz4::EncoderBuilder;
@@ -62,7 +63,19 @@ pub struct Timeseries {
 pub struct DeserializedDocStore {
     pub data: Option<Vec<u8>>,
     pub offset_len: Option<Vec<OffsetLen>>,
+    pub duration: i32
 }
+
+impl TimeSegmented for DeserializedDocStore {
+    fn get_duration(&self) -> Option<i32> {
+        Some(self.duration)
+    }
+
+    fn set_duration(&mut self, duration: i32) {
+        self.duration = duration;
+    }
+}
+
 
 #[derive(Debug, Clone)]
 pub struct OffsetLen {
@@ -158,7 +171,7 @@ impl<R: Read + Seek> Loader<R, DocStore> for DocStore {
         let mut block_entries = 0;
         for (id, offset) in docstore_header {
             buf.seek(SeekFrom::Start(offset as u64))?;
-            let docstore_deserialized = SegmentReader::get_docstore_from_reader(buf, 0, 0, id)?;
+            let docstore_deserialized = SegmentReader::get_docstore_from_reader(buf, 0, 0, id, 0 as i32)?;
             let offset_length = docstore_deserialized.offset_len.as_ref().unwrap();
             let docstore_result = docstore_deserialized.data.as_ref().unwrap();
 
@@ -227,7 +240,7 @@ impl DocStore {
         Ok(serialized)
     }
 
-    pub fn deserialize(data: &[u8]) -> Result<DeserializedDocStore> {
+    pub fn deserialize(data: &[u8], duration: i32) -> Result<DeserializedDocStore> {
         let curr_time = SystemTime::now();
         let mut reader = Cursor::new(data);
         let size = reader.read_u32::<NativeEndian>()?;
@@ -258,6 +271,7 @@ impl DocStore {
         Ok(DeserializedDocStore {
             data: Some(result),
             offset_len: Some(sizes),
+            duration: duration
         })
     }
 

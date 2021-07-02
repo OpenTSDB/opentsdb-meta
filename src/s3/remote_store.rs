@@ -19,14 +19,24 @@
 
 use log::info;
 use rusoto_s3::{
-    GetObjectRequest, ListObjectsRequest, PutObjectRequest, S3Client, StreamingBody, S3,
+    GetObjectRequest,
+    ListObjectsRequest,
+    HeadObjectRequest,
+    HeadObjectError,
+    PutObjectRequest, 
+    S3Client, 
+    StreamingBody, 
+    S3,
 };
+use rusoto_core::RusotoError;
 use std::{
     io,
     io::{Error, ErrorKind},
     sync::Arc,
     time::SystemTime,
+    collections::HashMap
 };
+
 use tokio::io::AsyncReadExt;
 
 // Ideally, we should have MystSegment implement the std::io::Read interface.
@@ -41,8 +51,8 @@ impl RemoteStore {
     pub fn new(s3_client: Arc<S3Client>, bucket: Arc<String>) -> RemoteStore {
         Self { s3_client, bucket }
     }
-
-    pub async fn upload(self, file_name: String, data: Vec<u8>) -> Result<i32, Error> {
+ 
+    pub async fn upload(self, file_name: String, data: Vec<u8>, metadata: HashMap<String, String>) -> Result<i32,Error> {
         let b = std::path::Path::new(&file_name).exists();
         info!("Upload Path exists: {} {}", &file_name, b);
         //let stream_from_file = fs::read(file_name.to_string().to_owned())
@@ -51,6 +61,7 @@ impl RemoteStore {
         let put_request = PutObjectRequest {
             bucket: self.bucket.clone().to_string(),
             key: file_name.clone().to_string(),
+            metadata: Some(metadata),
             body: Some(StreamingBody::from(data)),
             ..Default::default()
         };
@@ -111,6 +122,37 @@ impl RemoteStore {
             output.write(&buf[0..number]);
         }
         return Ok(());
+    }
+
+    pub async fn get_metadata(&self, file_name: String) -> Result<Option<HashMap<String,String>>, Error> {
+
+        let mut head_request = HeadObjectRequest::default();
+
+        head_request.bucket = self.bucket.to_string();
+
+        head_request.key = file_name.to_owned();
+
+        let result = self.s3_client.head_object(head_request).await;
+        match result {
+            Ok(obj) => {
+                let result = obj.metadata;
+                if result.is_some() {
+                    return Ok(result);
+                } else {
+                    return Ok(Some(HashMap::new()));
+                }
+            },
+            Err(e) => {
+                match e {
+                    RusotoError::Service(HeadObjectError::NoSuchKey(_)) => {},
+                    _ => {
+                        return Err(Error::new(ErrorKind::Other, e.to_string()));
+                    },
+                }
+            },
+        }
+        Ok(None)
+
     }
 
     pub async fn list_files(&self, file_prefix: String) -> Result<Option<Vec<String>>, Error> {

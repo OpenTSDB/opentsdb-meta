@@ -19,6 +19,7 @@
 
 use crate::segment::persistence::Builder;
 use crate::segment::persistence::Loader;
+use crate::segment::persistence::TimeSegmented;
 use crate::segment::store::dict::Dict;
 use crate::segment::store::docstore::{DocStore, Timeseries};
 use crate::segment::store::metric_bitmap::MetricBitmap;
@@ -70,9 +71,22 @@ pub struct MystSegment {
     dedup: HashSet<u64>, //TODO remove
 
     cluster: Option<Clusterer>,
+
+    duration: i32,
 }
 
+impl TimeSegmented  for MystSegment {
+    
+    fn get_duration(&self) -> Option<i32> {
+        Some(self.duration)
+    }
+
+    fn set_duration(&mut self, duration: i32) {
+        self.duration = duration;
+    }
+}
 /// Map that contains `MystSegmentHeaderKeys` and it's offset in the writer `W`
+
 #[derive(Default)]
 pub struct MystSegmentHeader {
     header: HashMap<u32, u32>,
@@ -325,18 +339,37 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
             tag_key_prefix: Rc::new(String::from(crate::utils::config::TAG_KEYS)),
             dedup: HashSet::new(),
             cluster: None,
+            duration: self.duration
         };
         Ok(Some(myst_segment))
     }
 }
 
 impl MystSegment {
+    pub fn new(shard_id: u32, epoch: u64) -> Self {
+        MystSegment::new_with_block_entries(shard_id, epoch, 50000 as usize)
+    }
+
+    pub fn new_with_block_entries(
+        shard_id: u32,
+        epoch: u64,
+        docstore_block_entries: usize,
+    ) -> Self {
+        MystSegment::new_with_block_entries_duration(shard_id, epoch, docstore_block_entries, 7200 as i32)
+    }
+
     /// Creates a new MystSegment
     /// # Arguments
     /// * `shard_id` - Shard id for the segment.
     /// * `epoch` - The start epoch of the segment.
     /// * `docstore_block_entries` - Number of entries in each docstore block
-    pub fn new(shard_id: u32, epoch: u64, docstore_block_entries: usize) -> Self {
+    /// * `duration` - The duration of data in the segment in seconds
+    pub fn new_with_block_entries_duration(
+        shard_id: u32,
+        epoch: u64,
+        docstore_block_entries: usize,
+        duration: i32
+    ) -> Self {
         info!("Creating new segment for shard id {}", shard_id);
         Self {
             shard_id,
@@ -358,6 +391,7 @@ impl MystSegment {
             tag_key_prefix: Rc::new(String::from(crate::utils::config::TAG_KEYS)),
             dedup: HashSet::new(), // TODO remove
             cluster: Some(Clusterer::default()),
+            duration: duration,
         }
     }
 

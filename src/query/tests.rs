@@ -46,7 +46,7 @@ pub fn write_and_get_segment_readers() -> Vec<SegmentReader<File>> {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let mut segment = MystSegment::new(1, epoch, 200);
+    let mut segment = MystSegment::new_with_block_entries(1, epoch, 200);
     let shard_id = segment.shard_id;
     let created = segment.epoch;
     let cache = Arc::new(Cache::new());
@@ -54,7 +54,7 @@ pub fn write_and_get_segment_readers() -> Vec<SegmentReader<File>> {
     close_segment(segment);
     let file_path = MystSegment::get_segment_filename(&shard_id, &created, data_path);
     let reader = File::open(file_path.clone()).unwrap();
-    let segment_reader = SegmentReader::new(shard_id, created, reader, cache, file_path).unwrap();
+    let segment_reader = SegmentReader::new(shard_id, created, reader, cache, file_path, 0 as i32).unwrap();
 
     segment_readers.push(segment_reader);
     segment_readers
@@ -99,7 +99,7 @@ pub fn write_data_large_segment() -> Vec<SegmentReader<BufReader<File>>> {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let mut segment = MystSegment::new(1, epoch, 200);
+    let mut segment = MystSegment::new_with_block_entries(1, epoch, 200);
     let shard_id = segment.shard_id;
     let created = segment.epoch;
     let cache = Arc::new(Cache::new());
@@ -111,7 +111,7 @@ pub fn write_data_large_segment() -> Vec<SegmentReader<BufReader<File>>> {
     close_segment(segment);
     let file_path = MystSegment::get_segment_filename(&shard_id, &created, data_path);
     let reader = BufReader::new(File::open(file_path.clone()).unwrap());
-    let segment_reader = SegmentReader::new(shard_id, created, reader, cache, file_path).unwrap();
+    let segment_reader = SegmentReader::new(shard_id, created, reader, cache, file_path, 0 as i32).unwrap();
 
     segment_readers.push(segment_reader);
     segment_readers
@@ -234,9 +234,7 @@ pub fn test_query() {
 pub fn search_timeseries() {
     let segment_readers = write_and_get_segment_readers();
     let filter = build_regex_tag_value_filter();
-    let mut query = build_timeseries_query(filter);
-    query.start = segment_readers.get(0).unwrap().created;
-    query.end = query.start + 1 * 60 * 60;
+    let query = build_timeseries_query(filter);
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
@@ -301,11 +299,8 @@ pub fn search_timeseries_large_segment() {
 pub fn search_timeseries_with_not_filter() {
     let segment_readers = write_and_get_segment_readers();
     let filter = build_not_tag_value_filter();
-    let mut query = build_timeseries_query(filter);
-    query.start = segment_readers.get(0).unwrap().created;
-    query.end = query.start + 1 * 60 * 60;
-    let mut config = crate::utils::config::Config::default();
-    config.docstore_block_size = 200;
+    let query = build_timeseries_query(filter);
+    let config = crate::utils::config::Config::default();
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
     let mut curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
@@ -333,11 +328,8 @@ pub fn search_timeseries_with_not_filter() {
 pub fn search_timeseries_with_explicit_filter() {
     let segment_readers = write_and_get_segment_readers();
     let filter = build_explicit_tag_filter();
-    let mut query = build_timeseries_query(filter);
-    query.start = segment_readers.get(0).unwrap().created;
-    query.end = query.start + 1 * 60 * 60;
-    let mut config = crate::utils::config::Config::default();
-    config.docstore_block_size = 200;
+    let query = build_timeseries_query(filter);
+    let config = crate::utils::config::Config::default();
     println!("{:?}", query);
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
     let mut curr_time = SystemTime::now();
@@ -367,11 +359,8 @@ pub fn test_groupby_ordering() {
     let segment_readers = write_and_get_segment_readers();
     let filter = build_literal_tag_value_filter();
     let mut query = build_timeseries_query(filter);
-    query.start = segment_readers.get(0).unwrap().created;
-    query.end = query.start + 1 * 60 * 60;
     query.group = vec![String::from("foo"), String::from("do")];
-    let mut config = crate::utils::config::Config::default();
-    config.docstore_block_size = 200;
+    let config = crate::utils::config::Config::default();
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
     let mut curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
@@ -401,7 +390,7 @@ pub fn test_groupby_ordering() {
     assert_eq!("re", dict.dict.get(groups.get(1).unwrap()).unwrap());
 }
 
-//#[test]
+#[test]
 pub fn test_bloom() {
     let expected_num_items = 100000000000;
 

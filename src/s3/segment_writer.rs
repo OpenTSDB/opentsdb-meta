@@ -19,17 +19,18 @@
 
 use crate::remote_store::RemoteStore;
 use crate::timeseries_record::Record;
-
-use myst::segment::myst_segment::{MystSegment, Write};
-use myst::segment::persistence::Builder;
+use myst::segment::myst_segment::MystSegment;
+use myst::segment::persistence::{Builder, TimeSegmented, Loader};
 
 use log::info;
+use log::error;
 use std::collections::HashMap;
-use std::fs::{rename, File};
-use std::ops::Deref;
+use std::fs::{File, create_dir_all};
+use std::thread;
 
 use bytes::BufMut;
-use std::io::Read;
+use std::path::Path;
+use std::io::{ Error, Write, ErrorKind};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -40,12 +41,15 @@ pub(crate) struct SegmentWriter {
     pub segment: Option<MystSegment>,
     pub shard_id: u32,
     pub epoch: u64,
+    pub duration: u64,
+    pub epoch_start: u64,
     pub sender: Option<mpsc::Sender<Record>>,
     pub receiver: mpsc::Receiver<Record>,
     pub finish: Arc<AtomicBool>,
-    pub data_path: Arc<String>,
+    pub segment_gen_data_path: Arc<String>,
     pub upload_root: Arc<String>,
     pub remote_store: Option<RemoteStore>,
+    runtime: Runtime
 }
 
 impl SegmentWriter {
@@ -54,21 +58,28 @@ impl SegmentWriter {
         finish: Arc<AtomicBool>,
         queue_size: usize,
         epoch: u64,
-        data_path: Arc<String>,
+        duration: u64,
+        epoch_start: u64,
+        segment_gen_data_path: Arc<String>,
         upload_root: Arc<String>,
         remote_store: RemoteStore,
     ) -> Self {
+        
+        let myst_duration = epoch - epoch_start + duration;
         let (tx, rx) = mpsc::channel(queue_size);
         let segment_writer = Self {
-            segment: Some(MystSegment::new(shard_id, epoch, 200)),
+            segment: Some(MystSegment::new_with_block_entries_duration(shard_id, epoch_start, 200, myst_duration as i32)),
             shard_id,
             epoch,
+            duration,
+            epoch_start,
             sender: Some(tx),
             receiver: rx,
             finish,
-            data_path,
+            segment_gen_data_path,
             upload_root,
             remote_store: Some(remote_store),
+            runtime: Runtime::new().unwrap()
         };
         info!(
             "Sender is {:?} {:?}",
@@ -79,9 +90,36 @@ impl SegmentWriter {
 
     pub(crate) fn write_to_segment(&mut self) -> Result<(), std::sync::mpsc::RecvError> {
         let mut count = 0;
+
+        let sleep_time = tokio::time::Duration::from_secs(2000);
+        if  self.epoch_start != self.epoch {
+            let mut remote_filename = SegmentWriter::get_upload_filename(self.shard_id, self.epoch_start, self.upload_root.to_string());
+            //Check segment_gen_data_path for file locally.
+            let file_path = Path::new(self.segment_gen_data_path.as_ref())
+            .join(Path::new(&remote_filename));
+            create_dir_all(file_path.clone().parent().unwrap());
+            let mut use_file = false;
+            if !file_path.exists() {
+                let mut f = File::create(&file_path).unwrap();
+                let result = self.download_file(&remote_filename, &mut f);
+                if result.is_ok() {
+                    let opt = result.unwrap();
+                    if opt.unwrap_or(-1) == 1 {
+                        use_file = true;
+                    }
+                } 
+            } 
+            if use_file {
+                info!("Loading segment for {} into mem", remote_filename);
+                let mut f = File::create(&file_path).unwrap();
+                let offset: u32 = 0;
+                let result = self.segment.take().unwrap().load(&mut f, &offset);
+                self.segment = result.unwrap();
+            }
+        }    
+
         loop {
             let mut result = None;
-
             let finish_lock = self.finish.load(Ordering::SeqCst);
             result = futures::executor::block_on(self.receiver.recv());
 
@@ -99,7 +137,7 @@ impl SegmentWriter {
                     self.shard_id, self.epoch
                 );
                 let s = self.segment.take().unwrap();
-                self.upload_segment(s);
+                self.create_and_upload_segment(s);
                 info!(
                     "Stopping shard: {} thread for epoch: {}",
                     self.shard_id, self.epoch
@@ -142,10 +180,59 @@ impl SegmentWriter {
         Ok(())
     }
 
+    fn download_file(&mut self, remote_filename: &String, mut buf: &mut Write) -> Result<Option<i32>, Error> {
+
+        let sleep_time = tokio::time::Duration::from_secs(2000);
+            let mut retries = 0;
+            let map_option:Option<HashMap<String,String>>;
+            let downloader = self.remote_store.take().unwrap();
+            loop {
+                let result = self.runtime.block_on(downloader.get_metadata(remote_filename.clone()));
+
+                if result.is_err() {
+                    error!("Getting metadata failed for {} {:?} retries left: {}", remote_filename, result, 3 - retries);
+                    if retries == 3 {
+                        error!("Will create a new file for {} as all retried failed", remote_filename);
+                        map_option = None;
+                        return Err(
+                            Error::new(
+                            ErrorKind::Other,
+                            "Error fetching meta from s3"
+                            )
+                        );
+                    }
+                    retries += 1;
+                } else {
+                    info!("Object meta call sucessfull or Object is not present: {} {:?}", remote_filename, result);
+                    map_option = result.unwrap();
+                    break;
+                }
+                thread::sleep(sleep_time);
+            }
+
+            if map_option.is_some() {
+                //Object is present, download it
+                info!("Downloading {}",remote_filename);
+                let result = self.runtime.block_on(downloader.download(remote_filename.clone(),&mut buf));
+                if result.is_err() {
+                    error!("Error downloading: {} from S3 {:?}", remote_filename, result);
+                    return Err(
+                        Error::new(
+                        ErrorKind::Other,
+                        "Error downloding from s3"
+                        )
+                    );
+                }
+                return Ok(Some(1 as i32));
+            } else {
+                return Ok(Some(0 as i32));
+            }
+    }
+    /// This method cannot be called as is. Will need to be worked into the code flow.
     fn create_segment(&mut self, myst_segment: MystSegment) {
         let shard_id = self.shard_id;
         let epoch = myst_segment.epoch;
-        let data_path = self.data_path.clone();
+        let data_path = self.segment_gen_data_path.clone();
         let filename = MystSegment::get_segment_filename(&shard_id, &epoch, data_path.to_string());
         info!("Creating segment file: {:?}", &filename);
         let mut file = File::create(&filename).unwrap();
@@ -156,33 +243,47 @@ impl SegmentWriter {
         lock_file_name.push_str("/.lock");
         File::create(lock_file_name).unwrap();
         info!("Created segment file: {}", &filename);
+    }
 
-        let filename_clone = Arc::new(filename.clone());
+    fn create_and_upload_segment(&mut self, myst_segment: MystSegment) {
+        let shard_id = self.shard_id;
+        let epoch = myst_segment.epoch;
+        let dur_result = myst_segment.get_duration();
+        let dur_string = dur_result.unwrap().to_string();
+        let mut vec_writer = Vec::new().writer();
+        myst_segment.build(&mut vec_writer, &mut (0 as u32)).unwrap();
+
         let uploader = self.remote_store.take().unwrap();
         let mut upload_root = self.upload_root.clone().to_string();
-        if !upload_root.ends_with("/") {
-            upload_root.push_str("/");
-        }
-        let upload_filename = MystSegment::get_segment_filename(&shard_id, &epoch, upload_root);
-        let move_result = rename(&filename, &upload_filename);
 
-        match move_result {
-            Ok(obj) => {
-                info!("Calling the uploader! for filename: {}", &upload_filename);
-                let mut data: Vec<u8> = Vec::new();
-                let mut f = File::open(&upload_filename).unwrap();
-                f.read_to_end(&mut data);
-                let result = Runtime::new()
-                    .unwrap()
-                    .block_on(uploader.upload(upload_filename.clone().to_owned(), data));
-                info!("Uploaded for filename: {}", &upload_filename);
-            }
-            Err(e) => info!(
-                "Move from {} to {} resulted in error: {:?}",
-                &filename, &upload_filename, e
-            ),
-        };
+        let data = vec_writer.get_mut().to_vec();
+        let upload_filename = SegmentWriter::get_upload_filename(shard_id, epoch, upload_root);
+            //Check segment_gen_data_path for file locally.
+        let file_path = Path::new(self.segment_gen_data_path.as_ref())
+            .join(Path::new(&upload_filename));
+
+        info!("Creating segment file: {:?} for duration: {}", &file_path, &dur_string);
+        let mut file = File::create(&file_path).unwrap();
+        file.write(&data);
+        file.flush().unwrap();
+        info!("Created segment file in segment gen: {:?}", &file_path);
+        
+        info!(
+            "Calling the uploader (upload segment)! for filename: {} and duration: {}",
+            &upload_filename,
+            &dur_string
+        );
+        let mut metadata: HashMap<String, String> = HashMap::new();
+        metadata.insert("duration".to_string(), dur_string);
+        let result = self.runtime
+            .block_on(uploader.upload(upload_filename.clone().to_owned(), data , metadata));
+            info!(
+            "Uploaded (upload segment) for filename: {} {:?}",
+            &upload_filename, result
+        );
+
     }
+
 
     fn upload_segment(&mut self, myst_segment: MystSegment) {
         let shard_id = self.shard_id;
@@ -190,13 +291,11 @@ impl SegmentWriter {
 
         let uploader = self.remote_store.take().unwrap();
         let mut upload_root = self.upload_root.clone().to_string();
-        if !upload_root.ends_with("/") {
-            upload_root.push_str("/");
-        }
-        let upload_filename = MystSegment::get_segment_filename(&shard_id, &epoch, upload_root);
+
+        let mut upload_filename = SegmentWriter::get_upload_filename(shard_id, epoch, upload_root);
 
         let mut vec_writer = Vec::new().writer();
-
+        let dur_string = myst_segment.get_duration().unwrap().to_string();
         myst_segment
             .build(&mut vec_writer, &mut (0 as u32))
             .unwrap();
@@ -206,12 +305,22 @@ impl SegmentWriter {
             "Calling the uploader (upload segment)! for filename: {}",
             &upload_filename
         );
-        let result = Runtime::new()
-            .unwrap()
-            .block_on(uploader.upload(upload_filename.clone().to_owned(), data));
-        info!(
+        let mut metadata: HashMap<String, String> = HashMap::new();
+        metadata.insert("duration".to_string(), dur_string);
+        let result = self.runtime
+            .block_on(uploader.upload(upload_filename.clone().to_owned(), data, metadata));
+            info!(
+
             "Uploaded (upload segment) for filename: {} {:?}",
             &upload_filename, result
         );
+    }
+
+    fn get_upload_filename(shard_id: u32, epoch: u64, mut upload_root: String) -> String {
+        
+        if !upload_root.ends_with("/") {
+            upload_root.push_str("/");
+        }
+        MystSegment::get_segment_filename(&shard_id, &epoch, upload_root)
     }
 }

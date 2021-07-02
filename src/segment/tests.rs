@@ -36,7 +36,7 @@ pub fn test_load() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let mut segment = MystSegment::new(1, epoch, 200);
+    let mut segment = MystSegment::new_with_block_entries(1, epoch, 200);
     let mut tags = HashMap::new();
     tags.insert(String::from("foo"), String::from("bar"));
     let mut tags_rc = HashMap::new();
@@ -54,7 +54,7 @@ pub fn test_load() {
     let mut offset = 0 as u32;
     segment.build(&mut buf, &mut offset);
 
-    let mut loaded_segment = MystSegment::new(0, 0, 200);
+    let mut loaded_segment = MystSegment::new_with_block_entries(0, 0, 200);
     let mut cursor = Cursor::new(buf.as_slice());
     loaded_segment = loaded_segment.load(&mut cursor, &0).unwrap().unwrap();
     println!("Fst Container {:?}", loaded_segment.fsts);
@@ -73,7 +73,7 @@ pub fn test() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let mut segment = MystSegment::new(1, epoch, 200);
+    let mut segment = MystSegment::new_with_block_entries(1, epoch, 200);
 
     let mut tags = HashMap::new();
     tags.insert(String::from("foo"), String::from("bar"));
@@ -82,8 +82,8 @@ pub fn test() {
         tags_rc.insert(Rc::new(k.clone()), Rc::new(v.clone()));
     }
 
-    for i in 0..1000 {
-        let mut metric = String::from("metric");
+    let mut metric = String::from("metric");
+    for i in 0..10 {
         metric.push_str(&i.to_string());
         segment.add_timeseries(Rc::new(metric.clone()), tags_rc.clone(), i, epoch);
     }
@@ -100,7 +100,7 @@ pub fn test() {
     let cache = Arc::new(Cache::new());
     let file_path = MystSegment::get_segment_filename(&1, &epoch, data_path);
     let file = File::open(file_path.clone()).unwrap();
-    let mut segment_reader = SegmentReader::new(1, epoch, file, cache, file_path).unwrap();
+    let mut segment_reader = SegmentReader::new(1, epoch, file, cache, file_path, 0 as i32).unwrap();
     println!("{:?}", segment_reader.segment_header);
     let fst_header_from_reader = &segment_reader.fst_header;
     for (k, v) in fst_header {
