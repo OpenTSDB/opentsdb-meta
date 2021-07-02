@@ -29,6 +29,6 @@ jobs:
   publish-docs:
     requires: [~main]
     steps:
-      - publish: apt-get update && apt-get -y install clang openssl python3-pip && rustup component add rustfmt && cargo doc && echo '<meta http-equiv=refresh content=0;url=YOURLIBNAME/index.md>' > target/doc/index.html && pip3 install ghp-import && ghp-import -n target/doc && git push -qf https://$GITHUB_TOKEN@github.com/OpenTSDB/opentsdb-meta.git gh-pages
+      - publish: apt-get update && apt-get -y install clang openssl python3-pip && rustup component add rustfmt && cargo doc && echo '<meta http-equiv=refresh content=0;url=myst/index.md>' > target/doc/index.html && cp target/doc/index.html target/doc/index.md && pip3 install ghp-import && ghp-import -n target/doc && git push -qf https://$GITHUB_TOKEN@github.com/OpenTSDB/opentsdb-meta.git gh-pages
     secrets:
       - GITHUB_TOKEN
