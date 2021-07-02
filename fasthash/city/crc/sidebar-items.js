@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Hash128","`CityHash` 128-bit hash functions using HW CRC instruction."],["Hasher128","An implementation of `std::hash::Hasher` and `fasthash::HasherExt`."]]});

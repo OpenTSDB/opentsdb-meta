@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["server"] = [{"text":"impl <a class=\"trait\" href=\"myst/myst_grpc/myst_service_server/trait.MystService.html\" title=\"trait myst::myst_grpc::myst_service_server::MystService\">MystService</a> for <a class=\"struct\" href=\"server/struct.TimeseriesService.html\" title=\"struct server::TimeseriesService\">TimeseriesService</a>","synthetic":false,"types":["server::TimeseriesService"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

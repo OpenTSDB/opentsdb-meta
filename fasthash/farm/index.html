@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `farm` mod in crate `fasthash`."><meta name="keywords" content="rust, rustlang, rust-lang, farm"><title>fasthash::farm - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../fasthash/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a><p class="location">Module farm</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#functions">Functions</a></li></ul></div><p class="location"><a href="../index.html">fasthash</a></p><div id="sidebar-vars" data-name="farm" data-ty="mod" data-relpath="../"></div><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Module <a href="../index.html">fasthash</a>::<wbr><a class="mod" href="">farm</a></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../../src/fasthash/farm.rs.html#1-467" title="goto source code">[src]</a></span></h1><div class="docblock"><p><code>FarmHash</code>, a family of hash functions.</p>
+<p>by Geoff Pike</p>
+<p>https://github.com/google/farmhash</p>
+<h1 id="introduction" class="section-header"><a href="#introduction">Introduction</a></h1>
+<p><code>FarmHash</code> provides hash functions for strings and other data.  The functions
+mix the input bits thoroughly but are not suitable for cryptography.  See
+&quot;Hash Quality,&quot; below, for details on how <code>FarmHash</code> was tested and so on.</p>
+<p>We provide reference implementations in C++, with a friendly MIT license.</p>
+<p>All members of the <code>FarmHash</code> family were designed with heavy reliance on
+previous work by Jyrki Alakuijala, Austin Appleby, Bob Jenkins, and others.</p>
+<h1 id="recommended-usage" class="section-header"><a href="#recommended-usage">Recommended Usage</a></h1>
+<p>Our belief is that the typical hash function is mostly used for in-memory hash
+tables and similar.  That use case allows hash functions that differ on
+different platforms, and that change from time to time.  For this, I recommend
+using wrapper functions in a .h file with comments such as, &quot;may change from
+time to time, may differ on different platforms, and may change depending on
+NDEBUG.&quot;</p>
+<p>Some projects may also require a forever-fixed, portable hash function.  Again
+we recommend using wrapper functions in a .h, but in this case the comments on
+them would be very different.</p>
+<p>We have provided a sample of these wrapper functions in src/farmhash.h.  Our
+hope is that most people will need nothing more than src/farmhash.h and
+src/farmhash.cc.  Those two files are a usable and relatively portable library.
+(One portability snag: if your compiler doesn't have <code>__builtin_expect</code> then
+you may need to define <code>FARMHASH_NO_BUILTIN_EXPECT</code>.)  For those that prefer
+using a configure script (perhaps because they want to &quot;make install&quot; later),
+<code>FarmHash</code> has one, but for many people it's best to ignore it.</p>
+<p>Note that the wrapper functions such as Hash() in src/farmhash.h can select
+one of several hash functions.  The selection is done at compile time, based
+on your machine architecture (e.g., <code>sizeof(size_t)</code>) and the availability of
+vector instructions (e.g., SSE4.1).</p>
+<p>To get the best performance from <code>FarmHash</code>, one will need to think a bit about
+when to use compiler flags that allow vector instructions and such: -maes,
+-msse4.2, -mavx, etc., or their equivalents for other compilers.  Those are
+the g++ flags that make g++ emit more types of machine instructions than it
+otherwise would.  For example, if you are confident that you will only be
+using <code>FarmHash</code> on systems with SSE4.2 and/or AES, you may communicate that to
+the compiler as explained in src/farmhash.cc.  If not, use -maes, -mavx, etc.,
+when you can, and the appropriate choices will be made by via conditional
+compilation in src/farmhash.cc.</p>
+<p>It may be beneficial to try -O3 or other compiler flags as well.  I also have
+found feedback-directed optimization (FDO) to improve the speed of <code>FarmHash</code>.</p>
+<h1 id="further-details" class="section-header"><a href="#further-details">Further Details</a></h1>
+<p>The above instructions will produce a single source-level library that
+includes multiple hash functions.  It will use conditional compilation, and
+perhaps GCC's multiversioning, to select among the functions.  In addition,
+&quot;make all check&quot; will create an object file using your chosen compiler, and
+test it.  The object file won't necessarily contain all the code that would be
+used if you were to compile the code on other platforms.  The downside of this
+is obvious: the paths not tested may not actually work if and when you try
+them.  The <code>FarmHash</code> developers try hard to prevent such problems; please let
+us know if you find bugs.</p>
+<p>To aid your cross-platform testing, for each relevant platform you may
+compile your program that uses farmhash.cc with the preprocessor flag
+FARMHASHSELFTEST equal to 1.  This causes a <code>FarmHash</code> self test to run
+at program startup; the self test writes output to stdout and then
+calls <code>std::exit()</code>.  You can see this in action by running &quot;make check&quot;:
+see src/farm-test.cc for details.</p>
+<p>There's also a trivial workaround to force particular functions to be used:
+modify the wrapper functions in hash.h.  You can prevent choices being made via
+conditional compilation or multiversioning by choosing <code>FarmHash</code> variants with
+names like <code>farmhashaa::Hash32</code>, <code>farmhashab::Hash64</code>, etc.: those compute the same
+hash function regardless of conditional compilation, multiversioning, or
+endianness.  Consult their comments and ifdefs to learn their requirements: for
+example, they are not all guaranteed to work on all platforms.</p>
+<h1 id="known-issues" class="section-header"><a href="#known-issues">Known Issues</a></h1>
+<ol>
+<li>
+<p><code>FarmHash</code> was developed with little-endian architectures in mind.  It should
+work on big-endian too, but less work has gone into optimizing for those
+platforms.  To make <code>FarmHash</code> work properly on big-endian platforms you may
+need to modify the wrapper .h file and/or your compiler flags to arrange for
+<code>FARMHASH_BIG_ENDIAN</code> to be defined, though there is logic that tries to figure
+it out automatically.</p>
+</li>
+<li>
+<p><code>FarmHash</code>'s implementation is fairly complex.</p>
+</li>
+<li>
+<p>The techniques described in dev/INSTRUCTIONS to let hash function
+developers regenerate src/<em>.cc from dev/</em> are hacky and not so portable.</p>
+</li>
+</ol>
+<h1 id="example" class="section-header"><a href="#example">Example</a></h1>
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">hash</span>::{<span class="ident">Hash</span>, <span class="ident">Hasher</span>};
+
+<span class="kw">use</span> <span class="ident">fasthash</span>::{<span class="ident">farm</span>, <span class="ident">FarmHasher</span>};
+
+<span class="kw">fn</span> <span class="ident">hash</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Hash</span><span class="op">&gt;</span>(<span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span>: <span class="ident">FarmHasher</span> <span class="op">=</span> <span class="ident">Default</span>::<span class="ident">default</span>();
+    <span class="ident">t</span>.<span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>);
+    <span class="ident">s</span>.<span class="ident">finish</span>()
+}
+
+<span class="kw">let</span> <span class="ident">h</span> <span class="op">=</span> <span class="ident">farm</span>::<span class="ident">hash64</span>(<span class="string">b&quot;hello world\xff&quot;</span>);
+
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">h</span>, <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="string">&quot;hello world&quot;</span>));</pre></div>
+</div><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
+<table><tr class="module-item"><td><a class="struct" href="struct.Hash32.html" title="fasthash::farm::Hash32 struct">Hash32</a></td><td class="docblock-short"><p><code>FarmHash</code> 32-bit hash functions</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hash64.html" title="fasthash::farm::Hash64 struct">Hash64</a></td><td class="docblock-short"><p><code>FarmHash</code> 64-bit hash functions</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hash128.html" title="fasthash::farm::Hash128 struct">Hash128</a></td><td class="docblock-short"><p><code>FarmHash</code> 128-bit hash functions</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hasher32.html" title="fasthash::farm::Hasher32 struct">Hasher32</a></td><td class="docblock-short"><p>An implementation of <code>std::hash::Hasher</code>.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hasher64.html" title="fasthash::farm::Hasher64 struct">Hasher64</a></td><td class="docblock-short"><p>An implementation of <code>std::hash::Hasher</code>.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hasher128.html" title="fasthash::farm::Hasher128 struct">Hasher128</a></td><td class="docblock-short"><p>An implementation of <code>std::hash::Hasher</code> and <code>fasthash::HasherExt</code>.</p>
+</td></tr></table><h2 id="functions" class="section-header"><a href="#functions">Functions</a></h2>
+<table><tr class="module-item"><td><a class="fn" href="fn.fingerprint32.html" title="fasthash::farm::fingerprint32 fn">fingerprint32</a></td><td class="docblock-short"><p><code>FarmHash</code> 32-bit fingerprint function for a byte array.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.fingerprint64.html" title="fasthash::farm::fingerprint64 fn">fingerprint64</a></td><td class="docblock-short"><p><code>FarmHash</code> 64-bit fingerprint function for a byte array.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.fingerprint128.html" title="fasthash::farm::fingerprint128 fn">fingerprint128</a></td><td class="docblock-short"><p><code>FarmHash</code> 128-bit fingerprint function for a byte array.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash32.html" title="fasthash::farm::hash32 fn">hash32</a></td><td class="docblock-short"><p><code>FarmHash</code> 32-bit hash function for a byte array.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash32_with_seed.html" title="fasthash::farm::hash32_with_seed fn">hash32_with_seed</a></td><td class="docblock-short"><p><code>FarmHash</code> 32-bit hash function for a byte array.
+For convenience, a 32-bit seed is also hashed into the result.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash64.html" title="fasthash::farm::hash64 fn">hash64</a></td><td class="docblock-short"><p><code>FarmHash</code> 64-bit hash function for a byte array.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash64_with_seed.html" title="fasthash::farm::hash64_with_seed fn">hash64_with_seed</a></td><td class="docblock-short"><p><code>FarmHash</code> 64-bit hash function for a byte array.
+For convenience, a 64-bit seed is also hashed into the result.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash64_with_seeds.html" title="fasthash::farm::hash64_with_seeds fn">hash64_with_seeds</a></td><td class="docblock-short"><p><code>FarmHash</code> 64-bit hash function for a byte array.
+For convenience, two seeds are also hashed into the result.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash128.html" title="fasthash::farm::hash128 fn">hash128</a></td><td class="docblock-short"><p><code>FarmHash</code> 128-bit hash function for a byte array.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash128_with_seed.html" title="fasthash::farm::hash128_with_seed fn">hash128_with_seed</a></td><td class="docblock-short"><p><code>FarmHash</code> 128-bit hash function for a byte array.
+For convenience, a 128-bit seed is also hashed into the result.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="fasthash"></div>
+    <script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>

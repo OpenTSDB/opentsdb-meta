@@ -1,0 +1,230 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `fst` crate."><meta name="keywords" content="rust, rustlang, rust-lang, fst"><title>fst - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../ayu.css" disabled ><script id="default-settings"></script><script src="../storage.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../fst/index.html'><div class='logo-container rust-logo'><img src='../rust-logo.png' alt='logo'></div></a><p class="location">Crate fst</p><div class="block version"><p>Version 0.4.7</p></div><div class="sidebar-elems"><a id="all-types" href="all.html"><p>See all fst's items</p></a><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#traits">Traits</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class="location"></p><div id="sidebar-vars" data-name="fst" data-ty="mod" data-relpath="../"></div></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Crate <a class="mod" href="">fst</a></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/fst/lib.rs.html#1-372" title="goto source code">[src]</a></span></h1><div class="docblock"><p>Crate <code>fst</code> is a library for efficiently storing and searching ordered sets or
+maps where the keys are byte strings. A key design goal of this crate is to
+support storing and searching <em>very large</em> sets or maps (i.e., billions). This
+means that much effort has gone in to making sure that all operations are
+memory efficient.</p>
+<p>Sets and maps are represented by a finite state machine, which acts as a form
+of compression on common prefixes and suffixes in the keys. Additionally,
+finite state machines can be efficiently queried with automata (like regular
+expressions or Levenshtein distance for fuzzy queries) or lexicographic ranges.</p>
+<p>To read more about the mechanics of finite state transducers, including a
+bibliography for algorithms used in this crate, see the docs for the
+<a href="raw/struct.Fst.html"><code>raw::Fst</code></a> type.</p>
+<h1 id="installation" class="section-header"><a href="#installation">Installation</a></h1>
+<p>Simply add a corresponding entry to your <code>Cargo.toml</code> dependency list:</p>
+<pre><code class="language-plain">[dependencies]
+fst = &quot;0.4&quot;
+</code></pre>
+<p>The examples in this documentation will show the rest.</p>
+<h1 id="overview-of-types-and-modules" class="section-header"><a href="#overview-of-types-and-modules">Overview of types and modules</a></h1>
+<p>This crate provides the high level abstractions---namely sets and maps---in the
+top-level module.</p>
+<p>The <code>set</code> and <code>map</code> sub-modules contain types specific to sets and maps, such
+as range queries and streams.</p>
+<p>The <code>raw</code> module permits direct interaction with finite state transducers.
+Namely, the states and transitions of a transducer can be directly accessed
+with the <code>raw</code> module.</p>
+<h1 id="example-stream-to-a-file-and-memory-map-it-for-searching" class="section-header"><a href="#example-stream-to-a-file-and-memory-map-it-for-searching">Example: stream to a file and memory map it for searching</a></h1>
+<p>This shows how to create a <code>MapBuilder</code> that will stream construction of the
+map to a file. Notably, this will never store the entire transducer in memory.
+Instead, only constant memory is required during construction.</p>
+<p>For the search phase, we use the
+<a href="https://crates.io/memmap"><code>memmap</code></a>
+crate to make the file available as a <code>&amp;[u8]</code> without necessarily reading it
+all into memory (the operating system will automatically handle that for you).</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">File</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
+
+<span class="kw">use</span> <span class="ident">fst</span>::{<span class="ident">IntoStreamer</span>, <span class="ident">Streamer</span>, <span class="ident">Map</span>, <span class="ident">MapBuilder</span>};
+<span class="kw">use</span> <span class="ident">memmap</span>::<span class="ident">Mmap</span>;
+
+<span class="comment">// This is where we&#39;ll write our map to.</span>
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">wtr</span> <span class="op">=</span> <span class="ident">io</span>::<span class="ident">BufWriter</span>::<span class="ident">new</span>(<span class="ident">File</span>::<span class="ident">create</span>(<span class="string">&quot;map.fst&quot;</span>)<span class="question-mark">?</span>);
+
+<span class="comment">// Create a builder that can be used to insert new key-value pairs.</span>
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">build</span> <span class="op">=</span> <span class="ident">MapBuilder</span>::<span class="ident">new</span>(<span class="ident">wtr</span>)<span class="question-mark">?</span>;
+<span class="ident">build</span>.<span class="ident">insert</span>(<span class="string">&quot;bruce&quot;</span>, <span class="number">1</span>).<span class="ident">unwrap</span>();
+<span class="ident">build</span>.<span class="ident">insert</span>(<span class="string">&quot;clarence&quot;</span>, <span class="number">2</span>).<span class="ident">unwrap</span>();
+<span class="ident">build</span>.<span class="ident">insert</span>(<span class="string">&quot;stevie&quot;</span>, <span class="number">3</span>).<span class="ident">unwrap</span>();
+
+<span class="comment">// Finish construction of the map and flush its contents to disk.</span>
+<span class="ident">build</span>.<span class="ident">finish</span>()<span class="question-mark">?</span>;
+
+<span class="comment">// At this point, the map has been constructed. Now we&#39;d like to search it.</span>
+<span class="comment">// This creates a memory map, which enables searching the map without loading</span>
+<span class="comment">// all of it into memory.</span>
+<span class="kw">let</span> <span class="ident">mmap</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">Mmap</span>::<span class="ident">map</span>(<span class="kw-2">&amp;</span><span class="ident">File</span>::<span class="ident">open</span>(<span class="string">&quot;map.fst&quot;</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span> };
+<span class="kw">let</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">Map</span>::<span class="ident">new</span>(<span class="ident">mmap</span>)<span class="question-mark">?</span>;
+
+<span class="comment">// Query for keys that are greater than or equal to clarence.</span>
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">map</span>.<span class="ident">range</span>().<span class="ident">ge</span>(<span class="string">&quot;clarence&quot;</span>).<span class="ident">into_stream</span>();
+
+<span class="kw">let</span> <span class="ident">kvs</span> <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">into_str_vec</span>()<span class="question-mark">?</span>;
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">kvs</span>, <span class="macro">vec</span><span class="macro">!</span>[
+    (<span class="string">&quot;clarence&quot;</span>.<span class="ident">to_owned</span>(), <span class="number">2</span>),
+    (<span class="string">&quot;stevie&quot;</span>.<span class="ident">to_owned</span>(), <span class="number">3</span>),
+]);</pre></div>
+<h1 id="example-case-insensitive-search" class="section-header"><a href="#example-case-insensitive-search">Example: case insensitive search</a></h1>
+<p>We can perform case insensitive search on a set using a regular expression. We
+can use the <a href="https://docs.rs/regex-automata"><code>regex-automata</code></a> crate to compile
+a regular expression into an automaton:</p>
+
+<div class='information'><div class='tooltip ignore'>ⓘ</div></div><div class="example-wrap"><pre class="rust rust-example-rendered ignore">
+<span class="kw">use</span> <span class="ident">fst</span>::{<span class="ident">IntoStreamer</span>, <span class="ident">Set</span>};
+<span class="kw">use</span> <span class="ident">regex_automata</span>::<span class="ident">dense</span>; <span class="comment">// regex-automata crate with &#39;transducer&#39; feature</span>
+
+<span class="kw">fn</span> <span class="ident">main</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">set</span> <span class="op">=</span> <span class="ident">Set</span>::<span class="ident">from_iter</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;FoO&quot;</span>, <span class="string">&quot;Foo&quot;</span>, <span class="string">&quot;fOO&quot;</span>, <span class="string">&quot;foo&quot;</span>])<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">pattern</span> <span class="op">=</span> <span class="string">r&quot;(?i)foo&quot;</span>;
+    <span class="comment">// Setting &#39;anchored&#39; is important, otherwise the regex can match anywhere</span>
+    <span class="comment">// in the key. This would cause the regex to iterate over every key in the</span>
+    <span class="comment">// FST set.</span>
+    <span class="kw">let</span> <span class="ident">dfa</span> <span class="op">=</span> <span class="ident">dense</span>::<span class="ident">Builder</span>::<span class="ident">new</span>().<span class="ident">anchored</span>(<span class="bool-val">true</span>).<span class="ident">build</span>(<span class="ident">pattern</span>).<span class="ident">unwrap</span>();
+
+    <span class="kw">let</span> <span class="ident">keys</span> <span class="op">=</span> <span class="ident">set</span>.<span class="ident">search</span>(<span class="kw-2">&amp;</span><span class="ident">dfa</span>).<span class="ident">into_stream</span>().<span class="ident">into_strs</span>()<span class="question-mark">?</span>;
+    <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">keys</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="string">&quot;FoO&quot;</span>, <span class="string">&quot;Foo&quot;</span>, <span class="string">&quot;fOO&quot;</span>, <span class="string">&quot;foo&quot;</span>]);
+    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">keys</span>);
+    <span class="prelude-val">Ok</span>(())
+}</pre></div>
+<p>Note that for this to work, the <code>regex-automata</code> crate must be compiled with
+the <code>transducer</code> feature enabled:</p>
+<pre><code class="language-toml">[dependencies]
+fst = &quot;0.4&quot;
+regex-automata = { version = &quot;0.1.9&quot;, features = [&quot;transducer&quot;] }
+</code></pre>
+<h1 id="example-searching-multiple-sets-efficiently" class="section-header"><a href="#example-searching-multiple-sets-efficiently">Example: searching multiple sets efficiently</a></h1>
+<p>Since queries can search a transducer without reading the entire data structure
+into memory, it is possible to search <em>many</em> transducers very quickly.</p>
+<p>This crate provides efficient set/map operations that allow one to combine
+multiple streams of search results. Each operation only uses memory
+proportional to the number of streams.</p>
+<p>The example below shows how to find all keys that start with <code>B</code> or <code>G</code>. The
+example below uses sets, but the same operations are available on maps too.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">fst</span>::<span class="ident">automaton</span>::{<span class="ident">Automaton</span>, <span class="ident">Str</span>};
+<span class="kw">use</span> <span class="ident">fst</span>::<span class="ident">set</span>;
+<span class="kw">use</span> <span class="ident">fst</span>::{<span class="ident">IntoStreamer</span>, <span class="ident">Set</span>, <span class="ident">Streamer</span>};
+
+<span class="kw">fn</span> <span class="ident">example</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">set1</span> <span class="op">=</span> <span class="ident">Set</span>::<span class="ident">from_iter</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;AC/DC&quot;</span>, <span class="string">&quot;Aerosmith&quot;</span>])<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">set2</span> <span class="op">=</span> <span class="ident">Set</span>::<span class="ident">from_iter</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;Bob Seger&quot;</span>, <span class="string">&quot;Bruce Springsteen&quot;</span>])<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">set3</span> <span class="op">=</span> <span class="ident">Set</span>::<span class="ident">from_iter</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;George Thorogood&quot;</span>, <span class="string">&quot;Golden Earring&quot;</span>])<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">set4</span> <span class="op">=</span> <span class="ident">Set</span>::<span class="ident">from_iter</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;Kansas&quot;</span>])<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">set5</span> <span class="op">=</span> <span class="ident">Set</span>::<span class="ident">from_iter</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;Metallica&quot;</span>])<span class="question-mark">?</span>;
+
+    <span class="comment">// Create the matcher. We can reuse it to search all of the sets.</span>
+    <span class="kw">let</span> <span class="ident">matcher</span> <span class="op">=</span> <span class="ident">Str</span>::<span class="ident">new</span>(<span class="string">&quot;B&quot;</span>)
+        .<span class="ident">starts_with</span>()
+        .<span class="ident">union</span>(<span class="ident">Str</span>::<span class="ident">new</span>(<span class="string">&quot;G&quot;</span>).<span class="ident">starts_with</span>());
+
+    <span class="comment">// Build a set operation. All we need to do is add a search result stream</span>
+    <span class="comment">// for each set and ask for the union. (Other operations, like intersection</span>
+    <span class="comment">// and difference are also available.)</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stream</span> <span class="op">=</span>
+        <span class="ident">set</span>::<span class="ident">OpBuilder</span>::<span class="ident">new</span>()
+        .<span class="ident">add</span>(<span class="ident">set1</span>.<span class="ident">search</span>(<span class="kw-2">&amp;</span><span class="ident">matcher</span>))
+        .<span class="ident">add</span>(<span class="ident">set2</span>.<span class="ident">search</span>(<span class="kw-2">&amp;</span><span class="ident">matcher</span>))
+        .<span class="ident">add</span>(<span class="ident">set3</span>.<span class="ident">search</span>(<span class="kw-2">&amp;</span><span class="ident">matcher</span>))
+        .<span class="ident">add</span>(<span class="ident">set4</span>.<span class="ident">search</span>(<span class="kw-2">&amp;</span><span class="ident">matcher</span>))
+        .<span class="ident">add</span>(<span class="ident">set5</span>.<span class="ident">search</span>(<span class="kw-2">&amp;</span><span class="ident">matcher</span>))
+        .<span class="ident">union</span>();
+
+    <span class="comment">// Now collect all of the keys. Alternatively, you could build another set</span>
+    <span class="comment">// here using `SetBuilder::extend_stream`.</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">keys</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">key</span>) <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">next</span>() {
+        <span class="ident">keys</span>.<span class="ident">push</span>(<span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">key</span>.<span class="ident">to_vec</span>())<span class="question-mark">?</span>);
+    }
+    <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">keys</span>, <span class="macro">vec</span><span class="macro">!</span>[
+        <span class="string">&quot;Bob Seger&quot;</span>,
+        <span class="string">&quot;Bruce Springsteen&quot;</span>,
+        <span class="string">&quot;George Thorogood&quot;</span>,
+        <span class="string">&quot;Golden Earring&quot;</span>,
+    ]);
+    <span class="prelude-val">Ok</span>(())
+}</pre></div>
+<h1 id="memory-usage" class="section-header"><a href="#memory-usage">Memory usage</a></h1>
+<p>An important advantage of using finite state transducers to represent sets and
+maps is that they can compress very well depending on the distribution of keys.
+The smaller your set/map is, the more likely it is that it will fit into
+memory. If it's in memory, then searching it is faster. Therefore, it is
+important to do what we can to limit what actually needs to be in memory.</p>
+<p>This is where automata shine, because they can be queried in their compressed
+state without loading the entire data structure into memory. This means that
+one can store a set/map created by this crate on disk and search it without
+actually reading the entire set/map into memory. This use case is served well
+by <em>memory maps</em>, which lets one assign the entire contents of a file to a
+contiguous region of virtual memory.</p>
+<p>Indeed, this crate encourages this mode of operation. Both sets and maps can
+be constructed from anything that provides an <code>AsRef&lt;[u8]&gt;</code> implementation,
+which any memory map should.</p>
+<p>This is particularly important for long running processes that use this crate,
+since it enables the operating system to determine which regions of your
+finite state transducers are actually in memory.</p>
+<p>Of course, there are downsides to this approach. Namely, navigating a
+transducer during a key lookup or a search will likely follow a pattern
+approximating random access. Supporting random access when reading from disk
+can be very slow because of how often <code>seek</code> must be called (or, in the case
+of memory maps, page faults). This is somewhat mitigated by the prevalence of
+solid state drives where seek time is eliminated. Nevertheless, solid state
+drives are not ubiquitous and it is possible that the OS will not be smart
+enough to keep your memory mapped transducers in the page cache. In that case,
+it is advisable to load the entire transducer into your process's memory (e.g.,
+calling <code>Set::new</code> with a <code>Vec&lt;u8&gt;</code>).</p>
+<h1 id="streams" class="section-header"><a href="#streams">Streams</a></h1>
+<p>Searching a set or a map needs to provide some way to iterate over the search
+results. Idiomatic Rust calls for something satisfying the <code>Iterator</code> trait
+to be used here. Unfortunately, this is not possible to do efficiently because
+the <code>Iterator</code> trait does not permit values emitted by the iterator to borrow
+from the iterator. Borrowing from the iterator is required in our case because
+keys and values are constructed <em>during iteration</em>.</p>
+<p>Namely, if we were to use iterators, then every key would need its own
+allocation, which could be quite costly.</p>
+<p>Instead, this crate provides a <code>Streamer</code>, which can be thought of as a
+streaming iterator. Namely, a stream in this crate maintains a single key
+buffer and lends it out on each iteration.</p>
+<p>For more details, including important limitations, see the <code>Streamer</code> trait.</p>
+<h1 id="quirks" class="section-header"><a href="#quirks">Quirks</a></h1>
+<p>There's no doubt about it, finite state transducers are a specialty data
+structure. They have a host of restrictions that don't apply to other similar
+data structures found in the standard library, such as <code>BTreeSet</code> and
+<code>BTreeMap</code>. Here are some of them:</p>
+<ol>
+<li>Sets can only contain keys that are byte strings.</li>
+<li>Maps can also only contain keys that are byte strings, and its values are
+limited to unsigned 64 bit integers. (The restriction on values may be
+relaxed some day.)</li>
+<li>Creating a set or a map requires inserting keys in lexicographic order.
+Often, keys are not already sorted, which can make constructing large
+sets or maps tricky. One way to do it is to sort pieces of the data and
+build a set/map for each piece. This can be parallelized trivially. Once
+done, they can be merged together into one big set/map if desired.
+A somewhat simplistic example of this procedure can be seen in
+<code>fst-bin/src/merge.rs</code> from the root of this crate's repository.</li>
+</ol>
+</div><h2 id="modules" class="section-header"><a href="#modules">Modules</a></h2>
+<table><tr class="module-item"><td><a class="mod" href="automaton/index.html" title="fst::automaton mod">automaton</a></td><td class="docblock-short"><p>Automaton implementations for finite state transducers.</p>
+</td></tr><tr class="module-item"><td><a class="mod" href="map/index.html" title="fst::map mod">map</a></td><td class="docblock-short"><p>Map operations implemented by finite state transducers.</p>
+</td></tr><tr class="module-item"><td><a class="mod" href="raw/index.html" title="fst::raw mod">raw</a></td><td class="docblock-short"><p>Operations on raw finite state transducers.</p>
+</td></tr><tr class="module-item"><td><a class="mod" href="set/index.html" title="fst::set mod">set</a></td><td class="docblock-short"><p>Set operations implemented by finite state transducers.</p>
+</td></tr></table><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
+<table><tr class="module-item"><td><a class="struct" href="struct.Map.html" title="fst::Map struct">Map</a></td><td class="docblock-short"><p>Map is a lexicographically ordered map from byte strings to integers.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.MapBuilder.html" title="fst::MapBuilder struct">MapBuilder</a></td><td class="docblock-short"><p>A builder for creating a map.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Set.html" title="fst::Set struct">Set</a></td><td class="docblock-short"><p>Set is a lexicographically ordered set of byte strings.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.SetBuilder.html" title="fst::SetBuilder struct">SetBuilder</a></td><td class="docblock-short"><p>A builder for creating a set.</p>
+</td></tr></table><h2 id="enums" class="section-header"><a href="#enums">Enums</a></h2>
+<table><tr class="module-item"><td><a class="enum" href="enum.Error.html" title="fst::Error enum">Error</a></td><td class="docblock-short"><p>An error that encapsulates all possible errors in this crate.</p>
+</td></tr></table><h2 id="traits" class="section-header"><a href="#traits">Traits</a></h2>
+<table><tr class="module-item"><td><a class="trait" href="trait.Automaton.html" title="fst::Automaton trait">Automaton</a></td><td class="docblock-short"><p>Automaton describes types that behave as a finite automaton.</p>
+</td></tr><tr class="module-item"><td><a class="trait" href="trait.IntoStreamer.html" title="fst::IntoStreamer trait">IntoStreamer</a></td><td class="docblock-short"><p>IntoStreamer describes types that can be converted to streams.</p>
+</td></tr><tr class="module-item"><td><a class="trait" href="trait.Streamer.html" title="fst::Streamer trait">Streamer</a></td><td class="docblock-short"><p>Streamer describes a &quot;streaming iterator.&quot;</p>
+</td></tr></table><h2 id="types" class="section-header"><a href="#types">Type Definitions</a></h2>
+<table><tr class="module-item"><td><a class="type" href="type.Result.html" title="fst::Result type">Result</a></td><td class="docblock-short"><p>A <code>Result</code> type alias for this crate's <code>Error</code> type.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../" data-current-crate="fst"></div>
+    <script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>

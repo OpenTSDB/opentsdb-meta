@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MetricBitmap","Stores the Bitmaps for each metric."]]});

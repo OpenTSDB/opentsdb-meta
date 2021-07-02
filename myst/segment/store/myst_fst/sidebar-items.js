@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["FSTHeader","Stores the `_type` and `offset` for the FST."],["MystFST","Maintains the FST for each `_type`"],["MystFSTContainer","Encaupsulates MystFst."]]});

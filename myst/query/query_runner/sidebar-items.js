@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["QueryRunner","Runs a query for all segments in a shard."]]});

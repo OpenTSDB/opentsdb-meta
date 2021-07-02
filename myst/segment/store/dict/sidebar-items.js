@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Dict","Stores the dictionary data structure of the segment. Dictionary is essentially a HashMap with an integer key and a String as value."]]});

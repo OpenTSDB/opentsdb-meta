@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `t1ha1` mod in crate `fasthash`."><meta name="keywords" content="rust, rustlang, rust-lang, t1ha1"><title>fasthash::t1ha::t1ha1 - Rust</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../fasthash/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a><p class="location">Module t1ha1</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#reexports">Re-exports</a></li><li><a href="#structs">Structs</a></li></ul></div><p class="location"><a href="../../index.html">fasthash</a>::<wbr><a href="../index.html">t1ha</a></p><div id="sidebar-vars" data-name="t1ha1" data-ty="mod" data-relpath="../"></div><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Module <a href="../../index.html">fasthash</a>::<wbr><a href="../index.html">t1ha</a>::<wbr><a class="mod" href="">t1ha1</a></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../../../src/fasthash/t1ha.rs.html#205-323" title="goto source code">[src]</a></span></h1><div class="docblock"><p>t1ha1 = 64-bit, BASELINE FAST PORTABLE HASH:</p>
+<ul>
+<li>
+<p>Runs faster on 64-bit platforms in other cases may runs slowly.</p>
+</li>
+<li>
+<p>Portable and stable, returns same 64-bit result
+on all architectures and CPUs.</p>
+</li>
+<li>
+<p>Unfortunately it fails the &quot;strict avalanche criteria&quot;,
+see test results at https://github.com/demerphq/smhasher.</p>
+<p>This flaw is insignificant for the t1ha1() purposes and imperceptible
+from a practical point of view.
+However, nowadays this issue has resolved in the next t1ha2(),
+that was initially planned to providing a bit more quality.</p>
+</li>
+</ul>
+</div><h2 id="reexports" class="section-header"><a href="#reexports">Re-exports</a></h2>
+<table><tr><td><code>pub use self::<a class="struct" href="../../../fasthash/t1ha/t1ha1/struct.Hasher64Le.html" title="struct fasthash::t1ha::t1ha1::Hasher64Le">Hasher64Le</a> as Hasher64;</code></td></tr><tr><td><code>pub use self::<a class="struct" href="../../../fasthash/t1ha/t1ha1/struct.Hash64Le.html" title="struct fasthash::t1ha::t1ha1::Hash64Le">Hash64Le</a> as Hash64;</code></td></tr></table><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
+<table><tr class="module-item"><td><a class="struct" href="struct.Hash64Be.html" title="fasthash::t1ha::t1ha1::Hash64Be struct">Hash64Be</a></td><td class="docblock-short"><p><code>T1Hash</code> 64-bit hash functions for 64-bit big-endian platforms.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hash64Le.html" title="fasthash::t1ha::t1ha1::Hash64Le struct">Hash64Le</a></td><td class="docblock-short"><p><code>T1Hash</code> 64-bit hash functions for 64-bit little-endian platforms.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hasher64Be.html" title="fasthash::t1ha::t1ha1::Hasher64Be struct">Hasher64Be</a></td><td class="docblock-short"><p>An implementation of <code>std::hash::Hasher</code>.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hasher64Le.html" title="fasthash::t1ha::t1ha1::Hasher64Le struct">Hasher64Le</a></td><td class="docblock-short"><p>An implementation of <code>std::hash::Hasher</code>.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="fasthash"></div>
+    <script src="../../../main.js"></script><script defer src="../../../search-index.js"></script></body></html>

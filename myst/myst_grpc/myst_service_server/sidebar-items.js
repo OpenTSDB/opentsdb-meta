@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MystServiceServer",""]],"trait":[["MystService","Generated trait containing gRPC methods that should be implemented for use with MystServiceServer."]]});

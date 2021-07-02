@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `spooky` mod in crate `fasthash`."><meta name="keywords" content="rust, rustlang, rust-lang, spooky"><title>fasthash::spooky - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../fasthash/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a><p class="location">Module spooky</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#functions">Functions</a></li></ul></div><p class="location"><a href="../index.html">fasthash</a></p><div id="sidebar-vars" data-name="spooky" data-ty="mod" data-relpath="../"></div><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Module <a href="../index.html">fasthash</a>::<wbr><a class="mod" href="">spooky</a></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../../src/fasthash/spooky.rs.html#1-326" title="goto source code">[src]</a></span></h1><div class="docblock"><p><code>SpookyHash</code>: a 128-bit noncryptographic hash function</p>
+<p>by Bob Jenkins</p>
+<p>http://www.burtleburtle.net/bob/hash/spooky.html</p>
+<ul>
+<li>Oct 31 2010: alpha, framework + <code>SpookyHash</code>::Mix appears right</li>
+<li>Oct 31 2011: alpha again, Mix only good to 2^^69 but rest appears right</li>
+<li>Dec 31 2011: beta, improved Mix, tested it for 2-bit deltas</li>
+<li>Feb  2 2012: production, same bits as beta</li>
+<li>Feb  5 2012: adjusted definitions of uint* to be more portable</li>
+</ul>
+<p>Up to 4 bytes/cycle for long messages.  Reasonably fast for short messages.
+All 1 or 2 bit deltas achieve avalanche within 1% bias per output bit.</p>
+<p>This was developed for and tested on 64-bit x86-compatible processors.
+It assumes the processor is little-endian.  There is a macro
+controlling whether unaligned reads are allowed (by default they are).
+This should be an equally good hash on big-endian machines, but it will
+compute different results on them than on little-endian machines.</p>
+<p>Google's <code>CityHash</code> has similar specs to <code>SpookyHash</code>, and <code>CityHash</code> is faster
+on some platforms.  MD4 and MD5 also have similar specs, but they are orders
+of magnitude slower.  CRCs are two or more times slower, but unlike
+<code>SpookyHash</code>, they have nice math for combining the CRCs of pieces to form
+the CRCs of wholes.  There are also cryptographic hashes, but those are even
+slower than MD5.</p>
+<h1 id="examples" class="section-header"><a href="#examples">Examples</a></h1>
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">hash</span>::{<span class="ident">Hash</span>, <span class="ident">Hasher</span>};
+
+<span class="kw">use</span> <span class="ident">fasthash</span>::{<span class="ident">spooky</span>, <span class="ident">SpookyHasher</span>};
+
+<span class="kw">fn</span> <span class="ident">hash</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Hash</span><span class="op">&gt;</span>(<span class="ident">t</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span>: <span class="ident">SpookyHasher</span> <span class="op">=</span> <span class="ident">Default</span>::<span class="ident">default</span>();
+    <span class="ident">t</span>.<span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>);
+    <span class="ident">s</span>.<span class="ident">finish</span>()
+}
+
+<span class="kw">let</span> <span class="ident">h</span> <span class="op">=</span> <span class="ident">spooky</span>::<span class="ident">hash64</span>(<span class="string">b&quot;hello world\xff&quot;</span>);
+
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">h</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="string">&quot;hello world&quot;</span>));</pre></div>
+</div><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
+<table><tr class="module-item"><td><a class="struct" href="struct.Hash32.html" title="fasthash::spooky::Hash32 struct">Hash32</a></td><td class="docblock-short"><p><code>SpookyHash</code> 32-bit hash functions</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hash64.html" title="fasthash::spooky::Hash64 struct">Hash64</a></td><td class="docblock-short"><p><code>SpookyHash</code> 64-bit hash functions</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hash128.html" title="fasthash::spooky::Hash128 struct">Hash128</a></td><td class="docblock-short"><p><code>SpookyHash</code> 128-bit hash functions</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hasher32.html" title="fasthash::spooky::Hasher32 struct">Hasher32</a></td><td class="docblock-short"><p>An implementation of <code>std::hash::Hasher</code>.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hasher64.html" title="fasthash::spooky::Hasher64 struct">Hasher64</a></td><td class="docblock-short"><p>An implementation of <code>std::hash::Hasher</code>.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Hasher128.html" title="fasthash::spooky::Hasher128 struct">Hasher128</a></td><td class="docblock-short"><p>An implementation of <code>std::hash::Hasher</code> and <code>fasthash::HasherExt</code>.</p>
+</td></tr></table><h2 id="functions" class="section-header"><a href="#functions">Functions</a></h2>
+<table><tr class="module-item"><td><a class="fn" href="fn.hash32.html" title="fasthash::spooky::hash32 fn">hash32</a></td><td class="docblock-short"><p><code>SpookyHash</code> 32-bit hash functions for a byte array.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash32_with_seed.html" title="fasthash::spooky::hash32_with_seed fn">hash32_with_seed</a></td><td class="docblock-short"><p><code>SpookyHash</code> 32-bit hash functions for a byte array.
+For convenience, a 32-bit seed is also hashed into the result.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash64.html" title="fasthash::spooky::hash64 fn">hash64</a></td><td class="docblock-short"><p><code>SpookyHash</code> 64-bit hash functions for a byte array.
+For convenience, a 64-bit seed is also hashed into the result.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash64_with_seed.html" title="fasthash::spooky::hash64_with_seed fn">hash64_with_seed</a></td><td class="docblock-short"><p><code>SpookyHash</code> 64-bit hash functions for a byte array.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash128.html" title="fasthash::spooky::hash128 fn">hash128</a></td><td class="docblock-short"><p><code>SpookyHash</code> 128-bit hash functions for a byte array.
+For convenience, a 128-bit seed is also hashed into the result.</p>
+</td></tr><tr class="module-item"><td><a class="fn" href="fn.hash128_with_seed.html" title="fasthash::spooky::hash128_with_seed fn">hash128_with_seed</a></td><td class="docblock-short"><p><code>SpookyHash</code> 128-bit hash functions for a byte array.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="fasthash"></div>
+    <script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>

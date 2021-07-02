@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["EPOCH_DURATION","Duration for each Bitmap. All timeseries that falls from start of epoch to this duration will be in a Bitmap"]],"struct":[["EpochBitmap","Stores a Bitmap for each epoch rolling every `EPOCH_DURATION` seconds."],["EpochBitmapHeader",""]]});

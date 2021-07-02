@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["SegmentReader","Contains various helper functions to read Myst Segment from a reader R"]]});

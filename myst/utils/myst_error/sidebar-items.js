@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ErrorKind",""]],"struct":[["MystError","MystError encapsulates all errors from this crate"]],"type":[["Result","Result type for myst's error type"]]});

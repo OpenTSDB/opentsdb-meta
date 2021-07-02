@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Bloom","Bloom filter structure"]]});

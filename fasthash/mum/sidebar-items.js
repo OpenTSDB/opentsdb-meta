@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["hash64","`MumHash` 64-bit hash functions for a byte array."],["hash64_with_seed","`MumHash` 64-bit hash function for a byte array. For convenience, a 64-bit seed is also hashed into the result."]],"struct":[["Hash64","`MumHash` 64-bit hash functions"],["Hasher64","An implementation of `std::hash::Hasher`."]]});

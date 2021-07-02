@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `raw` mod in crate `fst`."><meta name="keywords" content="rust, rustlang, rust-lang, raw"><title>fst::raw - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../fst/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a><p class="location">Module raw</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#constants">Constants</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class="location"><a href="../index.html">fst</a></p><div id="sidebar-vars" data-name="raw" data-ty="mod" data-relpath="../"></div><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Module <a href="../index.html">fst</a>::<wbr><a class="mod" href="">raw</a></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../../src/fst/raw/mod.rs.html#1-1382" title="goto source code">[src]</a></span></h1><div class="docblock"><p>Operations on raw finite state transducers.</p>
+<p>This sub-module exposes the guts of a finite state transducer. Many parts of
+it, such as construction and traversal, are mirrored in the <code>set</code> and <code>map</code>
+sub-modules. Other parts of it, such as direct access to nodes and transitions
+in the transducer, do not have any analog.</p>
+<h1 id="overview-of-types" class="section-header"><a href="#overview-of-types">Overview of types</a></h1>
+<p><code>Fst</code> is a read only interface to pre-constructed finite state transducers.
+<code>Node</code> is a read only interface to a single node in a transducer. <code>Builder</code> is
+used to create new finite state transducers. (Once a transducer is created, it
+can never be modified.) <code>Stream</code> is a stream of all inputs and outputs in a
+transducer. <code>StreamBuilder</code> builds range queries. <code>OpBuilder</code> collects streams
+and executes set operations like <code>union</code> or <code>intersection</code> on them with the
+option of specifying a merge strategy for output values.</p>
+<p>Most of the rest of the types are streams from set operations.</p>
+</div><h2 id="structs" class="section-header"><a href="#structs">Structs</a></h2>
+<table><tr class="module-item"><td><a class="struct" href="struct.Builder.html" title="fst::raw::Builder struct">Builder</a></td><td class="docblock-short"><p>A builder for creating a finite state transducer.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Difference.html" title="fst::raw::Difference struct">Difference</a></td><td class="docblock-short"><p>A stream of set difference over multiple fst streams in lexicographic
+order.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Fst.html" title="fst::raw::Fst struct">Fst</a></td><td class="docblock-short"><p>An acyclic deterministic finite state transducer.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.IndexedValue.html" title="fst::raw::IndexedValue struct">IndexedValue</a></td><td class="docblock-short"><p>A value indexed by a stream.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Intersection.html" title="fst::raw::Intersection struct">Intersection</a></td><td class="docblock-short"><p>A stream of set intersection over multiple fst streams in lexicographic
+order.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Node.html" title="fst::raw::Node struct">Node</a></td><td class="docblock-short"><p>Node represents a single state in a finite state transducer.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.OpBuilder.html" title="fst::raw::OpBuilder struct">OpBuilder</a></td><td class="docblock-short"><p>A builder for collecting fst streams on which to perform set operations
+on the keys of fsts.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Output.html" title="fst::raw::Output struct">Output</a></td><td class="docblock-short"><p>An output is a value that is associated with a key in a finite state
+transducer.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Stream.html" title="fst::raw::Stream struct">Stream</a></td><td class="docblock-short"><p>A lexicographically ordered stream of key-value pairs from an fst.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.StreamBuilder.html" title="fst::raw::StreamBuilder struct">StreamBuilder</a></td><td class="docblock-short"><p>A builder for constructing range queries on streams.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.StreamWithState.html" title="fst::raw::StreamWithState struct">StreamWithState</a></td><td class="docblock-short"><p>A lexicographically ordered stream of key-value-state triples from an fst
+and an automaton.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.StreamWithStateBuilder.html" title="fst::raw::StreamWithStateBuilder struct">StreamWithStateBuilder</a></td><td class="docblock-short"><p>A builder for constructing range queries on streams that include automaton
+states.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.SymmetricDifference.html" title="fst::raw::SymmetricDifference struct">SymmetricDifference</a></td><td class="docblock-short"><p>A stream of set symmetric difference over multiple fst streams in
+lexicographic order.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Transition.html" title="fst::raw::Transition struct">Transition</a></td><td class="docblock-short"><p>A transition from one note to another.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Transitions.html" title="fst::raw::Transitions struct">Transitions</a></td><td class="docblock-short"><p>An iterator over all transitions in a node.</p>
+</td></tr><tr class="module-item"><td><a class="struct" href="struct.Union.html" title="fst::raw::Union struct">Union</a></td><td class="docblock-short"><p>A stream of set union over multiple fst streams in lexicographic order.</p>
+</td></tr></table><h2 id="enums" class="section-header"><a href="#enums">Enums</a></h2>
+<table><tr class="module-item"><td><a class="enum" href="enum.Error.html" title="fst::raw::Error enum">Error</a></td><td class="docblock-short"><p>An error that occurred while using a finite state transducer.</p>
+</td></tr></table><h2 id="constants" class="section-header"><a href="#constants">Constants</a></h2>
+<table><tr class="module-item"><td><a class="constant" href="constant.VERSION.html" title="fst::raw::VERSION constant">VERSION</a></td><td class="docblock-short"><p>The API version of this crate.</p>
+</td></tr></table><h2 id="types" class="section-header"><a href="#types">Type Definitions</a></h2>
+<table><tr class="module-item"><td><a class="type" href="type.CompiledAddr.html" title="fst::raw::CompiledAddr type">CompiledAddr</a></td><td class="docblock-short"><p>CompiledAddr is the type used to address nodes in a finite state
+transducer.</p>
+</td></tr><tr class="module-item"><td><a class="type" href="type.FstType.html" title="fst::raw::FstType type">FstType</a></td><td class="docblock-short"><p>FstType is a convention used to indicate the type of the underlying
+transducer.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="fst"></div>
+    <script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>

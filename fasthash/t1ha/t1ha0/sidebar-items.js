@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["aes","`T1Hash` 64-bit hash functions with AES."],["avx","`T1Hash` 64-bit hash functions with AVX."],["avx2","`T1Hash` 64-bit hash functions with AVX2."]],"struct":[["Hash64","`T1Hash` 64-bit hash functions."],["Hasher64_64","An implementation of `std::hash::Hasher`."]]});

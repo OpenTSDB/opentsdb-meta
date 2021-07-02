@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Hash128AtOnce","The at-once variant with 64-bit result"],["Hash64AtOnce","The at-once variant with 64-bit result"],["Hasher128","An implementation of `std::hash::Hasher` and `fasthash::HasherExt`."],["Hasher64","An implementation of `std::hash::Hasher`."]]});
