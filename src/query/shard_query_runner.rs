@@ -142,10 +142,10 @@ impl ShardQueryRunner {
                 let created = d.file_name().to_str().unwrap().parse::<u64>().unwrap();
 
                 let duration = if duration_file.exists() {
-                    let mut dur = File::open(duration_file.as_path());
+                    let dur = File::open(duration_file.as_path());
                     let mut dur_str = String::new();
                     if dur.is_ok() {
-                        dur.unwrap().read_to_string(&mut dur_str);
+                        dur.unwrap().read_to_string(&mut dur_str)?;
                         let fduration = dur_str.parse().unwrap_or(0 as i32);
                         fduration
                     } else {

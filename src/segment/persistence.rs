@@ -49,6 +49,10 @@ where
     fn get(shard: u32, epoch: u64) -> Option<W>;
 }
 
+/// This trait needs to be implemented
+/// by any Data structure needing a dynamic duration parameter.
+/// i.e Wherever there is a concept of an updating sub-epoch.
+/// Ex: Cached versions of data and MystSegment.
 pub trait TimeSegmented {
     fn get_duration(&self) -> Option<i32>;
     fn set_duration(&mut self, duration: i32); 

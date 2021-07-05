@@ -19,7 +19,7 @@
 
 use super::store::docstore::DocStore;
 use crate::query::cache::Cache;
-use crate::segment::myst_segment::{MystSegment, MystSegmentHeader, MystSegmentHeaderKeys};
+use crate::segment::myst_segment::{MystSegmentHeader, MystSegmentHeaderKeys};
 use crate::segment::store::docstore::DeserializedDocStore;
 use crate::segment::store::dict::DictHolder;
 use crate::segment::store::myst_fst::MystFST;
@@ -36,7 +36,6 @@ use regex_automata::dense;
 
 use lz4::Decoder;
 use num::ToPrimitive;
-use std::io::BufRead;
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::{
@@ -351,7 +350,6 @@ impl<R: Read + Seek> SegmentReader<R> {
 
     pub fn get_ts_bitmap_from_reader(reader: &mut R, offset: u32) -> Result<Bitmap> {
         reader.seek(SeekFrom::Start(offset as u64))?;
-        let epoch = reader.read_u64::<NativeEndian>()?;
         let bitmap_size = reader.read_u32::<NativeEndian>()?;
         let mut buf = vec![0; bitmap_size as usize];
         reader.read_exact(&mut buf)?;
@@ -393,6 +391,7 @@ impl<R: Read + Seek> SegmentReader<R> {
                         self.created,
                         id
                     );
+                    drop(docstore_lock);
                     let new_d = self.get_docstore(id)?;
                     debug!(
                         "Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}",
@@ -403,11 +402,11 @@ impl<R: Read + Seek> SegmentReader<R> {
                     );
                     sharded_cache.put(self.created, id, new_d.clone());
                     return Ok(new_d);
+                } else {
+                    let d = docstore.clone();
+                    drop(docstore_lock);
+                    return Ok(d);
                 }
-
-                let d = docstore.clone();
-                drop(docstore_lock);
-                Ok(d)
             } //Yikes: TODO
             None => {
                 drop(docstore_lock);
@@ -426,7 +425,6 @@ impl<R: Read + Seek> SegmentReader<R> {
     }
 
     pub fn get_docstore(&self, id: u32) -> Result<Arc<DeserializedDocStore>> {
-        let mut curr_time = SystemTime::now();
         let mut buffered_reader = BufReader::new(File::open(self.file_path.clone())?);
         let offset = *self
             .docstore_header
@@ -518,6 +516,7 @@ impl<R: Read + Seek> SegmentReader<R> {
                         self.shard_id,
                         self.created,
                     );
+                    drop(lock);
                     let new_dict = self.get_dict()?;
                     debug!(
                         "Time took to get dict from disk {:?} for shard: {} segment: {}",
@@ -527,11 +526,11 @@ impl<R: Read + Seek> SegmentReader<R> {
                     );
                     sharded_cache.put_dict(self.created, new_dict.clone());
                     return Ok(new_dict)
+                } else {
+                    let d = dict.clone();
+                    drop(lock);
+                    return Ok(d);
                 }
-
-                let d = dict.clone();
-                drop(lock);
-                Ok(d)
             } //Yikes: TODO
             None => {
                 drop(lock);
