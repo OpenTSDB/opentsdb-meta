@@ -17,7 +17,7 @@
  *
  */
 
-use super::yamas_fst::YamasFST;
+use super::myst_fst::MystFST;
 
 use crate::segment::persistence::Builder;
 use crate::segment::persistence::Loader;
@@ -32,7 +32,7 @@ use std::{collections::HashMap, io::Read, io::Write, rc::Rc};
 #[derive(Debug)]
 pub struct TagKeysBitmap {
     pub tag_keys_bitmap: HashMap<Rc<String>, Bitmap>, // tagkey -> bitmap
-    pub fsts: Option<HashMap<Rc<String>, YamasFST>>,
+    pub fsts: Option<HashMap<Rc<String>, MystFST>>,
 }
 
 impl TagKeysBitmap {
@@ -60,7 +60,7 @@ impl<W: Write> Builder<W> for TagKeysBitmap {
             let val = fst.buf.get(k).ok_or(MystError::new_query_error(
                 "Tag not found in FST. Something is wrong",
             ))?;
-            let id = YamasFST::get_id(*val);
+            let id = MystFST::get_id(*val);
 
             fst.insert_with_id_and_offset(Rc::clone(&k), id, tmp_offset);
             // data = length +
@@ -82,7 +82,7 @@ impl<W: Write> Builder<W> for TagKeysBitmap {
 #[derive(Debug)]
 pub struct TagValuesBitmap {
     pub tag_vals_bitmap: HashMap<Rc<String>, HashMap<Rc<String>, Bitmap>>, // tagkey -> tagval -> bitmap
-    pub fsts: Option<HashMap<Rc<String>, YamasFST>>,
+    pub fsts: Option<HashMap<Rc<String>, MystFST>>,
 }
 
 impl<W: Write> Builder<W> for TagValuesBitmap {
@@ -94,7 +94,7 @@ impl<W: Write> Builder<W> for TagValuesBitmap {
             for (tv, bitmap) in v.iter() {
                 let tv_fst = self.fsts.as_mut().unwrap().get_mut(k).unwrap();
                 let val = tv_fst.buf.get(tv).unwrap();
-                let id = YamasFST::get_id(*val);
+                let id = MystFST::get_id(*val);
 
                 tv_fst.insert_with_id_and_offset(Rc::clone(&tv), id, tmp_offset);
                 length = bitmap.get_serialized_size_in_bytes() as u32;

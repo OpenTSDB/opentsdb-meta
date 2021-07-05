@@ -20,9 +20,9 @@
 //Periodically check for and download segments
 
 use crate::s3::remote_store::RemoteStore;
+use log::info;
 use std::fs::{create_dir_all, read_dir, rename, File};
 use std::path::Path;
-use std::rc::Rc;
 use std::{
     collections::HashSet, io::Error, io::ErrorKind, io::Write, os::unix::prelude::FileExt,
     sync::Arc, thread,
@@ -66,7 +66,7 @@ impl SegmentDownload {
     }
 
     async fn download(self) -> Result<(), Error> {
-        println!("In download function for {}", &self.prefix_i);
+        info!("In download function for {}", &self.prefix_i);
         let prefix = Arc::clone(&self.prefix_i);
 
         let mut downloaded_set_original: HashSet<String> = HashSet::new();
@@ -75,7 +75,7 @@ impl SegmentDownload {
 
         let root_dir = Path::new(&shard_path);
         if root_dir.exists() {
-            println!("Reading for {:?} as dir exists", root_dir);
+            info!("Reading for {:?} as dir exists", root_dir);
             let mut files: Vec<String> = Vec::new();
             //Recursively list files
             self.list_files(root_dir, &mut files)?;
@@ -83,14 +83,14 @@ impl SegmentDownload {
                 downloaded_set_original.insert(sfile);
             }
         } else {
-            println!("Path does not exist, creating {:?}", root_dir);
+            info!("Path does not exist, creating {:?}", root_dir);
             create_dir_all(root_dir)?;
         }
-        println!("Before loop for {}", &self.prefix_i);
+        info!("Before loop for {}", &self.prefix_i);
         let downloaded_set: Arc<RwLock<HashSet<String>>> =
             Arc::new(RwLock::new(downloaded_set_original));
         loop {
-            println!("Starting loop for {}", &self.prefix_i);
+            info!("Starting loop for {}", &self.prefix_i);
             let store = self.remote_store.clone();
             let store_clone = Arc::clone(&store);
             let result = store_clone.list_files(prefix.to_string().to_owned()).await;
@@ -98,12 +98,12 @@ impl SegmentDownload {
                 Ok(files_option) => match files_option {
                     Some(f) => f,
                     None => {
-                        println!("No files found for {}", prefix);
+                        info!("No files found for {}", prefix);
                         continue;
                     }
                 },
                 Err(e) => {
-                    println!("Error fetching files for prefix: {}", prefix);
+                    info!("Error fetching files for prefix: {}", prefix);
                     continue;
                 }
             };
@@ -132,8 +132,8 @@ impl SegmentDownload {
                     if !skip {
                         create_dir_all(tpath.parent().unwrap());
                         create_dir_all(fpath.parent().unwrap());
-                        println!("Creating path: {:?}", tpath);
-                        println!("Downloading file: {}", file_name_clone);
+                        info!("Creating path: {:?}", tpath);
+                        info!("Downloading file: {}", file_name_clone);
                         let mut f = File::create(tpath.clone()).unwrap();
                         let downloaded = store_clone
                             .download(file_name_clone.to_string().to_owned(), &mut f)
@@ -142,7 +142,7 @@ impl SegmentDownload {
                             Ok(bytes) => {
                                 f.flush().unwrap();
                                 //Final move
-                                println!(
+                                info!(
                                     "Moving downloaded file from {:?} to {:?}",
                                     tpath.to_str(),
                                     fpath.to_str()
@@ -156,11 +156,11 @@ impl SegmentDownload {
                                 drop(lock);
                             }
                             Err(e) => {
-                                println!("Error fetching file {}", file_name);
+                                info!("Error fetching file {}", file_name);
                             }
                         }
                     } else {
-                        println!(
+                        info!(
                             "Skipping download for file {}, as it is already there.",
                             &file_path
                         );
@@ -172,18 +172,18 @@ impl SegmentDownload {
                     let lock_file = lock_file_buf.as_path();
 
                     if !lock_file.exists() {
-                        println!("Creating lock file: {:?}", lock_file.to_str());
+                        info!("Creating lock file: {:?}", lock_file.to_str());
                         File::create(lock_file).unwrap();
                     }
                 }));
             }
-            handles.push(tokio::spawn(async move { println!("Dummy closure!") }));
-            println!("Before block on");
+            handles.push(tokio::spawn(async move { info!("Dummy closure!") }));
+            info!("Before block on");
             /* let result = futures::executor::block_on(futures::future::try_join_all(handles));
-                   println!("After block on");
+                   info!("After block on");
             match result {
-                           Ok(v) => println!("Downloaded all shards successfully!"),
-                           Err(e) => println!("Error while downloading from s3 {:?}", e),
+                           Ok(v) => info!("Downloaded all shards successfully!"),
+                           Err(e) => info!("Error while downloading from s3 {:?}", e),
                       }
 
                    for rs1 in result {
@@ -197,15 +197,15 @@ impl SegmentDownload {
                 let result = h.await;
                 match result {
                     Ok(v) => count += 1,
-                    Err(e) => println!("Error while downloading from s3 {:?}", e),
+                    Err(e) => info!("Error while downloading from s3 {:?}", e),
                 }
             }
-            println!(
+            info!(
                 "Successfully downloaded for {}/{} files for shard: {}",
                 count, download_count, self.shard
             );
             let sleep_time = tokio::time::Duration::from_secs(self.frequency);
-            println!("Will sleep for a while before retrying {:?}", sleep_time);
+            info!("Will sleep for a while before retrying {:?}", sleep_time);
             thread::sleep(sleep_time);
         }
     }
@@ -219,7 +219,7 @@ impl SegmentDownload {
         } else if root_dir.is_file() {
             let full_name = root_dir.to_str().unwrap();
             if !full_name.ends_with(".lock") {
-                println!("Inserting path: {} into vector: ", full_name);
+                info!("Inserting path: {} into vector: ", full_name);
                 files.push(full_name.to_string());
             }
         }
@@ -228,7 +228,7 @@ impl SegmentDownload {
 }
 
 pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Starting segment download");
+    info!("Starting segment download");
     let mut config = Config::new();
 
     let processed_bucket = config.processed_bucket;
@@ -249,7 +249,7 @@ pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
     let arc_s3_client = Arc::new(s3_client);
     let arc_processed_bucket = Arc::new(processed_bucket.clone());
     let num_shards = config.shards as usize;
-    println!("Num shards: {} root path: {}", num_shards, root_data_path);
+    info!("Num shards: {} root path: {}", num_shards, root_data_path);
 
     let mut handles = Vec::new();
     for i in 0..num_shards {
@@ -269,7 +269,7 @@ pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
                 frequency,
             );
             let result = segment_download.download().await;
-            println!(
+            info!(
                 "Segment download finished for: {} {:?}",
                 &remote_prefix, result
             );
@@ -280,8 +280,8 @@ pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
     /*let result = futures::executor::block_on(futures::future::try_join_all(handles));
 
     match result {
-        Ok(v) => println!("Threads submitted successfully - should never happen!"),
-        Err(e) => println!("Error while submitting jobs for download from remote store {:?}", e),
+        Ok(v) => info!("Threads submitted successfully - should never happen!"),
+        Err(e) => info!("Error while submitting jobs for download from remote store {:?}", e),
     }*/
     Ok(())
 }

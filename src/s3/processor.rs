@@ -28,6 +28,7 @@ use crate::timeseries_record::ParseRecord;
 use crate::timeseries_record::Record;
 use flate2::read::GzDecoder;
 use futures::TryStreamExt;
+use log::info;
 use myst::setup_logger;
 use rusoto_core::credential::AwsCredentials;
 use rusoto_core::credential::StaticProvider;
@@ -82,7 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         list_request.prefix = Some(key_prefix.to_string());
 
-        println!(
+        info!(
             "Listing objects for bucket: {} and key prefix: {}",
             bucket, key_prefix
         );
@@ -91,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let object_list = result.contents;
 
-        println!(
+        info!(
             "Checked object availability for {} , result is {:?}",
             key_prefix, object_list
         );
@@ -99,7 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let objects = match object_list {
             Some(obj) => obj,
             None => {
-                println!(
+                info!(
                     "Nothing found for {:?} {:?}, will try again in {} secs",
                     bucket, key_prefix, poll_interval
                 );
@@ -148,7 +149,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
             handles.push(handle);
         }
-        println!(
+        info!(
             "Created segment writers: {} for epoch: {}",
             segment_signals.len(),
             running_time
@@ -167,15 +168,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .await?;
 
-        println!("Waiting for segment writers to finish their job...");
+        info!("Waiting for segment writers to finish their job...");
         for hdl in handles {
             hdl.join().unwrap();
         }
 
-        println!("Successfully finished generation for {} !", key_prefix);
+        info!("Successfully finished generation for {} !", key_prefix);
         running_time += segment_duration;
         key_prefix = format!("{}/{}", namespace, running_time);
-        println!("Will begin polling for {}", key_prefix);
+        info!("Will begin polling for {}", key_prefix);
     }
 }
 
@@ -200,7 +201,7 @@ async fn process(
             loop {
                 let senders_clone_clone = Arc::clone(&senders_clone);
                 let s3_client_clone = Arc::clone(&s3_client);
-                println!(
+                info!(
                     "Trying to fetch object name: {} : {:?} iteration: {}",
                     bucket, object.key, num_iteration
                 );
@@ -215,19 +216,19 @@ async fn process(
 
                 match result {
                     Ok(()) => {
-                        println!(
+                        info!(
                             "Successfully fetched and processed {}",
                             object.key.as_ref().unwrap().to_string()
                         );
                         break; // break out of inner loop.
                     }
                     Err(e) => {
-                        println!(
+                        info!(
                             "Error while fetching from s3: {:?} try: {}",
                             e, num_iteration
                         );
                         if num_iteration > 2 {
-                            println!(
+                            info!(
                                 "Tried fetching {} {} times. Giving up now.",
                                 object.key.as_ref().unwrap().to_string(),
                                 num_iteration
@@ -245,25 +246,25 @@ async fn process(
     let res = futures::executor::block_on(futures::future::try_join_all(handles));
     match res {
         Ok(_res) => {
-            println!("Succesfully processed all shards for bucket {}", bucket_str)
+            info!("Succesfully processed all shards for bucket {}", bucket_str)
         }
         Err(e) => {
-            println!("Error while fetching from s3: {:?}", e);
+            info!("Error while fetching from s3: {:?}", e);
         }
     }
     //Create segment files
     let mut write_guard = senders.write().await;
     for sender in write_guard.drain() {
-        println!("Dropping sender {:?}", sender);
+        info!("Dropping sender {:?}", sender);
         drop(sender.1); // need to drop senders or the receivers will keep blocking
     }
     for i in 0..segment_signals.len() {
-        println!("Sending finish signal to writer: {}", i);
+        info!("Sending finish signal to writer: {}", i);
         let signal = segment_signals.get(i).unwrap();
         signal.store(true, Ordering::SeqCst);
     }
 
-    println!(
+    info!(
         "Time took to process {:?}",
         SystemTime::now().duration_since(curr_time).unwrap()
     );
@@ -280,11 +281,11 @@ async fn fetch_and_process(
     let senders_unlocked = senders.read().await;
     let num_shards = senders_unlocked.len();
     //  let mut cluster = Cluster::default();
-    println!("Running get from s3 for");
+    info!("Running get from s3 for");
     match result {
         Ok(object) => {
             let len = object.content_length.unwrap();
-            println!("Object output: {:?} and length: {}", object.metadata, len);
+            info!("Object output: {:?} and length: {}", object.metadata, len);
             let async_read = object.body.unwrap();
             let data = async_read
                 .map_ok(|b| bytes::BytesMut::from(&b[..]))
@@ -292,7 +293,7 @@ async fn fetch_and_process(
                 .await
                 .unwrap();
             let vec = data.to_vec();
-            println!("Read {:?} bytes", data.len());
+            info!("Read {:?} bytes", data.len());
             let mut decoder = GzDecoder::new(&vec[..]);
             //let mut read_bytes = 0;
             //let mut iter: i64 = 0;
@@ -304,27 +305,27 @@ async fn fetch_and_process(
                 let result = decoder.read_exact(&mut small_buffer);
                 match result {
                     Err(e) => {
-                        println!("Stopped reading {:?}", e);
+                        info!("Stopped reading {:?}", e);
                         break;
                     }
                     _ => {}
                 }
                 let read_len = Record::read_int(&mut small_buffer);
-                //println!("New record length: {}", read_len);
+                //info!("New record length: {}", read_len);
                 let mut read_buffer = vec![0u8; read_len as usize];
                 total_bytes += read_len;
                 let mut record = Record::default();
                 decoder.read_exact(&mut read_buffer);
                 match record.parse(&mut read_buffer) {
                     Err(e) => {
-                        println!("Error but continuing {:?}", e);
+                        info!("Error but continuing {:?}", e);
                         parse_errors += 1;
                     }
                     _ => {}
                 }
                 let sender_index = (record.xx_hash % (num_shards as i64)).abs() as usize;
                 let sender = senders_unlocked.get(&(sender_index as u32)).unwrap();
-                //println!("Result: {:?} {:?} {:?} {:?} {}", read_len, record.metric, record.tags, record.xx_hash, val);
+                //info!("Result: {:?} {:?} {:?} {:?} {}", read_len, record.metric, record.tags, record.xx_hash, val);
 
                 sender.send(record).await?;
                 //   cluster.cluster_by_metric(record);
@@ -332,7 +333,7 @@ async fn fetch_and_process(
             }
 
             //  cluster.drain(senders).await?;
-            println!(
+            info!(
                 "Read {} records {} bytes in shard with {} errors.",
                 val, total_bytes, parse_errors
             );
@@ -340,7 +341,7 @@ async fn fetch_and_process(
             return Ok(());
         }
         Err(e) => {
-            println!("Error fetching object: {:?}", e);
+            info!("Error fetching object: {:?}", e);
             return Err(Box::new(Error::new(
                 ErrorKind::Other,
                 "Error fetching from s3",

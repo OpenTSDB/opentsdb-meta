@@ -326,7 +326,7 @@ mod test {
         let mut writer = File::create(filename).unwrap();
         docstore.build(&mut writer, &mut 0);
     }
-    #[test]
+    //#[test]
     pub fn test_compression() {
         rayon::ThreadPoolBuilder::new()
             .num_threads(num_cpus::get())

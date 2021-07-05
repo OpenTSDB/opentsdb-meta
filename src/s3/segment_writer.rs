@@ -23,6 +23,7 @@ use crate::timeseries_record::Record;
 use myst::segment::myst_segment::{MystSegment, Write};
 use myst::segment::persistence::Builder;
 
+use log::info;
 use std::collections::HashMap;
 use std::fs::{rename, File};
 use std::ops::Deref;
@@ -69,7 +70,7 @@ impl SegmentWriter {
             upload_root,
             remote_store: Some(remote_store),
         };
-        println!(
+        info!(
             "Sender is {:?} {:?}",
             segment_writer.sender, &segment_writer.sender as *const _
         );
@@ -86,20 +87,20 @@ impl SegmentWriter {
 
             if finish_lock && result.is_none() {
                 if count == 0 {
-                    println!(
+                    info!(
                         "No records read for shard: {} for epoch: {}",
                         self.shard_id, self.epoch
                     );
                     //Should not happen but, we shouldnt panic because of this.
                     break;
                 }
-                println!(
+                info!(
                     "Creating segment for shard: {} for epoch: {}",
                     self.shard_id, self.epoch
                 );
                 let s = self.segment.take().unwrap();
                 self.upload_segment(s);
-                println!(
+                info!(
                     "Stopping shard: {} thread for epoch: {}",
                     self.shard_id, self.epoch
                 );
@@ -107,7 +108,7 @@ impl SegmentWriter {
                 break;
             }
 
-            //println!("Mutex == {:?}", self.finish);
+            //info!("Mutex == {:?}", self.finish);
             match result {
                 Some(record) => {
                     count += 1;
@@ -129,7 +130,7 @@ impl SegmentWriter {
                     // }
                 }
                 None => {
-                    println!(
+                    info!(
                         "################ Error in segment writer {:?}",
                         self.shard_id
                     );
@@ -137,7 +138,7 @@ impl SegmentWriter {
             }
         }
 
-        println!("Timeseries written to shard {} is {}", self.shard_id, count);
+        info!("Timeseries written to shard {} is {}", self.shard_id, count);
         Ok(())
     }
 
@@ -146,7 +147,7 @@ impl SegmentWriter {
         let epoch = myst_segment.epoch;
         let data_path = self.data_path.clone();
         let filename = MystSegment::get_segment_filename(&shard_id, &epoch, data_path.to_string());
-        println!("Creating segment file: {:?}", &filename);
+        info!("Creating segment file: {:?}", &filename);
         let mut file = File::create(&filename).unwrap();
         myst_segment.build(&mut file, &mut (0 as u32)).unwrap();
         file.flush().unwrap();
@@ -154,7 +155,7 @@ impl SegmentWriter {
             MystSegment::get_path_prefix(&shard_id, &epoch, data_path.to_string());
         lock_file_name.push_str("/.lock");
         File::create(lock_file_name).unwrap();
-        println!("Created segment file: {}", &filename);
+        info!("Created segment file: {}", &filename);
 
         let filename_clone = Arc::new(filename.clone());
         let uploader = self.remote_store.take().unwrap();
@@ -167,16 +168,16 @@ impl SegmentWriter {
 
         match move_result {
             Ok(obj) => {
-                println!("Calling the uploader! for filename: {}", &upload_filename);
+                info!("Calling the uploader! for filename: {}", &upload_filename);
                 let mut data: Vec<u8> = Vec::new();
                 let mut f = File::open(&upload_filename).unwrap();
                 f.read_to_end(&mut data);
                 let result = Runtime::new()
                     .unwrap()
                     .block_on(uploader.upload(upload_filename.clone().to_owned(), data));
-                println!("Uploaded for filename: {}", &upload_filename);
+                info!("Uploaded for filename: {}", &upload_filename);
             }
-            Err(e) => println!(
+            Err(e) => info!(
                 "Move from {} to {} resulted in error: {:?}",
                 &filename, &upload_filename, e
             ),
@@ -201,14 +202,14 @@ impl SegmentWriter {
             .unwrap();
 
         let data = vec_writer.get_mut().to_vec();
-        println!(
+        info!(
             "Calling the uploader (upload segment)! for filename: {}",
             &upload_filename
         );
         let result = Runtime::new()
             .unwrap()
             .block_on(uploader.upload(upload_filename.clone().to_owned(), data));
-        println!(
+        info!(
             "Uploaded (upload segment) for filename: {} {:?}",
             &upload_filename, result
         );

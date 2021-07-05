@@ -31,7 +31,7 @@ use std::pin::Pin;
 use tonic::{Request, Response, Status};
 
 use myst::query::query::Query;
-use myst::{init_yamas_metrics, setup_logger};
+use myst::setup_logger;
 use std::sync::Arc;
 use std::time::SystemTime;
 use tokio_stream::Stream;
@@ -96,9 +96,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::new();
     setup_logger(String::from(&config.log_file))?;
 
-    init_yamas_metrics(&config);
-
-    //YamasKafkaConsumer::start_consumers();
     start_download().await?;
 
     start_grpc_server().await
