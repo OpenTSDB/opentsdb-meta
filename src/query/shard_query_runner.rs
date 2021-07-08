@@ -146,7 +146,8 @@ impl ShardQueryRunner {
                     let mut dur_str = String::new();
                     if dur.is_ok() {
                         dur.unwrap().read_to_string(&mut dur_str)?;
-                        let fduration = dur_str.parse().unwrap_or(0 as i32);
+                        //If a duration file is present, it should have the right format.
+                        let fduration = dur_str.parse()?;
                         fduration
                     } else {
                         0
