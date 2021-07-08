@@ -39,7 +39,7 @@ Usage
 Contribute
 ----------
 
-Please see the [Contributing](contributing.md) file for information on how to
+Please see the [Contributing](Contributing.md) file for information on how to
 get involved. We welcome issues, questions, and pull requests.
 
 Maintainers
@@ -53,3 +53,6 @@ License
 
 This project is licensed under the terms of the Apache 2.0 open source license.
 Please refer to [LICENSE](LICENSE.md) for the full terms.
+
+[status-image]: https://cd.screwdriver.cd/pipelines/7648/badge
+[status-url]: https://cd.screwdriver.cd/pipelines/7648

@@ -84,7 +84,6 @@ impl Config {
             ssl_key: config.get_str("ssl_key").unwrap(),
             ssl_cert: config.get_str("ssl_cert").unwrap(),
             ca_cert: config.get_str("ca_cert").unwrap(),
-
             polling_interval: config.get_int("polling_interval").unwrap() as u64,
             segment_duration: config.get_int("segment_duration").unwrap() as u64,
             segment_full_duration: config.get_int("segment_full_duration").unwrap() as u64,

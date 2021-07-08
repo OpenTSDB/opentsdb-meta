@@ -234,7 +234,9 @@ pub fn test_query() {
 pub fn search_timeseries() {
     let segment_readers = write_and_get_segment_readers();
     let filter = build_regex_tag_value_filter();
-    let query = build_timeseries_query(filter);
+    let mut query = build_timeseries_query(filter);
+    query.start = segment_readers.get(0).unwrap().created;
+    query.end = query.start + 1 * 60 * 60;
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
@@ -299,8 +301,11 @@ pub fn search_timeseries_large_segment() {
 pub fn search_timeseries_with_not_filter() {
     let segment_readers = write_and_get_segment_readers();
     let filter = build_not_tag_value_filter();
-    let query = build_timeseries_query(filter);
-    let config = crate::utils::config::Config::default();
+    let mut query = build_timeseries_query(filter);
+    query.start = segment_readers.get(0).unwrap().created;
+    query.end = query.start + 1 * 60 * 60;
+    let mut config = crate::utils::config::Config::default();
+    config.docstore_block_size = 200;
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
     let mut curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
@@ -328,8 +333,11 @@ pub fn search_timeseries_with_not_filter() {
 pub fn search_timeseries_with_explicit_filter() {
     let segment_readers = write_and_get_segment_readers();
     let filter = build_explicit_tag_filter();
-    let query = build_timeseries_query(filter);
-    let config = crate::utils::config::Config::default();
+    let mut query = build_timeseries_query(filter);
+    query.start = segment_readers.get(0).unwrap().created;
+    query.end = query.start + 1 * 60 * 60;
+    let mut config = crate::utils::config::Config::default();
+    config.docstore_block_size = 200;
     println!("{:?}", query);
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
     let mut curr_time = SystemTime::now();
@@ -359,8 +367,11 @@ pub fn test_groupby_ordering() {
     let segment_readers = write_and_get_segment_readers();
     let filter = build_literal_tag_value_filter();
     let mut query = build_timeseries_query(filter);
+    query.start = segment_readers.get(0).unwrap().created;
+    query.end = query.start + 1 * 60 * 60;
     query.group = vec![String::from("foo"), String::from("do")];
-    let config = crate::utils::config::Config::default();
+    let mut config = crate::utils::config::Config::default();
+    config.docstore_block_size = 200;
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
     let mut curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
@@ -390,7 +401,7 @@ pub fn test_groupby_ordering() {
     assert_eq!("re", dict.dict.get(groups.get(1).unwrap()).unwrap());
 }
 
-#[test]
+//#[test]
 pub fn test_bloom() {
     let expected_num_items = 100000000000;
 

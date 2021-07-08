@@ -19,7 +19,7 @@
 
 use crate::remote_store::RemoteStore;
 use crate::timeseries_record::Record;
-use myst::segment::myst_segment::MystSegment;
+use myst::segment::myst_segment::{MystSegment, Write};
 use myst::segment::persistence::{Builder, TimeSegmented, Loader};
 
 use log::info;
@@ -30,7 +30,13 @@ use std::thread;
 
 use bytes::BufMut;
 use std::path::Path;
-use std::io::{ Error, Write, ErrorKind};
+use std::{
+    io,
+    io::{ 
+        Error, 
+        ErrorKind
+    }
+};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -180,7 +186,7 @@ impl SegmentWriter {
         Ok(())
     }
 
-    fn download_file(&mut self, remote_filename: &String, mut buf: &mut Write) -> Result<Option<i32>, Error> {
+    fn download_file(&mut self, remote_filename: &String, mut buf: &mut io::Write) -> Result<Option<i32>, Error> {
 
         let sleep_time = tokio::time::Duration::from_secs(2000);
             let mut retries = 0;
@@ -281,7 +287,6 @@ impl SegmentWriter {
             "Uploaded (upload segment) for filename: {} {:?}",
             &upload_filename, result
         );
-
     }
 
 
@@ -310,7 +315,6 @@ impl SegmentWriter {
         let result = self.runtime
             .block_on(uploader.upload(upload_filename.clone().to_owned(), data, metadata));
             info!(
-
             "Uploaded (upload segment) for filename: {} {:?}",
             &upload_filename, result
         );

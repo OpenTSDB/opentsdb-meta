@@ -20,6 +20,7 @@
 //Periodically check for and download segments
 
 use crate::s3::remote_store::RemoteStore;
+use log::info;
 use std::fs::{create_dir_all, read_dir, rename, File};
 use std::path::Path;
 use std::{
@@ -29,7 +30,6 @@ use std::{
     sync::Arc,
     thread,
 };
-use log::info;
 use tokio::sync::RwLock;
 
 //This following imports will move to the main class
@@ -68,7 +68,6 @@ impl SegmentDownload {
     }
 
     async fn download(self) -> Result<(), Error> {
-
         info!("In download function for {}", &self.prefix_i);
 
         let prefix = Arc::clone(&self.prefix_i);
@@ -79,9 +78,7 @@ impl SegmentDownload {
 
         let root_dir = Path::new(&shard_path);
         if root_dir.exists() {
-
             info!("Reading for {:?} as dir exists", root_dir);
-
             let mut files: Vec<String> = Vec::new();
             //Recursively list files
             self.list_files(root_dir, &mut files)?;
@@ -187,8 +184,8 @@ impl SegmentDownload {
                     if !skip {
                         create_dir_all(tpath.parent().unwrap());
                         create_dir_all(parent_path);
-                        println!("Creating path: {:?}", tpath);
-                        println!("Downloading file: {}", file_name_clone);
+                        info!("Creating path: {:?}", tpath);
+                        info!("Downloading file: {}", file_name_clone);
                         let mut f = File::create(tpath.clone()).unwrap();
                         let downloaded = store_clone
                             .download(file_name_clone.to_string().to_owned(), &mut f)
@@ -197,7 +194,7 @@ impl SegmentDownload {
                             Ok(bytes) => {
                                 f.flush().unwrap();
                                 //Final move
-                                println!(
+                                info!(
                                     "Moving downloaded file from {:?} to {:?}",
                                     tpath.to_str(),
                                     fpath.to_str()
@@ -223,11 +220,11 @@ impl SegmentDownload {
                                 drop(lock);
                             }
                             Err(e) => {
-                                println!("Error fetching file {}", file_name);
+                                info!("Error fetching file {}", file_name);
                             }
                         }
                     } else {
-                        println!(
+                        info!(
                             "Skipping download for file {}, as it is already there.",
                             &file_path
                         );
@@ -239,18 +236,18 @@ impl SegmentDownload {
                     let lock_file = lock_file_buf.as_path();
 
                     if !lock_file.exists() {
-                        println!("Creating lock file: {:?}", lock_file.to_str());
+                        info!("Creating lock file: {:?}", lock_file.to_str());
                         File::create(lock_file).unwrap();
                     }
                 }));
             }
-            handles.push(tokio::spawn(async move { println!("Dummy closure!") }));
-            println!("Before block on");
+            handles.push(tokio::spawn(async move { info!("Dummy closure!") }));
+            info!("Before block on");
             /* let result = futures::executor::block_on(futures::future::try_join_all(handles));
-                   println!("After block on");
+                   info!("After block on");
             match result {
-                           Ok(v) => println!("Downloaded all shards successfully!"),
-                           Err(e) => println!("Error while downloading from s3 {:?}", e),
+                           Ok(v) => info!("Downloaded all shards successfully!"),
+                           Err(e) => info!("Error while downloading from s3 {:?}", e),
                       }
 
                    for rs1 in result {

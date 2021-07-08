@@ -82,8 +82,8 @@ pub fn test() {
         tags_rc.insert(Rc::new(k.clone()), Rc::new(v.clone()));
     }
 
-    let mut metric = String::from("metric");
-    for i in 0..10 {
+    for i in 0..1000 {
+        let mut metric = String::from("metric");
         metric.push_str(&i.to_string());
         segment.add_timeseries(Rc::new(metric.clone()), tags_rc.clone(), i, epoch);
     }
