@@ -141,7 +141,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     500,
                     running_time as u64,
                     segment_duration as u64,
-                    segment_full_duration as u64,
+                    (running_time - (running_time % segment_full_duration)) as u64,
                     path,
                     clone_namespace,
                     RemoteStore::new(clone_s3_client, clone_bucket),
