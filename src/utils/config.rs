@@ -49,7 +49,10 @@ pub struct Config {
     pub download_frequency: u64,
 
     pub plugin_path: String,
+<<<<<<< HEAD
     pub ssl_for_metrics: bool,
+=======
+>>>>>>> Instrumentation plugin
 }
 // TODO: Cleanup
 impl Config {
