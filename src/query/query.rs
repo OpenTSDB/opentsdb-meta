@@ -30,7 +30,10 @@ use crate::utils::config::Config;
 
 use metrics_reporter::MetricsReporter;
 use std::sync::Arc;
+<<<<<<< HEAD
 
+=======
+>>>>>>> Add a noop metric reporter
 
 #[derive(EnumString, Debug, PartialEq)]
 pub enum QueryType {

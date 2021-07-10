@@ -51,7 +51,6 @@ use std::fs::File;
 use std::io::{Read, Seek};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
-use metrics_reporter::MetricsReporter;
 
 const METRIC_PREFIX: &str = crate::utils::config::METRIC;
 const TAG_KEY_PREFIX: &str = crate::utils::config::TAG_KEYS;
@@ -124,7 +123,6 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                     .as_millis() as u64,
             );
         }
-
         Ok(())
     }
 

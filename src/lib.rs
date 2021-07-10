@@ -52,5 +52,3 @@ pub fn setup_logger(filename: String) -> Result<(), fern::InitError> {
         .apply()?;
     Ok(())
 }
-
-
