@@ -29,7 +29,7 @@ use std::fs::{File, create_dir_all};
 use std::thread;
 
 use bytes::BufMut;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{
     io,
     io::{ 
@@ -287,6 +287,8 @@ impl SegmentWriter {
         let file_path = Path::new(self.segment_gen_data_path.as_ref())
             .join(Path::new(&upload_filename));
 
+        let parent_dir = file_path.parent();
+        create_dir_all(parent_dir.unwrap());
         info!("Creating segment file: {:?} for duration: {}", &file_path, &dur_string);
         let mut file = File::create(&file_path).unwrap();
         file.write(&data);
