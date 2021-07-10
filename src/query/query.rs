@@ -31,6 +31,7 @@ use crate::utils::config::Config;
 use metrics_reporter::MetricsReporter;
 use std::sync::Arc;
 
+
 #[derive(EnumString, Debug, PartialEq)]
 pub enum QueryType {
     TAG_KEYS,
