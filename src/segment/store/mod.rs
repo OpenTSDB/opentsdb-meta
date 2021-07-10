@@ -21,5 +21,5 @@ pub mod dict;
 pub mod docstore;
 pub mod epoch_bitmap;
 pub mod metric_bitmap;
-pub mod tag_bitmap;
 pub mod myst_fst;
+pub mod tag_bitmap;

@@ -239,7 +239,7 @@ pub fn search_timeseries() {
     query.end = query.start + 1 * 60 * 60;
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
-    let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
+    let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
     let mut curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(num_cpus::get())
@@ -273,7 +273,7 @@ pub fn search_timeseries_large_segment() {
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
 
-    let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
+    let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
     let mut curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(num_cpus::get())
@@ -306,7 +306,7 @@ pub fn search_timeseries_with_not_filter() {
     query.end = query.start + 1 * 60 * 60;
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
-    let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
+    let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
     let mut curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(1)
@@ -339,7 +339,7 @@ pub fn search_timeseries_with_explicit_filter() {
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
     println!("{:?}", query);
-    let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
+    let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
     let mut curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(1)
@@ -372,7 +372,7 @@ pub fn test_groupby_ordering() {
     query.group = vec![String::from("foo"), String::from("do")];
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
-    let mut query_runner = QueryRunner::new(segment_readers, &query, &config);
+    let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
     let mut curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(1)
