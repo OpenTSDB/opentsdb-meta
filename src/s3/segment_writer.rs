@@ -96,7 +96,12 @@ impl SegmentWriter {
 
     pub(crate) fn write_to_segment(&mut self) -> Result<(), std::sync::mpsc::RecvError> {
         let mut count = 0;
-
+        info!("Beginning segment writer for shard: {} epoch: {} epochStart: {} segment duration: {} duration: {}",
+                                                                        self.shard_id,
+                                                                        self.epoch,
+                                                                        self.epoch_start,
+                                                                        (self.epoch - self.epoch_start + self.duration),
+                                                                        self.duration);
         let sleep_time = tokio::time::Duration::from_secs(2000);
         if  self.epoch_start != self.epoch {
             let mut remote_filename = SegmentWriter::get_upload_filename(self.shard_id, self.epoch_start, self.upload_root.to_string());
@@ -120,10 +125,24 @@ impl SegmentWriter {
                 let mut f = File::create(&file_path).unwrap();
                 let offset: u32 = 0;
                 let result = self.segment.take().unwrap().load(&mut f, &offset);
-                self.segment = result.unwrap();
+
+                match result {
+                    Ok(o) => {
+                        info!("Loaded segment suecessfully for {} into mem", remote_filename);
+                        self.segment = o;
+                    },
+                    Err(e) => {
+                    error!("Error loading segment for {} into mem {:?}", remote_filename, e);
+                    }
+                }
+                
             }
         }    
-
+        info!("Done with segment init, will begin receiving data for shard: {} epoch: {} epochStart: {} segment duration: {}",
+                                                                        self.shard_id,
+                                                                        self.epoch,
+                                                                        self.epoch_start,
+                                                                        (self.epoch - self.epoch_start + self.duration));
         loop {
             let mut result = None;
             let finish_lock = self.finish.load(Ordering::SeqCst);
@@ -188,7 +207,7 @@ impl SegmentWriter {
 
     fn download_file(&mut self, remote_filename: &String, mut buf: &mut io::Write) -> Result<Option<i32>, Error> {
 
-        let sleep_time = tokio::time::Duration::from_secs(2000);
+        let sleep_time = tokio::time::Duration::from_millis(2000);
             let mut retries = 0;
             let map_option:Option<HashMap<String,String>>;
             let downloader = self.remote_store.take().unwrap();

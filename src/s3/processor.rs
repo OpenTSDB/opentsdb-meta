@@ -322,7 +322,7 @@ async fn fetch_and_process(
                 let mut read_buffer = vec![0u8; read_len as usize];
                 total_bytes += read_len;
                 let mut record = Record::default();
-                decoder.read_exact(&mut read_buffer);
+                decoder.read_exact(&mut read_buffer)?;
                 match record.parse(&mut read_buffer) {
                     Err(e) => {
                         info!("Error but continuing {:?}", e);
