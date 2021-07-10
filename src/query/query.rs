@@ -29,6 +29,8 @@ use crate::query::cache::Cache;
 use crate::utils::config::Config;
 
 use std::sync::Arc;
+use metrics_reporter::MetricsReporter;
+
 
 #[derive(EnumString, Debug, PartialEq)]
 pub enum QueryType {
@@ -130,12 +132,13 @@ impl Query {
         shard_pool: &rayon::ThreadPool,
         cache: Arc<Cache>,
         config: &Config,
+        metrics_reporter: &Box<MetricsReporter>
     ) -> Result<
         tokio::sync::mpsc::Receiver<
             std::result::Result<crate::myst_grpc::TimeseriesResponse, tonic::Status>,
         >,
         MystError,
     > {
-        ShardQueryRunner::run(query, shard_pool, cache, config)
+        ShardQueryRunner::run(query, shard_pool, cache, config, metrics_reporter)
     }
 }

@@ -31,20 +31,24 @@ use std::pin::Pin;
 use tonic::{Request, Response, Status};
 
 use myst::query::query::Query;
-use myst::setup_logger;
+use myst::{setup_logger};
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{SystemTime, Duration};
 use tokio_stream::Stream;
 use tonic::transport::Server;
+use std::thread;
+use metrics_reporter::MetricsReporter;
+
 
 pub struct TimeseriesService {
     pub thread_pool: rayon::ThreadPool,
     pub cache: Arc<Cache>,
     pub config: Config,
+    pub metrics_reporter: Box<MetricsReporter>
 }
 
-impl Default for TimeseriesService {
-    fn default() -> Self {
+impl TimeseriesService {
+    pub fn new(metrics_reporter: Box<MetricsReporter>, config: Config) -> Self {
         Self {
             thread_pool: rayon::ThreadPoolBuilder::new()
                 .num_threads(num_cpus::get())
@@ -52,7 +56,8 @@ impl Default for TimeseriesService {
                 .unwrap(),
 
             cache: Arc::new(Cache::new()),
-            config: Config::new(),
+            config,
+            metrics_reporter,
         }
     }
 }
@@ -76,6 +81,7 @@ impl MystService for TimeseriesService {
             &self.thread_pool,
             self.cache.clone(),
             &self.config,
+            &self.metrics_reporter,
         );
 
         match res {
@@ -93,20 +99,28 @@ impl MystService for TimeseriesService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
     let config = Config::new();
+    let lib = libloading::Library::new(&config.plugin_path)
+        .expect("load library");
+    let new_service: libloading::Symbol<extern "Rust" fn(&str, &str, &str) -> Box<dyn MetricsReporter + Send + Sync>> = unsafe { lib.get(b"new_reporter_with_ssl") }
+        .expect("load symbol");
+    let mut service = new_service(&config.ssl_key, &config.ssl_cert, &config.ca_cert);
+
     setup_logger(String::from(&config.log_file))?;
 
     start_download().await?;
 
-    start_grpc_server().await
+    start_grpc_server(service, config).await
 }
 
-async fn start_grpc_server() -> Result<(), Box<dyn std::error::Error>> {
+
+async fn start_grpc_server(metrics_reporter: Box<MetricsReporter>, config: Config) -> Result<(), Box<dyn std::error::Error>> {
     let mut hostname = local_ipaddress::get().unwrap();
     hostname.push_str(":9999");
     let addr = hostname.parse()?;
 
-    let myst_service = TimeseriesService::default();
+    let myst_service = TimeseriesService::new(metrics_reporter, config);
 
     let svc = MystServiceServer::new(myst_service);
 

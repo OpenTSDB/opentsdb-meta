@@ -50,6 +50,7 @@ use std::fs::File;
 use std::io::{Read, Seek};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use metrics_reporter::MetricsReporter;
 
 const METRIC_PREFIX: &str = crate::utils::config::METRIC;
 const TAG_KEY_PREFIX: &str = crate::utils::config::TAG_KEYS;
@@ -60,6 +61,7 @@ pub struct QueryRunner<'a, R: Read + Seek + Send + Sync> {
     pub segment_readers: Vec<SegmentReader<R>>,
     pub query: &'a Query,
     pub config: &'a Config,
+    pub metrics_reporter: &'a Box<MetricsReporter>
 }
 
 impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
@@ -67,11 +69,13 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         segment_readers: Vec<SegmentReader<R>>,
         query: &'a Query,
         config: &'a Config,
+        metrics_reporter: &'a Box<MetricsReporter>,
     ) -> Self {
         Self {
             segment_readers,
             query,
             config,
+            metrics_reporter,
         }
     }
 
@@ -92,6 +96,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
             self.config.docstore_block_size,
             timeseries_response,
         )?;
+        self.metrics_reporter.gauge("segment.query.latency", &["shard", self.segment_readers.get(0).unwrap().shard_id.to_string().as_str(),  "segment", self.segment_readers.get(0).unwrap().created.to_string().as_str(), "host", sys_info::hostname().unwrap().as_str()], SystemTime::now().duration_since(curr_time).unwrap().as_millis() as u64);
 
         Ok(())
     }

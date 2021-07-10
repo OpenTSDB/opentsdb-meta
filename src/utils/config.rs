@@ -47,6 +47,8 @@ pub struct Config {
     pub aws_secret: String,
     pub temp_data_path: String,
     pub download_frequency: u64,
+
+    pub plugin_path: String,
 }
 // TODO: Cleanup
 impl Config {
@@ -90,6 +92,7 @@ impl Config {
             aws_secret: config.get_str("aws_secret").unwrap().to_string(),
             temp_data_path: config.get_str("temp_data_path").unwrap().to_string(),
             download_frequency: config.get_int("download_frequency").unwrap() as u64,
+            plugin_path: config.get_str("plugin_path").unwrap()
         }
     }
 }
