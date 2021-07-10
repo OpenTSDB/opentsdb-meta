@@ -32,15 +32,12 @@ use tonic::{Request, Response, Status};
 
 use metrics_reporter::MetricsReporter;
 use myst::query::query::Query;
-use myst::{setup_logger};
+use myst::setup_logger;
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime};
 use tokio_stream::Stream;
 use tonic::transport::Server;
-use std::thread;
-use metrics_reporter::MetricsReporter;
-
 
 pub struct TimeseriesService {
     pub thread_pool: rayon::ThreadPool,
@@ -101,7 +98,6 @@ impl MystService for TimeseriesService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     let config = Config::new();
     let lib = libloading::Library::new(&config.plugin_path).expect("load library");
 

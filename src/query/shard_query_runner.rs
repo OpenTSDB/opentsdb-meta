@@ -35,7 +35,6 @@ use crate::utils::myst_error::{MystError, Result};
 use super::{query::Query, query_runner::QueryRunner};
 use metrics_reporter::MetricsReporter;
 use std::io::BufReader;
-use metrics_reporter::MetricsReporter;
 
 
 /// Runs a query for all shards
