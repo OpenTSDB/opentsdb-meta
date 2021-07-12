@@ -811,6 +811,36 @@
 <span id="808">808</span>
 <span id="809">809</span>
 <span id="810">810</span>
+<span id="811">811</span>
+<span id="812">812</span>
+<span id="813">813</span>
+<span id="814">814</span>
+<span id="815">815</span>
+<span id="816">816</span>
+<span id="817">817</span>
+<span id="818">818</span>
+<span id="819">819</span>
+<span id="820">820</span>
+<span id="821">821</span>
+<span id="822">822</span>
+<span id="823">823</span>
+<span id="824">824</span>
+<span id="825">825</span>
+<span id="826">826</span>
+<span id="827">827</span>
+<span id="828">828</span>
+<span id="829">829</span>
+<span id="830">830</span>
+<span id="831">831</span>
+<span id="832">832</span>
+<span id="833">833</span>
+<span id="834">834</span>
+<span id="835">835</span>
+<span id="836">836</span>
+<span id="837">837</span>
+<span id="838">838</span>
+<span id="839">839</span>
+<span id="840">840</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -860,6 +890,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">myst_segment</span>::<span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">EpochBitmap</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">epoch_bitmap</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">Config</span>;
+<span class="kw">use</span> <span class="ident">metrics_reporter</span>::<span class="ident">MetricsReporter</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">File</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">Read</span>, <span class="ident">Seek</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicU32</span>, <span class="ident">Ordering</span>};
@@ -874,6 +905,7 @@
     <span class="kw">pub</span> <span class="ident">segment_readers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SegmentReader</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">query</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Query</span>,
     <span class="kw">pub</span> <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Config</span>,
+    <span class="kw">pub</span> <span class="ident">metrics_reporter</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">MetricsReporter</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">R</span>: <span class="ident">Read</span> <span class="op">+</span> <span class="ident">Seek</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span> <span class="ident">QueryRunner</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">R</span><span class="op">&gt;</span> {
@@ -881,11 +913,13 @@
         <span class="ident">segment_readers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SegmentReader</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">query</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Query</span>,
         <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Config</span>,
+        <span class="ident">metrics_reporter</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">MetricsReporter</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">segment_readers</span>,
             <span class="ident">query</span>,
             <span class="ident">config</span>,
+            <span class="ident">metrics_reporter</span>,
         }
     }
 
@@ -906,7 +940,33 @@
             <span class="self">self</span>.<span class="ident">config</span>.<span class="ident">docstore_block_size</span>,
             <span class="ident">timeseries_response</span>,
         )<span class="question-mark">?</span>;
-
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">metrics_reporter</span>.<span class="ident">is_some</span>() {
+            <span class="self">self</span>.<span class="ident">metrics_reporter</span>.<span class="ident">unwrap</span>().<span class="ident">gauge</span>(
+                <span class="string">&quot;segment.query.latency&quot;</span>,
+                <span class="kw-2">&amp;</span>[
+                    <span class="string">&quot;shard&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">segment_readers</span>
+                        .<span class="ident">get</span>(<span class="number">0</span>)
+                        .<span class="ident">unwrap</span>()
+                        .<span class="ident">shard_id</span>
+                        .<span class="ident">to_string</span>()
+                        .<span class="ident">as_str</span>(),
+                    <span class="string">&quot;segment&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">segment_readers</span>
+                        .<span class="ident">get</span>(<span class="number">0</span>)
+                        .<span class="ident">unwrap</span>()
+                        .<span class="ident">created</span>
+                        .<span class="ident">to_string</span>()
+                        .<span class="ident">as_str</span>(),
+                    <span class="string">&quot;host&quot;</span>,
+                    <span class="ident">sys_info</span>::<span class="ident">hostname</span>().<span class="ident">unwrap</span>().<span class="ident">as_str</span>(),
+                ],
+                <span class="ident">SystemTime</span>::<span class="ident">now</span>()
+                    .<span class="ident">duration_since</span>(<span class="ident">curr_time</span>)
+                    .<span class="ident">unwrap</span>()
+                    .<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">u64</span>,
+            );
+        }
         <span class="prelude-val">Ok</span>(())
     }
 

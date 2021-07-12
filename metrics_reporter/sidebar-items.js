@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["MetricsReporter","Trait for reporting metrics to a monitoring system. Plugins implementing this trait will be dynamically loaded during start of the binary. An example NoopMetricReporter is provided."]]});

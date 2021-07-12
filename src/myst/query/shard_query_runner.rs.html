@@ -178,6 +178,24 @@
 <span id="175">175</span>
 <span id="176">176</span>
 <span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -214,6 +232,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">myst_error</span>::{<span class="ident">MystError</span>, <span class="prelude-ty">Result</span>};
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">query</span>::<span class="ident">Query</span>, <span class="ident">query_runner</span>::<span class="ident">QueryRunner</span>};
+<span class="kw">use</span> <span class="ident">metrics_reporter</span>::<span class="ident">MetricsReporter</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">BufReader</span>;
 
 <span class="doccomment">/// Runs a query for all shards</span>
@@ -231,6 +250,7 @@
         <span class="ident">shard_pool</span>: <span class="kw-2">&amp;</span><span class="ident">rayon</span>::<span class="ident">ThreadPool</span>,
         <span class="ident">cache</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Cache</span><span class="op">&gt;</span>,
         <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Config</span>,
+        <span class="ident">metrics_reporter</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="ident">MetricsReporter</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">myst_grpc</span>::<span class="ident">TimeseriesResponse</span>, <span class="ident">tonic</span>::<span class="ident">Status</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>
     {
         <span class="kw">let</span> <span class="ident">shards</span> <span class="op">=</span> <span class="ident">ShardQueryRunner</span>::<span class="ident">get_num_shards</span>(<span class="ident">config</span>)<span class="question-mark">?</span>;
@@ -259,6 +279,7 @@
                         <span class="ident">shard_pool</span>,
                         <span class="ident">c</span>,
                         <span class="ident">config</span>,
+                        <span class="ident">metrics_reporter</span>,
                         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">timeseries_response</span>,
                     ); <span class="comment">// TODO: panic_handler</span>
                     <span class="kw">if</span> <span class="ident">res</span>.<span class="ident">is_err</span>() {
@@ -304,6 +325,7 @@
         <span class="ident">segment_pool</span>: <span class="kw-2">&amp;</span><span class="ident">rayon</span>::<span class="ident">ThreadPool</span>,
         <span class="ident">cache</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Cache</span><span class="op">&gt;</span>,
         <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Config</span>,
+        <span class="ident">metrics_reporter</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="ident">MetricsReporter</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">timeseries_response</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">crate</span>::<span class="ident">myst_grpc</span>::<span class="ident">TimeseriesResponse</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
@@ -344,9 +366,23 @@
                 <span class="string">&quot;No valid segments found for this time range&quot;</span>,
             ));
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query_runner</span> <span class="op">=</span> <span class="ident">QueryRunner</span>::<span class="ident">new</span>(<span class="ident">segment_readers</span>, <span class="ident">query</span>, <span class="ident">config</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query_runner</span> <span class="op">=</span> <span class="ident">QueryRunner</span>::<span class="ident">new</span>(<span class="ident">segment_readers</span>, <span class="ident">query</span>, <span class="ident">config</span>, <span class="ident">metrics_reporter</span>);
         <span class="ident">query_runner</span>.<span class="ident">search_timeseries</span>(<span class="ident">segment_pool</span>, <span class="ident">timeseries_response</span>)<span class="question-mark">?</span>;
-
+        <span class="kw">if</span> <span class="ident">metrics_reporter</span>.<span class="ident">is_some</span>() {
+            <span class="ident">metrics_reporter</span>.<span class="ident">unwrap</span>().<span class="ident">gauge</span>(
+                <span class="string">&quot;shard.query.latency&quot;</span>,
+                <span class="kw-2">&amp;</span>[
+                    <span class="string">&quot;shard&quot;</span>,
+                    <span class="ident">shard_id</span>.<span class="ident">to_string</span>().<span class="ident">as_str</span>(),
+                    <span class="string">&quot;host&quot;</span>,
+                    <span class="ident">sys_info</span>::<span class="ident">hostname</span>().<span class="ident">unwrap</span>().<span class="ident">as_str</span>(),
+                ],
+                <span class="ident">SystemTime</span>::<span class="ident">now</span>()
+                    .<span class="ident">duration_since</span>(<span class="ident">curr_time</span>)
+                    .<span class="ident">unwrap</span>()
+                    .<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">u64</span>,
+            );
+        }
         <span class="macro">info</span><span class="macro">!</span>(
             <span class="string">&quot;Time taken to query in shard: {:?} is {:?} in thread {:?}&quot;</span>,
             <span class="ident">shard_id</span>,
