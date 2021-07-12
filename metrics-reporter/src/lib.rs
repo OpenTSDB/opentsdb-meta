@@ -20,11 +20,7 @@
 /// Plugins implementing this trait will be dynamically loaded during start of the binary.
 /// An example NoopMetricReporter is provided.
 pub trait MetricsReporter: Send + Sync {
-    fn build(self) -> Self where Self: Sized;
     fn count(&self, metric: &str, tags: &[&str], value: u64);
     fn gauge(&self, metric: &str, tags: &[&str], value: u64);
 }
-<<<<<<< HEAD
-=======
 
->>>>>>> Add a noop metric reporter
