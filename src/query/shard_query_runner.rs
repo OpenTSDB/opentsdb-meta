@@ -33,6 +33,7 @@ use crate::utils::config::Config;
 use crate::utils::myst_error::{MystError, Result};
 
 use super::{query::Query, query_runner::QueryRunner};
+use metrics_reporter::MetricsReporter;
 use std::io::BufReader;
 
 /// Runs a query for all shards
@@ -50,6 +51,7 @@ impl ShardQueryRunner {
         shard_pool: &rayon::ThreadPool,
         cache: Arc<Cache>,
         config: &Config,
+        metrics_reporter: Option<&Box<MetricsReporter>>,
     ) -> Result<Receiver<std::result::Result<crate::myst_grpc::TimeseriesResponse, tonic::Status>>>
     {
         let shards = ShardQueryRunner::get_num_shards(config)?;
@@ -78,6 +80,7 @@ impl ShardQueryRunner {
                         shard_pool,
                         c,
                         config,
+                        metrics_reporter,
                         &mut timeseries_response,
                     ); // TODO: panic_handler
                     if res.is_err() {
@@ -123,6 +126,7 @@ impl ShardQueryRunner {
         segment_pool: &rayon::ThreadPool,
         cache: Arc<Cache>,
         config: &Config,
+        metrics_reporter: Option<&Box<MetricsReporter>>,
         timeseries_response: &mut crate::myst_grpc::TimeseriesResponse,
     ) -> Result<()> {
         let curr_time = SystemTime::now();
@@ -163,9 +167,23 @@ impl ShardQueryRunner {
                 "No valid segments found for this time range",
             ));
         }
-        let mut query_runner = QueryRunner::new(segment_readers, query, config);
+        let mut query_runner = QueryRunner::new(segment_readers, query, config, metrics_reporter);
         query_runner.search_timeseries(segment_pool, timeseries_response)?;
-
+        if metrics_reporter.is_some() {
+            metrics_reporter.unwrap().gauge(
+                "shard.query.latency",
+                &[
+                    "shard",
+                    shard_id.to_string().as_str(),
+                    "host",
+                    sys_info::hostname().unwrap().as_str(),
+                ],
+                SystemTime::now()
+                    .duration_since(curr_time)
+                    .unwrap()
+                    .as_millis() as u64,
+            );
+        }
         info!(
             "Time taken to query in shard: {:?} is {:?} in thread {:?}",
             shard_id,

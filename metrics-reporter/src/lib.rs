@@ -16,10 +16,12 @@
  *  * limitations under the License.
  *
  */
+/// Trait for reporting metrics to a monitoring system.
+/// Plugins implementing this trait will be dynamically loaded during start of the binary.
+/// An example NoopMetricReporter is provided.
+pub trait MetricsReporter: Send + Sync {
+    fn build(self) -> Self where Self: Sized;
+    fn count(&self, metric: &str, tags: &[&str], value: u64);
+    fn gauge(&self, metric: &str, tags: &[&str], value: u64);
+}
 
-pub mod dict;
-pub mod docstore;
-pub mod epoch_bitmap;
-pub mod metric_bitmap;
-pub mod myst_fst;
-pub mod tag_bitmap;

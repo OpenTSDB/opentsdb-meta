@@ -1,0 +1,13 @@
+[package]
+name = "noop-metrics-reporter"
+version = "0.1.0"
+authors = ["sidhhu <sidhhu@verizonmedia.com>"]
+edition = "2018"
+
+
+[dependencies]
+metrics-reporter = { path = "../metrics-reporter", version = "*" }
+
+[lib]
+name = "noop_metrics_reporter"
+crate-type = ["dylib"]
