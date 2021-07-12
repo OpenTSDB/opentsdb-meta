@@ -35,6 +35,17 @@ Usage
 #### 3. Run Segment Generator
 ```docker run --name opentsdb-meta IMAGE_ID segment-gen```
 
+Plugins
+-----
+#### Instrumentation
+
+[metrics-reporter](https://github.com/OpenTSDB/opentsdb-meta/tree/master/metrics-reporter) contains the traits used to report counter and gauge metrics. 
+The binaries (server and segment-gen) load plugins during runtime that implement this trait. 
+
+A sample plugin [noop-metrics-reporter](https://github.com/OpenTSDB/opentsdb-meta/tree/master/noop-metrics-reporter) is provided for your reference. Building this will generate a shared library (`*so` or `*dll`) based on the platform. 
+[Server](https://github.com/OpenTSDB/opentsdb-meta/blob/master/src/server/server.rs) loads this shared library during run time from the `plugin_path` specified in the config file and reports the metrics. 
+
+
 
 Contribute
 ----------

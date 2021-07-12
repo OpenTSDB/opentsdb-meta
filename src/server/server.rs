@@ -118,7 +118,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-
     setup_logger(String::from(&config.log_file))?;
 
     start_download().await?;

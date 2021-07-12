@@ -36,6 +36,7 @@ use super::{query::Query, query_runner::QueryRunner};
 use metrics_reporter::MetricsReporter;
 use std::io::BufReader;
 
+
 /// Runs a query for all shards
 pub struct ShardQueryRunner {}
 
