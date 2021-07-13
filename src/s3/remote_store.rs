@@ -52,7 +52,7 @@ impl RemoteStore {
         Self { s3_client, bucket }
     }
  
-    pub async fn upload(self, file_name: String, data: Vec<u8>, metadata: HashMap<String, String>) -> Result<i32,Error> {
+    pub async fn upload(&self, file_name: String, data: Vec<u8>, metadata: HashMap<String, String>) -> Result<i32,Error> {
         let b = std::path::Path::new(&file_name).exists();
         info!("Upload Path exists: {} {}", &file_name, b);
         //let stream_from_file = fs::read(file_name.to_string().to_owned())
