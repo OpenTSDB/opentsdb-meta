@@ -28,6 +28,7 @@ use serde_json::Value;
 use crate::query::cache::Cache;
 use crate::utils::config::Config;
 
+use metrics_reporter::MetricsReporter;
 use std::sync::Arc;
 
 #[derive(EnumString, Debug, PartialEq)]
@@ -130,12 +131,13 @@ impl Query {
         shard_pool: &rayon::ThreadPool,
         cache: Arc<Cache>,
         config: &Config,
+        metrics_reporter: Option<&Box<MetricsReporter>>,
     ) -> Result<
         tokio::sync::mpsc::Receiver<
             std::result::Result<crate::myst_grpc::TimeseriesResponse, tonic::Status>,
         >,
         MystError,
     > {
-        ShardQueryRunner::run(query, shard_pool, cache, config)
+        ShardQueryRunner::run(query, shard_pool, cache, config, metrics_reporter)
     }
 }
