@@ -30,7 +30,7 @@ use tokio::sync::mpsc::Receiver;
 use crate::query::cache::Cache;
 use crate::segment::myst_segment::MystSegment;
 use crate::segment::segment_reader::SegmentReader;
-use crate::utils::config::Config;
+use crate::utils::config::{Config, add_dir};
 use crate::utils::myst_error::{MystError, Result};
 
 use super::{query::Query, query_runner::QueryRunner};
@@ -128,10 +128,10 @@ impl ShardQueryRunner {
         let curr_time = SystemTime::now();
         let s_time = SystemTime::now();
         let mut path = String::from(&config.data_read_path);
-        path.push_str(&shard_id.to_string());
+        let mut path = add_dir(path, shard_id.to_string());
         let dirs = fs::read_dir(path)?;
         let mut segment_readers = Vec::new();
-
+        
         for dir in dirs {
             let d = dir.unwrap();
             let mut path = d.path();
@@ -140,7 +140,6 @@ impl ShardQueryRunner {
             duration_file.push("duration");
             if Path::new(&path).exists() {
                 let created = d.file_name().to_str().unwrap().parse::<u64>().unwrap();
-
                 let duration = if duration_file.exists() {
                     let dur = File::open(duration_file.as_path());
                     let mut dur_str = String::new();
@@ -148,6 +147,7 @@ impl ShardQueryRunner {
                         dur.unwrap().read_to_string(&mut dur_str)?;
                         //If a duration file is present, it should have the right format.
                         let fduration = dur_str.parse()?;
+                        info!("Read duration: {} for file: {:?}", fduration, &duration_file );
                         fduration
                     } else {
                         0

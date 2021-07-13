@@ -25,6 +25,7 @@ use crate::segment::store::docstore::{DocStore, Timeseries};
 use crate::segment::store::metric_bitmap::MetricBitmap;
 use crate::segment::store::myst_fst::{MystFST, MystFSTContainer};
 use crate::segment::store::tag_bitmap::{TagKeysBitmap, TagValuesBitmap};
+use crate::utils::config::add_dir;
 
 use crate::utils::myst_error::{MystError, Result};
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
@@ -565,17 +566,15 @@ impl MystSegment {
 
     pub fn get_segment_filename(shard_id: &u32, created: &u64, data_root_path: String) -> String {
         let mut filename = MystSegment::get_path_prefix(shard_id, created, data_root_path);
-        filename.push_str("segment");
+        let mut filename = add_dir(filename, "segment".to_string());
         let ext = String::from(".myst");
         filename.push_str(&ext);
         filename
     }
 
     pub fn get_path_prefix(shard_id: &u32, created: &u64, mut data_path: String) -> String {
-        data_path.push_str(&shard_id.to_string());
-        data_path.push_str("/");
-        data_path.push_str(&created.to_string());
-        data_path.push_str(&String::from("/"));
+        let data_path = add_dir(data_path, shard_id.to_string());
+        let data_path = add_dir(data_path, created.to_string());
         if !Path::new(&data_path).exists() {
             fs::create_dir_all(Path::new(&data_path)).unwrap();
         }
