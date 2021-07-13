@@ -205,14 +205,11 @@ impl SegmentDownload {
                                 //Create duration file
 
                                 let duration_tmp_file = Path::new(parent_path)
-                                    .join(Path::new("duration.tmp"));
+                                    .join(Path::new("duration_tmp"));
                                 {
                                     let duration_tmp_path = duration_tmp_file.as_path();
-                                    if !duration_tmp_path.exists() {
-                                        File::create(duration_tmp_path).unwrap();
-                                    }
                                     let mut dt_file_res =
-                                        File::open(duration_tmp_path).unwrap();
+                                        File::create(duration_tmp_path).unwrap();
                                     let dur_as_str= duration.to_string();
                                     let result = dt_file_res.write(dur_as_str.as_bytes());
                                     match result {
