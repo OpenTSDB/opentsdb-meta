@@ -77,12 +77,15 @@ impl SegmentDownload {
         let shard_path = add_dir(self.root_path.to_string(), self.prefix_i.to_string());
 
         let root_dir = Path::new(&shard_path);
+
+        info!("Checking if {:?} dir exists, {}", root_dir, root_dir.exists());
         if root_dir.exists() {
             info!("Reading for {:?} as dir exists", root_dir);
             let mut files: Vec<String> = Vec::new();
             //Recursively list files
             self.list_files(root_dir, &mut files)?;
             for sfile in files {
+                info!("Adding file {} to exists set", sfile);
                 downloaded_set_original.insert(sfile);
             }
         } else {
@@ -131,7 +134,7 @@ impl SegmentDownload {
                     let file_path = fpath.as_path().to_str().unwrap_or("none").to_string();
                     let contains_file = read_lock.contains(&file_path);
                     drop(read_lock);
-
+		    info!("Is file {} present: {}", &file_path, contains_file);	
                     let metadata = store_clone
                         .get_metadata(file_name_clone.to_string().to_owned())
                         .await;
@@ -139,7 +142,7 @@ impl SegmentDownload {
                         print!(
                             "Error while reading metadata for file: {} {:?}",
                             &file_name_clone,
-                            metadata.unwrap()
+                            metadata
                         );
                         return;
                     }
@@ -233,9 +236,11 @@ impl SegmentDownload {
                                 rename(duration_tmp_file, duration_file);
                                 // Wait until lock is acquired. But what is the point of a blocking method, if it doesnt block by itself ?
                                 // I guess this is a side effect of async
-                                let mut lock =
+                                let file_name_str = fpath.to_str().unwrap().to_string();
+				info!("Writing file {} into cache", file_name_str);
+				let mut lock =
                                     futures::executor::block_on(downloaded_set_clone.write());
-                                lock.insert(file_name_clone.to_string().to_owned());
+                                lock.insert(file_name_str);
                                 drop(lock);
                             }
                             Err(e) => {
