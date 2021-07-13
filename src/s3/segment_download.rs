@@ -165,15 +165,21 @@ impl SegmentDownload {
                     // either, the file doesnt exist at all or,
                     // the file exists and the duration is < remote file duration.
                     if contains_file {
+                        info!("File {} is present. Will check duration file: {:?}", &file_path, duration_file);
                         // Check the duration file
                         if duration_file.exists() {
-                            let mut dur = File::open(duration_file.as_path());
+                            let dur_result = File::open(duration_file.as_path());
                             let mut dur_str = String::new();
-                            if dur.is_ok() {
-                                dur.unwrap().read_to_string(&mut dur_str);
-                                fduration = dur_str.parse().unwrap_or(-1);
-                                info!("Read duration from file: {:?} string: {} i32: {}", duration_file, dur_str, fduration );
-                                skip = duration <= fduration;
+                            match dur_result {
+                                Ok(mut dur) => {
+                                    dur.read_to_string(&mut dur_str);
+                                    fduration = dur_str.parse().unwrap_or(-1);
+                                    info!("Read duration from file: {:?} string: {} i32: {}", duration_file, dur_str, fduration );
+                                    skip = duration <= fduration;
+                                },
+                                Err(e) => {
+                                    error!("Error reading duration from file: {:?} {:?}", duration_file, e);
+                                },
                             }
                         }
                     } else {
