@@ -350,6 +350,7 @@ impl<R: Read + Seek> SegmentReader<R> {
 
     pub fn get_ts_bitmap_from_reader(reader: &mut R, offset: u32) -> Result<Bitmap> {
         reader.seek(SeekFrom::Start(offset as u64))?;
+        let epoch = reader.read_u64::<NativeEndian>()?;
         let bitmap_size = reader.read_u32::<NativeEndian>()?;
         let mut buf = vec![0; bitmap_size as usize];
         reader.read_exact(&mut buf)?;
