@@ -148,14 +148,18 @@ impl ShardQueryRunner {
                 let duration = if duration_file.exists() {
                     let dur = File::open(duration_file.as_path());
                     let mut dur_str = String::new();
-                    if dur.is_ok() {
-                        dur.unwrap().read_to_string(&mut dur_str)?;
-                        //If a duration file is present, it should have the right format.
-                        let fduration = dur_str.parse()?;
-                        info!("Read duration: {} for file: {:?}", fduration, &duration_file );
-                        fduration
-                    } else {
-                        0
+                    match dur {
+                        Ok(mut dur_file) => {
+                            dur_file.read_to_string(&mut dur_str)?;
+                            //If a duration file is present, it should have the right format.
+                            let fduration = dur_str.parse()?;
+                            info!("Read duration: {} for file: {:?}", fduration, &duration_file );
+                            fduration
+                        },
+                        Err(e) =>  {
+                            error!("Unable to read duration for file: {:?} {:?}", &duration_file, e );
+                            0
+                        },
                     }
                 } else {
                     0
