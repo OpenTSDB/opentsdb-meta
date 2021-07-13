@@ -206,11 +206,16 @@ impl SegmentDownload {
                                 let duration_tmp_file = Path::new(parent_path)
                                     .join(Path::new("duration.tmp"));
                                 {
+                                    let duration_tmp_path = duration_tmp_file.as_path();
+                                    if !duration_tmp_path.exists() {
+                                        File::create(duration_tmp_path).unwrap();
+                                    }
                                     let mut dt_file_res =
-                                        File::open(duration_tmp_file.as_path()).unwrap();
+                                        File::open(duration_tmp_path).unwrap();
                                     dt_file_res.write(&mut fduration.to_le_bytes());
                                     dt_file_res.flush();
                                 } // File should be closed here.
+                                info!("Creating duration file: {:?} for duration: {}", &duration_file ,fduration);
                                 rename(duration_tmp_file, duration_file);
                                 // Wait until lock is acquired. But what is the point of a blocking method, if it doesnt block by itself ?
                                 // I guess this is a side effect of async
