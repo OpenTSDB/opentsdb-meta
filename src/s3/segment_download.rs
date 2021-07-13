@@ -20,7 +20,7 @@
 //Periodically check for and download segments
 
 use crate::s3::remote_store::RemoteStore;
-use log::info;
+use log::{error, info};
 use std::fs::{create_dir_all, read_dir, rename, File};
 use std::path::Path;
 use std::{
@@ -172,6 +172,7 @@ impl SegmentDownload {
                             if dur.is_ok() {
                                 dur.unwrap().read_to_string(&mut dur_str);
                                 fduration = dur_str.parse().unwrap_or(-1);
+                                info!("Read duration from file: {:?} string: {} i32: {}", duration_file, dur_str, fduration );
                                 skip = duration <= fduration;
                             }
                         }
@@ -212,10 +213,20 @@ impl SegmentDownload {
                                     }
                                     let mut dt_file_res =
                                         File::open(duration_tmp_path).unwrap();
-                                    dt_file_res.write(&mut fduration.to_le_bytes());
-                                    dt_file_res.flush();
+                                    let dur_as_str= duration.to_string();
+                                    let result = dt_file_res.write(dur_as_str.as_bytes());
+                                    match result {
+                                        Ok(o) => info!("Successfully written duration {} in {:?}. Size: {} bytes",
+                                         dur_as_str, duration_tmp_path, o),
+                                         Err(e) => error!("Error writing duration file: {:?} {:?}", duration_tmp_path, e),
+                                    }
+                                    let result = dt_file_res.flush();
+                                    match result {
+                                        Ok(o) => {},
+                                         Err(e) => error!("Error flushing duration file: {:?} {:?}", duration_tmp_path, e),
+                                    }
                                 } // File should be closed here.
-                                info!("Creating duration file: {:?} for duration: {}", &duration_file ,fduration);
+                                info!("Creating duration file: {:?} for duration: {}", &duration_file ,duration);
                                 rename(duration_tmp_file, duration_file);
                                 // Wait until lock is acquired. But what is the point of a blocking method, if it doesnt block by itself ?
                                 // I guess this is a side effect of async
