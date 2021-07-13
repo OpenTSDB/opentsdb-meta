@@ -149,7 +149,7 @@ impl ShardQueryRunner {
                     let dur = File::open(duration_file.as_path());
                     let mut dur_str = String::new();
                     match dur {
-                        Ok(mut dur_file) => {
+                        Ok(dur_file) => {
                             dur_file.read_to_string(&mut dur_str)?;
                             //If a duration file is present, it should have the right format.
                             let fduration = dur_str.parse()?;
@@ -167,7 +167,7 @@ impl ShardQueryRunner {
                 info!("Duration read for {:?} as {}", &duration_file, duration);
             
                 if query.start <= created && query.end >= created || 
-                (duration > 0 && query.start <= (created + duration as u64) && query.end >= (created + duration as u64) ) {
+                (duration > 0 && query.start >= created && query.end <= (created + duration as u64) ) {
                     let file_path = MystSegment::get_segment_filename(
                         &shard_id,
                         &created,
