@@ -102,7 +102,7 @@ impl ShardQueryRunner {
 
     fn get_num_shards(config: &Config) -> Result<Vec<u32>> {
         let mut result = Vec::new();
-        let path = String::from(&config.data_path);
+        let path = String::from(&config.data_read_path);
         let dirs = fs::read_dir(path)?;
         for dir in dirs {
             result.push(
@@ -127,7 +127,7 @@ impl ShardQueryRunner {
     ) -> Result<()> {
         let curr_time = SystemTime::now();
         let s_time = SystemTime::now();
-        let mut path = String::from(&config.data_path);
+        let mut path = String::from(&config.data_read_path);
         path.push_str(&shard_id.to_string());
         let dirs = fs::read_dir(path)?;
         let mut segment_readers = Vec::new();
@@ -162,7 +162,7 @@ impl ShardQueryRunner {
                     let file_path = MystSegment::get_segment_filename(
                         &shard_id,
                         &created,
-                        String::from(&config.data_path),
+                        String::from(&config.data_read_path),
                     );
                     let reader = BufReader::new(File::open(file_path.clone())?);
                     let segment_reader =

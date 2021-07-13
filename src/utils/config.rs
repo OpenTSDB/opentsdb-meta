@@ -30,7 +30,8 @@ pub const TAG_VALUES: &str = "__tagvalue";
 pub struct Config {
     // myst properties
     pub shards: usize,
-    pub data_path: String,
+    pub data_download_path: String,
+    pub data_read_path: String,
     pub segment_gen_data_path: String,
     pub cache: Vec<String>,
     pub docstore_block_size: usize,
@@ -64,12 +65,16 @@ impl Config {
         for s in split {
             cache.push(String::from(s));
         }
+        let data_download_path=  config
+                                    .get_str("data_download_path")
+                                    .unwrap_or(String::from("/var/myst/data/"))
+                                    .to_string();
+        let data_read_path_root = data_download_path.clone();                                    
+        let namespace= config.get_str("namespace").unwrap().to_string();
         Self {
             shards: config.get_int("shards").unwrap_or(10) as usize,
-            data_path: config
-                .get_str("data_path")
-                .unwrap_or(String::from("/var/myst/data/"))
-                .to_string(),
+            data_download_path: data_download_path,
+            data_read_path: add_dir(data_read_path_root, namespace.clone()),   
             segment_gen_data_path: config
                 .get_str("segment_gen_data_path")
                 .unwrap_or(String::from("/var/myst/segment_gen/data/"))
@@ -87,7 +92,7 @@ impl Config {
             polling_interval: config.get_int("polling_interval").unwrap() as u64,
             segment_duration: config.get_int("segment_duration").unwrap() as u64,
             segment_full_duration: config.get_int("segment_full_duration").unwrap() as u64,
-            namespace: config.get_str("namespace").unwrap().to_string(),
+            namespace: namespace,
             start_epoch: config.get_int("start_epoch").unwrap() as u64,
             input_bucket: config.get_str("input_bucket").unwrap().to_string(),
             processed_bucket: config.get_str("processed_bucket").unwrap().to_string(),
@@ -97,4 +102,12 @@ impl Config {
             download_frequency: config.get_int("download_frequency").unwrap() as u64,
         }
     }
+}
+
+pub fn add_dir(mut root: String, child: String) -> String {
+    if !root.ends_with("/") {
+        root.push_str("/");
+    }
+    root.push_str(&child);
+    root
 }

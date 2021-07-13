@@ -33,7 +33,7 @@ use std::{
 use tokio::sync::RwLock;
 
 //This following imports will move to the main class
-use crate::utils::config::Config;
+use crate::utils::config::{Config, add_dir};
 use rusoto_core::credential::AwsCredentials;
 use rusoto_core::credential::StaticProvider;
 use rusoto_core::request::HttpClient;
@@ -317,14 +317,14 @@ impl SegmentDownload {
 
 pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting segment download");
-    let mut config = Config::new();
+    let config = Config::new();
     let processed_bucket = config.processed_bucket;
 
     let key = config.aws_key;
     let secret = config.aws_secret;
     let creds = AwsCredentials::new(key, secret, None, None);
     let namespace = config.namespace;
-    let root_data_path = config.data_path;
+    let root_data_path = config.data_download_path;
     let temp_data_path = config.temp_data_path;
     let frequency = config.download_frequency;
     let s3_client = S3Client::new_with(
@@ -371,12 +371,4 @@ pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => info!("Error while submitting jobs for download from remote store {:?}", e),
     }*/
     Ok(())
-}
-
-fn add_dir(mut root: String, child: String) -> String {
-    if !root.ends_with("/") {
-        root.push_str("/");
-    }
-    root.push_str(&child);
-    root
 }
