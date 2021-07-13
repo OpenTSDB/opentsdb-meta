@@ -68,7 +68,10 @@ num-derive = "0.3"
 num = "0.4.0"
 
 bloomfilter = "1.0.5"
+sys-info = "0.9.0"
 
+libloading = "0.5"
+metrics-reporter = { path = "./metrics-reporter", version = "*" }
 
 [build-dependencies]
 tonic-build = { version = "0.4.0", features = ["prost"] }
