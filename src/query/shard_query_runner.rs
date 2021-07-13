@@ -149,7 +149,7 @@ impl ShardQueryRunner {
                     let dur = File::open(duration_file.as_path());
                     let mut dur_str = String::new();
                     match dur {
-                        Ok(dur_file) => {
+                        Ok(mut dur_file) => {
                             dur_file.read_to_string(&mut dur_str)?;
                             //If a duration file is present, it should have the right format.
                             let fduration = dur_str.parse()?;
