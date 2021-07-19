@@ -88,10 +88,13 @@ impl TimeSegmented  for MystSegment {
 }
 /// Map that contains `MystSegmentHeaderKeys` and it's offset in the writer `W`
 
+/// TODO: Move reader to the same place as data.
+/// TODO: Add version and len.
 #[derive(Default)]
 pub struct MystSegmentHeader {
     pub header: HashMap<u32, u32>,
     pub segment_timeseries_id: u32,
+    pub uid: u32,
 }
 
 /// Maps each datastructure to a integer for efficiency.
@@ -110,7 +113,7 @@ pub enum MystSegmentHeaderKeys {
 }
 
 impl MystSegmentHeader {
-    /// TODO: Move reader to the same place as data.
+    
     pub fn from(data: &[u8]) -> Result<Self> {
         let mut reader = Cursor::new(data);
         let mut map = HashMap::new();
@@ -121,9 +124,11 @@ impl MystSegmentHeader {
             );
         }
         let segment_timeseries_id = reader.read_u32::<NativeEndian>()?;
+        let uid = reader.read_u32::<NativeEndian>()?;
         let header = Self {
             header: map,
             segment_timeseries_id: segment_timeseries_id,
+            uid: uid,
         };
 
         Ok(header)
@@ -250,7 +255,7 @@ impl<W: Write> Builder<W> for MystSegment {
         }
 
         buf.write_u32::<NativeEndian>(self.segment_timeseries_id)?;
-
+        buf.write_u32::<NativeEndian>(self.uid)?;
         info!(
             "Done building segment for {:?} and {:?}",
             self.shard_id, self.epoch
@@ -347,7 +352,7 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
             header: Default::default(),
             shard_id: 0,
             epoch: 0,
-            uid: 0,
+            uid: full_segment_header.uid,
             segment_timeseries_id: full_segment_header.segment_timeseries_id,
             metric_prefix: Rc::new(String::from(crate::utils::config::METRIC)),
             tag_key_prefix: Rc::new(String::from(crate::utils::config::TAG_KEYS)),
