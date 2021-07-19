@@ -68,7 +68,7 @@ impl<R: Read + Seek> SegmentReader<R> {
         file_path: String,
         duration: i32
     ) -> Result<Self> {
-        let segment_header = SegmentReader::read_segment_header(&mut reader)?;
+        let segment_header = SegmentReader::read_segment_header(&mut reader)?.header;
         let fst_header_offset = segment_header
             .get(&ToPrimitive::to_u32(&MystSegmentHeaderKeys::FstHeader).unwrap())
             .ok_or(MystError::new_query_error("No segment header offset found"))?;
@@ -121,7 +121,7 @@ impl<R: Read + Seek> SegmentReader<R> {
         Ok(header)
     }
 
-    pub fn read_segment_header(reader: &mut R) -> Result<HashMap<u32, u32>> {
+    pub fn read_segment_header(reader: &mut R) -> Result<MystSegmentHeader> {
         info!("Reading segment header");
         let len = reader.seek(SeekFrom::End(0))?;
         let header_start = len - (4 * 2 * 10);
@@ -130,7 +130,7 @@ impl<R: Read + Seek> SegmentReader<R> {
         reader.read_exact(&mut header_buf)?;
 
         let header = MystSegmentHeader::from(&header_buf)?;
-        Ok(header.header)
+        Ok(header)
     }
 
     pub fn read_fst_header(reader: &mut R, offset: &u32) -> Result<HashMap<String, u32>> {

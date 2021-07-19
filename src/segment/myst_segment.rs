@@ -248,7 +248,7 @@ impl<W: Write> Builder<W> for MystSegment {
             buf.write_u32::<NativeEndian>(k)?;
             buf.write_u32::<NativeEndian>(v)?;
         }
-        
+
         buf.write_u32::<NativeEndian>(self.segment_timeseries_id)?;
 
         info!(
@@ -265,7 +265,10 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
     fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<MystSegment>> {
         //        let mut buffered_reader = BufReader::new(buf);
         // Read header first -- seek from end
-        let segment_header = SegmentReader::read_segment_header(buf)?;
+        
+        let full_segment_header = SegmentReader::read_segment_header(buf)?;
+
+        let segment_header = full_segment_header.header;
         // load fst
         let fst_offset = segment_header
             .get(&ToPrimitive::to_u32(&MystSegmentHeaderKeys::FstHeader).unwrap())
@@ -345,7 +348,7 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
             shard_id: 0,
             epoch: 0,
             uid: 0,
-            segment_timeseries_id: 0,
+            segment_timeseries_id: full_segment_header.segment_timeseries_id,
             metric_prefix: Rc::new(String::from(crate::utils::config::METRIC)),
             tag_key_prefix: Rc::new(String::from(crate::utils::config::TAG_KEYS)),
             dedup: HashSet::new(),
