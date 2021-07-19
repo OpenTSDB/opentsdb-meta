@@ -687,8 +687,11 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         let mut ts_bitmaps = segment_reader.get_all_ts_bitmaps()?;
         let mut final_ts_bitmap = Bitmap::create();
         for (epoch, ts_bitmap) in &mut ts_bitmaps {
+            info!("Reading epoch from bitmap: {} {}", epoch, epoch_bitmap::EPOCH_DURATION);
             if start <= &(epoch + epoch_bitmap::EPOCH_DURATION) && end >= epoch {
+                let ts_card = ts_bitmap.cardinality();
                 final_ts_bitmap.or_inplace(ts_bitmap);
+                info!("Filtered in epoch from bitmap: {} {} {}", epoch, ts_card, final_ts_bitmap.cardinality());
             }
         }
         filtered_bitmap.and_inplace(&final_ts_bitmap);

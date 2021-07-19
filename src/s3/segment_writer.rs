@@ -121,6 +121,8 @@ impl SegmentWriter {
                         use_file = true;
                     }
                 } 
+            } else {
+                use_file = true;
             } 
             if use_file {
                 info!("Loading segment for {} into mem", remote_filename);

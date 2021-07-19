@@ -90,7 +90,8 @@ impl TimeSegmented  for MystSegment {
 
 #[derive(Default)]
 pub struct MystSegmentHeader {
-    header: HashMap<u32, u32>,
+    pub header: HashMap<u32, u32>,
+    pub segment_timeseries_id: u32,
 }
 
 /// Maps each datastructure to a integer for efficiency.
@@ -109,7 +110,8 @@ pub enum MystSegmentHeaderKeys {
 }
 
 impl MystSegmentHeader {
-    pub fn deserialize_header(data: &[u8]) -> Result<HashMap<u32, u32>> {
+    /// TODO: Move reader to the same place as data.
+    pub fn from(data: &[u8]) -> Result<Self> {
         let mut reader = Cursor::new(data);
         let mut map = HashMap::new();
         for _i in 0..10 {
@@ -118,7 +120,13 @@ impl MystSegmentHeader {
                 reader.read_u32::<NativeEndian>()?,
             );
         }
-        Ok(map)
+        let segment_timeseries_id = reader.read_u32::<NativeEndian>()?;
+        let header = Self {
+            header: map,
+            segment_timeseries_id: segment_timeseries_id,
+        };
+
+        Ok(header)
     }
 }
 
@@ -240,6 +248,8 @@ impl<W: Write> Builder<W> for MystSegment {
             buf.write_u32::<NativeEndian>(k)?;
             buf.write_u32::<NativeEndian>(v)?;
         }
+        
+        buf.write_u32::<NativeEndian>(self.segment_timeseries_id)?;
 
         info!(
             "Done building segment for {:?} and {:?}",

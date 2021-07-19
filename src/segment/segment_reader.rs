@@ -129,7 +129,8 @@ impl<R: Read + Seek> SegmentReader<R> {
         let mut header_buf = vec![0; 4 * 2 * 10];
         reader.read_exact(&mut header_buf)?;
 
-        MystSegmentHeader::deserialize_header(&header_buf)
+        let header = MystSegmentHeader::from(&header_buf)?;
+        Ok(header.header)
     }
 
     pub fn read_fst_header(reader: &mut R, offset: &u32) -> Result<HashMap<String, u32>> {
