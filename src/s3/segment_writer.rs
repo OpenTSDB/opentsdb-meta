@@ -126,7 +126,7 @@ impl SegmentWriter {
             } 
             if use_file {
                 info!("Loading segment for {} into mem", remote_filename);
-                let mut f = File::create(&file_path).unwrap();
+                let mut f = File::open(&file_path).unwrap();
                 let offset: u32 = 0;
                 let result = self.segment.take().unwrap().load(&mut f, &offset);
 
@@ -292,9 +292,20 @@ impl SegmentWriter {
         create_dir_all(parent_dir.unwrap());
         info!("Creating segment file: {:?} for duration: {}", &file_path, &dur_string);
         let mut file = File::create(&file_path).unwrap();
-        file.write(&data);
-        file.flush().unwrap();
-        info!("Created segment file in segment gen: {:?}", &file_path);
+        let result = file.write_all(&data);
+        match result {
+            Ok(()) => info!("Writing to segment file in segment gen: {:?}", &file_path),
+            Err(e) => error!("Failed to write to segment file: {:?} {:?}", &file_path, e),
+        }
+
+        let result = file.flush();
+
+        match result {
+            Ok(()) => info!("Created segment file in segment gen: {:?}", &file_path),
+            Err(e) => error!("Failed to create segment file: {:?} {:?}", &file_path, e),
+        }
+	
+	drop(file);
         
         info!(
             "Calling the uploader (upload segment)! for filename: {} and duration: {}",

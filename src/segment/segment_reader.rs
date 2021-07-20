@@ -124,11 +124,12 @@ impl<R: Read + Seek> SegmentReader<R> {
     pub fn read_segment_header(reader: &mut R) -> Result<MystSegmentHeader> {
         info!("Reading segment header");
         let len = reader.seek(SeekFrom::End(0))?;
-        let header_start = len - (4 * 2 * 10 + 4 * 2); 
+        let bytes_header =  (4 * 2 * 10) + (4 * 2);
+        let header_start = len - bytes_header;
+        debug!("Seeking from start: {} {} {}", header_start, len, bytes_header); 
         reader.seek(SeekFrom::Start(header_start))?;
-        let mut header_buf = vec![0; (4 * 2 * 10) + 4 * 2];
+        let mut header_buf = vec![0; bytes_header as usize];
         reader.read_exact(&mut header_buf)?;
-
         let header = MystSegmentHeader::from(&header_buf)?;
         Ok(header)
     }

@@ -30,7 +30,7 @@ use crate::utils::config::add_dir;
 use crate::utils::myst_error::{MystError, Result};
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use croaring::Bitmap;
-use log::info;
+use log::{info, debug};
 use std::collections::{HashMap, HashSet};
 
 pub use std::io::{Cursor, Read, Write};
@@ -69,7 +69,7 @@ pub struct MystSegment {
     segment_timeseries_id: u32,
     tag_key_prefix: Rc<String>,
     metric_prefix: Rc<String>,
-    dedup: HashSet<u64>, //TODO remove
+    dedup: HashSet<u64>,
 
     cluster: Option<Clusterer>,
 
@@ -125,12 +125,12 @@ impl MystSegmentHeader {
         }
         let segment_timeseries_id = reader.read_u32::<NativeEndian>()?;
         let uid = reader.read_u32::<NativeEndian>()?;
+        debug!("Read uid {} and segment id: {}", uid, segment_timeseries_id);
         let header = Self {
             header: map,
             segment_timeseries_id: segment_timeseries_id,
             uid: uid,
         };
-
         Ok(header)
     }
 }
@@ -253,7 +253,7 @@ impl<W: Write> Builder<W> for MystSegment {
             buf.write_u32::<NativeEndian>(k)?;
             buf.write_u32::<NativeEndian>(v)?;
         }
-
+        info!("Writing segment timeseries id {} and uid: {} for shard: {} and epoch: {}", self.segment_timeseries_id, self.uid, self.shard_id, self.epoch);
         buf.write_u32::<NativeEndian>(self.segment_timeseries_id)?;
         buf.write_u32::<NativeEndian>(self.uid)?;
         info!(
@@ -329,7 +329,16 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
             ))?;
         let mut docstore = DocStore::new(0);
         docstore = docstore.load(buf, docstore_header_offset)?.unwrap();
+        
+        /// Load xxhashes into dedup map.
+        let mut dedup: HashSet<u64> =  HashSet::new();
 
+        let doc_vec = &docstore.data;
+
+        for t in doc_vec {
+            dedup.insert(t.timeseries_id);
+        }
+        
         let ts_bitmaps_header_offset = segment_header
             .get(&ToPrimitive::to_u32(&MystSegmentHeaderKeys::EpochBitmapHeader).unwrap())
             .ok_or(MystError::new_query_error(
@@ -339,8 +348,12 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
         timeseries_bitmap = timeseries_bitmap
             .load(buf, ts_bitmaps_header_offset)?
             .unwrap();
-        // TODO: Doc store block entries should be segment specific ? (and not global ?)
-
+        /// TODO: Doc store block entries should be segment specific ? (and not global ?)
+        /// NOTE: It is ok to have a new clusterer because,
+        /// the exists check is performed while draining the clusters.
+        let last_id = full_segment_header.segment_timeseries_id;
+        let uid = full_segment_header.uid;
+        info!("Loading segment for shard: {} and epoch: {} with last segment id: {} uid: {}", self.shard_id, self.epoch, last_id, uid);
         let myst_segment = MystSegment {
             fsts: fst_container,
             dict,
@@ -350,14 +363,14 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
             epoch_bitmap: timeseries_bitmap,
             data: docstore,
             header: Default::default(),
-            shard_id: 0,
-            epoch: 0,
-            uid: full_segment_header.uid,
-            segment_timeseries_id: full_segment_header.segment_timeseries_id,
+            shard_id: self.shard_id,
+            epoch: self.epoch,
+            uid: uid,
+            segment_timeseries_id: last_id,
             metric_prefix: Rc::new(String::from(crate::utils::config::METRIC)),
             tag_key_prefix: Rc::new(String::from(crate::utils::config::TAG_KEYS)),
-            dedup: HashSet::new(),
-            cluster: None,
+            dedup: dedup,
+            cluster: Some(Clusterer::default()),
             duration: self.duration
         };
         Ok(Some(myst_segment))
