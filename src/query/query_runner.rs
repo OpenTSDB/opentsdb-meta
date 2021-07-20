@@ -17,8 +17,7 @@
  *
  */
 
-use log::debug;
-use log::{error, info};
+use log::{error, info, debug};
 use std::collections::HashMap;
 use std::{
     collections::{hash_map::DefaultHasher, HashSet},
@@ -369,7 +368,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         cache: &Vec<String>,
         explicit_filter: bool,
         explicit_tags_count: u32,
-        dict: &HashMap<u32,String>,
+        dict: &HashMap<u32, String>,
         group_key_ids: &Vec<u32>,
         docstore_block_size: usize,
         ts_data_time: Arc<AtomicU32>,
@@ -687,7 +686,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         let mut ts_bitmaps = segment_reader.get_all_ts_bitmaps()?;
         let mut final_ts_bitmap = Bitmap::create();
         for (epoch, ts_bitmap) in &mut ts_bitmaps {
-            info!("Reading epoch from bitmap: {} {}", epoch, epoch_bitmap::EPOCH_DURATION);
+            debug!("Reading epoch from bitmap: {} {}", epoch, epoch_bitmap::EPOCH_DURATION);
             if start <= &(epoch + epoch_bitmap::EPOCH_DURATION) && end >= epoch {
                 let ts_card = ts_bitmap.cardinality();
                 final_ts_bitmap.or_inplace(ts_bitmap);
@@ -695,7 +694,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
             }
         }
         filtered_bitmap.and_inplace(&final_ts_bitmap);
-        info!(
+        debug!(
             "After filtering by time, number of elements: {:?}",
             filtered_bitmap.cardinality()
         );
