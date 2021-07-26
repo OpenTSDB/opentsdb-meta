@@ -13,77 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+[workspace]
 
-[package]
-name = "myst"
-version = "0.1.0"
-authors = ["sidhhu <sidhhu@verizonmedia.com>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-#kafka = { version = "0.8.0", features = ["gzip"] }
-futures = "0.3.1"
-tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "sync", "time", "fs"] }
-tokio-stream = "0.1.3"
-serde = "1.0.119"
-chrono = "0.4.18"
-log = "0.4.11"
-fst = "0.4"
-regex-automata = { version = "0.1.9", features = ["transducer"] }
-croaring = "0.4.5"
-rand = "0.7.3"
-byteorder = "1.3.4"
-rayon = "1.5.0"
-fasthash = "0.4.0"
-serde_json = "1.0.61"
-strum = "0.20"
-strum_macros = "0.20"
-#rocket = "0.4.6"
-#rocket_contrib = "0.4.6"
-#lazy_static = "1.4.0"
-
-tonic = "0.4.0"
-prost = "0.7"
-local_ipaddress = "0.1.3"
-
-zstd = "0.6.1+zstd.1.4.9"
-lz4 = "1.23.2"
-snap = "1"
-
-fern = "0.6.0"
-lru = "0.6.5"
-num_cpus = "1.13.0"
-
-#### S3 ####
-rusoto_core = "0.46.0"
-rusoto_s3 = "0.46.0"
-futures-util = "0.3"
-flate2 = "1.0.13"
-bytes = "1.0.1"
-config = "0.11.0"
-num-traits = "0.2"
-num-derive = "0.3"
-num = "0.4.0"
-
-bloomfilter = "1.0.5"
-sys-info = "0.9.0"
-
-libloading = "0.5"
-metrics-reporter = { path = "./metrics-reporter", version = "*" }
-
-[build-dependencies]
-tonic-build = { version = "0.4.0", features = ["prost"] }
-
-[[bin]]
-name="client"
-path= "src/client/client.rs"
-
-[[bin]]
-name="server"
-path= "src/server/server.rs"
-
-[[bin]]
-name="segment-gen"
-path= "src/s3/processor.rs"
+members = [
+    "myst",
+    "metrics-reporter",
+    "noop-metrics-reporter"
+]

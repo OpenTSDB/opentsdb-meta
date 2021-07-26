@@ -103,7 +103,7 @@ impl Config {
             aws_secret: config.get_str("aws_secret").unwrap().to_string(),
             temp_data_path: config.get_str("temp_data_path").unwrap().to_string(),
             download_frequency: config.get_int("download_frequency").unwrap() as u64,
-            plugin_path: config.get_str("plugin_path").unwrap(),
+            plugin_path: config.get_str("plugin_path").unwrap_or(String::from("/etc/myst/plugin/metrics-reporter")),
             ssl_for_metrics: config.get_bool("ssl_for_metrics").unwrap(),
         }
     }

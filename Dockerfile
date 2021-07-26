@@ -14,9 +14,11 @@ FROM debian:buster-slim
 RUN apt-get update \
     && apt-get -y install clang
 RUN mkdir -p /etc/myst          \
+    && mkdir -p /etc/myst/plugin \
     && mkdir -p /var/log/myst   \
     && mkdir -p /var/myst/data  \
     && mkdir -p /var/myst/tmp
+COPY --from=build /dep-download/target/release/libnoop_metrics_reporter.so /etc/myst/plugin/metrics-reporter
 COPY --from=build /dep-download/target/release/server /usr/bin/myst-server
 COPY --from=build /dep-download/target/release/segment-gen /usr/bin/myst-segment-gen
 
