@@ -514,6 +514,20 @@
 <span id="511">511</span>
 <span id="512">512</span>
 <span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -547,6 +561,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">Builder</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">Loader</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">TimeSegmented</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">segment_reader</span>::<span class="ident">SegmentReader</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">myst_error</span>::{<span class="ident">MystError</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">lz4</span>::<span class="ident">EncoderBuilder</span>;
@@ -579,7 +594,19 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DeserializedDocStore</span> {
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">offset_len</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OffsetLen</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">duration</span>: <span class="ident">i32</span>
 }
+
+<span class="kw">impl</span> <span class="ident">TimeSegmented</span> <span class="kw">for</span> <span class="ident">DeserializedDocStore</span> {
+    <span class="kw">fn</span> <span class="ident">get_duration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">duration</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">set_duration</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">duration</span>: <span class="ident">i32</span>) {
+        <span class="self">self</span>.<span class="ident">duration</span> <span class="op">=</span> <span class="ident">duration</span>;
+    }
+}
+
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OffsetLen</span> {
@@ -675,7 +702,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">block_entries</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">for</span> (<span class="ident">id</span>, <span class="ident">offset</span>) <span class="kw">in</span> <span class="ident">docstore_header</span> {
             <span class="ident">buf</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>))<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">docstore_deserialized</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_docstore_from_reader</span>(<span class="ident">buf</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="ident">id</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">docstore_deserialized</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_docstore_from_reader</span>(<span class="ident">buf</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="ident">id</span>, <span class="number">0</span> <span class="kw">as</span> <span class="ident">i32</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">offset_length</span> <span class="op">=</span> <span class="ident">docstore_deserialized</span>.<span class="ident">offset_len</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="ident">docstore_result</span> <span class="op">=</span> <span class="ident">docstore_deserialized</span>.<span class="ident">data</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
 
@@ -744,7 +771,7 @@
         <span class="prelude-val">Ok</span>(<span class="ident">serialized</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DeserializedDocStore</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">duration</span>: <span class="ident">i32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DeserializedDocStore</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">data</span>);
         <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
@@ -775,6 +802,7 @@
         <span class="prelude-val">Ok</span>(<span class="ident">DeserializedDocStore</span> {
             <span class="ident">data</span>: <span class="prelude-val">Some</span>(<span class="ident">result</span>),
             <span class="ident">offset_len</span>: <span class="prelude-val">Some</span>(<span class="ident">sizes</span>),
+            <span class="ident">duration</span>: <span class="ident">duration</span>
         })
     }
 

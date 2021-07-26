@@ -134,19 +134,19 @@
  */</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">docstore</span>::<span class="ident">DeserializedDocStore</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">dict</span>::<span class="ident">DictHolder</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">myst_error</span>::<span class="ident">MystError</span>;
 
 <span class="kw">use</span> <span class="ident">lru</span>::<span class="ident">LruCache</span>;
 
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">File</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">rc</span>::<span class="ident">Rc</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>, <span class="ident">RwLock</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fs</span>, <span class="ident">thread</span>};
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ShardedCache</span> {
     <span class="kw">pub</span> <span class="ident">docstore_cache</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">LruCache</span><span class="op">&lt;</span>(<span class="ident">u64</span>, <span class="ident">u32</span>), <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DeserializedDocStore</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">dict_cache</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">LruCache</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">dict_cache</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">LruCache</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DictHolder</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">ShardedCache</span> {
@@ -155,7 +155,7 @@
             <span class="ident">docstore_cache</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Mutex</span>::<span class="ident">new</span>(
                 <span class="ident">LruCache</span>::<span class="op">&lt;</span>(<span class="ident">u64</span>, <span class="ident">u32</span>), <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DeserializedDocStore</span><span class="op">&gt;</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="number">200</span>),
             )),
-            <span class="ident">dict_cache</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">LruCache</span>::<span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>::<span class="ident">new</span>(
+            <span class="ident">dict_cache</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">LruCache</span>::<span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DictHolder</span><span class="op">&gt;</span><span class="op">&gt;</span>::<span class="ident">new</span>(
                 <span class="number">48</span>,
             ))),
         }
@@ -166,7 +166,7 @@
         <span class="ident">lock</span>.<span class="ident">put</span>((<span class="ident">epoch</span>, <span class="ident">id</span>), <span class="ident">docstore</span>);
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">put_dict</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>, <span class="ident">dict</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">put_dict</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>, <span class="ident">dict</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DictHolder</span><span class="op">&gt;</span>) {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lock</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">dict_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
         <span class="ident">lock</span>.<span class="ident">put</span>(<span class="ident">epoch</span>, <span class="ident">dict</span>);
     }

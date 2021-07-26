@@ -101,6 +101,24 @@
 <span id="98"> 98</span>
 <span id="99"> 99</span>
 <span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -134,7 +152,9 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
     <span class="comment">// myst properties</span>
     <span class="kw">pub</span> <span class="ident">shards</span>: <span class="ident">usize</span>,
-    <span class="kw">pub</span> <span class="ident">data_path</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">data_download_path</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">data_read_path</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">segment_gen_data_path</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">cache</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">docstore_block_size</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span> <span class="ident">log_file</span>: <span class="ident">String</span>,
@@ -143,6 +163,7 @@
     <span class="kw">pub</span> <span class="ident">ca_cert</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">polling_interval</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">segment_duration</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">segment_full_duration</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">namespace</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">start_epoch</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">input_bucket</span>: <span class="ident">String</span>,
@@ -169,13 +190,20 @@
         <span class="kw">for</span> <span class="ident">s</span> <span class="kw">in</span> <span class="ident">split</span> {
             <span class="ident">cache</span>.<span class="ident">push</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="ident">s</span>));
         }
+        <span class="kw">let</span> <span class="ident">data_download_path</span><span class="op">=</span>  <span class="ident">config</span>
+                                    .<span class="ident">get_str</span>(<span class="string">&quot;data_download_path&quot;</span>)
+                                    .<span class="ident">unwrap_or</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;/var/myst/data/&quot;</span>))
+                                    .<span class="ident">to_string</span>();
+        <span class="kw">let</span> <span class="ident">data_read_path_root</span> <span class="op">=</span> <span class="ident">data_download_path</span>.<span class="ident">clone</span>();                                    
+        <span class="kw">let</span> <span class="ident">namespace</span><span class="op">=</span> <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;namespace&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">to_string</span>();
         <span class="self">Self</span> {
             <span class="ident">shards</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;shards&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">10</span>) <span class="kw">as</span> <span class="ident">usize</span>,
-            <span class="ident">data_path</span>: <span class="ident">config</span>
-                .<span class="ident">get_str</span>(<span class="string">&quot;data_path&quot;</span>)
-                .<span class="ident">unwrap_or</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;/var/myst/data/&quot;</span>))
+            <span class="ident">data_download_path</span>: <span class="ident">data_download_path</span>,
+            <span class="ident">data_read_path</span>: <span class="ident">add_dir</span>(<span class="ident">data_read_path_root</span>, <span class="ident">namespace</span>.<span class="ident">clone</span>()),   
+            <span class="ident">segment_gen_data_path</span>: <span class="ident">config</span>
+                .<span class="ident">get_str</span>(<span class="string">&quot;segment_gen_data_path&quot;</span>)
+                .<span class="ident">unwrap_or</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;/var/myst/segment_gen/data/&quot;</span>))
                 .<span class="ident">to_string</span>(),
-
             <span class="ident">cache</span>,
             <span class="ident">docstore_block_size</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;docstore_block_size&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">200</span>) <span class="kw">as</span> <span class="ident">usize</span>,
             <span class="ident">log_file</span>: <span class="ident">config</span>
@@ -186,10 +214,10 @@
             <span class="ident">ssl_key</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;ssl_key&quot;</span>).<span class="ident">unwrap</span>(),
             <span class="ident">ssl_cert</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;ssl_cert&quot;</span>).<span class="ident">unwrap</span>(),
             <span class="ident">ca_cert</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;ca_cert&quot;</span>).<span class="ident">unwrap</span>(),
-
             <span class="ident">polling_interval</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;polling_interval&quot;</span>).<span class="ident">unwrap</span>() <span class="kw">as</span> <span class="ident">u64</span>,
             <span class="ident">segment_duration</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;segment_duration&quot;</span>).<span class="ident">unwrap</span>() <span class="kw">as</span> <span class="ident">u64</span>,
-            <span class="ident">namespace</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;namespace&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
+            <span class="ident">segment_full_duration</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;segment_full_duration&quot;</span>).<span class="ident">unwrap</span>() <span class="kw">as</span> <span class="ident">u64</span>,
+            <span class="ident">namespace</span>: <span class="ident">namespace</span>,
             <span class="ident">start_epoch</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;start_epoch&quot;</span>).<span class="ident">unwrap</span>() <span class="kw">as</span> <span class="ident">u64</span>,
             <span class="ident">input_bucket</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;input_bucket&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
             <span class="ident">processed_bucket</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;processed_bucket&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
@@ -201,6 +229,14 @@
             <span class="ident">ssl_for_metrics</span>: <span class="ident">config</span>.<span class="ident">get_bool</span>(<span class="string">&quot;ssl_for_metrics&quot;</span>).<span class="ident">unwrap</span>(),
         }
     }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_dir</span>(<span class="kw-2">mut</span> <span class="ident">root</span>: <span class="ident">String</span>, <span class="ident">child</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">root</span>.<span class="ident">ends_with</span>(<span class="string">&quot;/&quot;</span>) {
+        <span class="ident">root</span>.<span class="ident">push_str</span>(<span class="string">&quot;/&quot;</span>);
+    }
+    <span class="ident">root</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="ident">child</span>);
+    <span class="ident">root</span>
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="myst"></div>

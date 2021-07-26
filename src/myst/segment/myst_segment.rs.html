@@ -582,6 +582,70 @@
 <span id="579">579</span>
 <span id="580">580</span>
 <span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -604,16 +668,18 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">Builder</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">Loader</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">TimeSegmented</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">dict</span>::<span class="ident">Dict</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">docstore</span>::{<span class="ident">DocStore</span>, <span class="ident">Timeseries</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">metric_bitmap</span>::<span class="ident">MetricBitmap</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">myst_fst</span>::{<span class="ident">MystFST</span>, <span class="ident">MystFSTContainer</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">tag_bitmap</span>::{<span class="ident">TagKeysBitmap</span>, <span class="ident">TagValuesBitmap</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">add_dir</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">myst_error</span>::{<span class="ident">MystError</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">NativeEndian</span>, <span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 <span class="kw">use</span> <span class="ident">croaring</span>::<span class="ident">Bitmap</span>;
-<span class="kw">use</span> <span class="ident">log</span>::<span class="ident">info</span>;
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">info</span>, <span class="ident">debug</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>};
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">Cursor</span>, <span class="ident">Read</span>, <span class="ident">Write</span>};
@@ -652,15 +718,32 @@
     <span class="ident">segment_timeseries_id</span>: <span class="ident">u32</span>,
     <span class="ident">tag_key_prefix</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="ident">metric_prefix</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="ident">dedup</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>, <span class="comment">//TODO remove</span>
+    <span class="ident">dedup</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 
     <span class="ident">cluster</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Clusterer</span><span class="op">&gt;</span>,
+
+    <span class="ident">duration</span>: <span class="ident">i32</span>,
 }
 
+<span class="kw">impl</span> <span class="ident">TimeSegmented</span>  <span class="kw">for</span> <span class="ident">MystSegment</span> {
+    
+    <span class="kw">fn</span> <span class="ident">get_duration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">duration</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">set_duration</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">duration</span>: <span class="ident">i32</span>) {
+        <span class="self">self</span>.<span class="ident">duration</span> <span class="op">=</span> <span class="ident">duration</span>;
+    }
+}
 <span class="doccomment">/// Map that contains `MystSegmentHeaderKeys` and it&#39;s offset in the writer `W`</span>
+
+<span class="doccomment">/// TODO: Move reader to the same place as data.</span>
+<span class="doccomment">/// TODO: Add version and len.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MystSegmentHeader</span> {
-    <span class="ident">header</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">header</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">u32</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">segment_timeseries_id</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span> <span class="ident">uid</span>: <span class="ident">u32</span>,
 }
 
 <span class="doccomment">/// Maps each datastructure to a integer for efficiency.</span>
@@ -679,7 +762,8 @@
 }
 
 <span class="kw">impl</span> <span class="ident">MystSegmentHeader</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">deserialize_header</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">u32</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">data</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
         <span class="kw">for</span> <span class="ident">_i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">10</span> {
@@ -688,7 +772,15 @@
                 <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
             );
         }
-        <span class="prelude-val">Ok</span>(<span class="ident">map</span>)
+        <span class="kw">let</span> <span class="ident">segment_timeseries_id</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">uid</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Read uid {} and segment id: {}&quot;</span>, <span class="ident">uid</span>, <span class="ident">segment_timeseries_id</span>);
+        <span class="kw">let</span> <span class="ident">header</span> <span class="op">=</span> <span class="self">Self</span> {
+            <span class="ident">header</span>: <span class="ident">map</span>,
+            <span class="ident">segment_timeseries_id</span>: <span class="ident">segment_timeseries_id</span>,
+            <span class="ident">uid</span>: <span class="ident">uid</span>,
+        };
+        <span class="prelude-val">Ok</span>(<span class="ident">header</span>)
     }
 }
 
@@ -810,7 +902,9 @@
             <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">k</span>)<span class="question-mark">?</span>;
             <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">v</span>)<span class="question-mark">?</span>;
         }
-
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Writing segment timeseries id {} and uid: {} for shard: {} and epoch: {}&quot;</span>, <span class="self">self</span>.<span class="ident">segment_timeseries_id</span>, <span class="self">self</span>.<span class="ident">uid</span>, <span class="self">self</span>.<span class="ident">shard_id</span>, <span class="self">self</span>.<span class="ident">epoch</span>);
+        <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">segment_timeseries_id</span>)<span class="question-mark">?</span>;
+        <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">uid</span>)<span class="question-mark">?</span>;
         <span class="macro">info</span><span class="macro">!</span>(
             <span class="string">&quot;Done building segment for {:?} and {:?}&quot;</span>,
             <span class="self">self</span>.<span class="ident">shard_id</span>, <span class="self">self</span>.<span class="ident">epoch</span>
@@ -825,7 +919,10 @@
     <span class="kw">fn</span> <span class="ident">load</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">MystSegment</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="comment">//        let mut buffered_reader = BufReader::new(buf);</span>
         <span class="comment">// Read header first -- seek from end</span>
-        <span class="kw">let</span> <span class="ident">segment_header</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">read_segment_header</span>(<span class="ident">buf</span>)<span class="question-mark">?</span>;
+        
+        <span class="kw">let</span> <span class="ident">full_segment_header</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">read_segment_header</span>(<span class="ident">buf</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let</span> <span class="ident">segment_header</span> <span class="op">=</span> <span class="ident">full_segment_header</span>.<span class="ident">header</span>;
         <span class="comment">// load fst</span>
         <span class="kw">let</span> <span class="ident">fst_offset</span> <span class="op">=</span> <span class="ident">segment_header</span>
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">FstHeader</span>).<span class="ident">unwrap</span>())
@@ -881,7 +978,16 @@
             ))<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">docstore</span> <span class="op">=</span> <span class="ident">DocStore</span>::<span class="ident">new</span>(<span class="number">0</span>);
         <span class="ident">docstore</span> <span class="op">=</span> <span class="ident">docstore</span>.<span class="ident">load</span>(<span class="ident">buf</span>, <span class="ident">docstore_header_offset</span>)<span class="question-mark">?</span>.<span class="ident">unwrap</span>();
+        
+        <span class="doccomment">/// Load xxhashes into dedup map.</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dedup</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> <span class="op">=</span>  <span class="ident">HashSet</span>::<span class="ident">new</span>();
 
+        <span class="kw">let</span> <span class="ident">doc_vec</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">docstore</span>.<span class="ident">data</span>;
+
+        <span class="kw">for</span> <span class="ident">t</span> <span class="kw">in</span> <span class="ident">doc_vec</span> {
+            <span class="ident">dedup</span>.<span class="ident">insert</span>(<span class="ident">t</span>.<span class="ident">timeseries_id</span>);
+        }
+        
         <span class="kw">let</span> <span class="ident">ts_bitmaps_header_offset</span> <span class="op">=</span> <span class="ident">segment_header</span>
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">EpochBitmapHeader</span>).<span class="ident">unwrap</span>())
             .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(
@@ -891,8 +997,12 @@
         <span class="ident">timeseries_bitmap</span> <span class="op">=</span> <span class="ident">timeseries_bitmap</span>
             .<span class="ident">load</span>(<span class="ident">buf</span>, <span class="ident">ts_bitmaps_header_offset</span>)<span class="question-mark">?</span>
             .<span class="ident">unwrap</span>();
-        <span class="comment">// TODO: Doc store block entries should be segment specific ? (and not global ?)</span>
-
+        <span class="doccomment">/// TODO: Doc store block entries should be segment specific ? (and not global ?)</span>
+        <span class="doccomment">/// NOTE: It is ok to have a new clusterer because,</span>
+        <span class="doccomment">/// the exists check is performed while draining the clusters.</span>
+        <span class="kw">let</span> <span class="ident">last_id</span> <span class="op">=</span> <span class="ident">full_segment_header</span>.<span class="ident">segment_timeseries_id</span>;
+        <span class="kw">let</span> <span class="ident">uid</span> <span class="op">=</span> <span class="ident">full_segment_header</span>.<span class="ident">uid</span>;
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Loading segment for shard: {} and epoch: {} with last segment id: {} uid: {}&quot;</span>, <span class="self">self</span>.<span class="ident">shard_id</span>, <span class="self">self</span>.<span class="ident">epoch</span>, <span class="ident">last_id</span>, <span class="ident">uid</span>);
         <span class="kw">let</span> <span class="ident">myst_segment</span> <span class="op">=</span> <span class="ident">MystSegment</span> {
             <span class="ident">fsts</span>: <span class="ident">fst_container</span>,
             <span class="ident">dict</span>,
@@ -902,26 +1012,45 @@
             <span class="ident">epoch_bitmap</span>: <span class="ident">timeseries_bitmap</span>,
             <span class="ident">data</span>: <span class="ident">docstore</span>,
             <span class="ident">header</span>: <span class="ident">Default</span>::<span class="ident">default</span>(),
-            <span class="ident">shard_id</span>: <span class="number">0</span>,
-            <span class="ident">epoch</span>: <span class="number">0</span>,
-            <span class="ident">uid</span>: <span class="number">0</span>,
-            <span class="ident">segment_timeseries_id</span>: <span class="number">0</span>,
+            <span class="ident">shard_id</span>: <span class="self">self</span>.<span class="ident">shard_id</span>,
+            <span class="ident">epoch</span>: <span class="self">self</span>.<span class="ident">epoch</span>,
+            <span class="ident">uid</span>: <span class="ident">uid</span>,
+            <span class="ident">segment_timeseries_id</span>: <span class="ident">last_id</span>,
             <span class="ident">metric_prefix</span>: <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">METRIC</span>)),
             <span class="ident">tag_key_prefix</span>: <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">TAG_KEYS</span>)),
-            <span class="ident">dedup</span>: <span class="ident">HashSet</span>::<span class="ident">new</span>(),
-            <span class="ident">cluster</span>: <span class="prelude-val">None</span>,
+            <span class="ident">dedup</span>: <span class="ident">dedup</span>,
+            <span class="ident">cluster</span>: <span class="prelude-val">Some</span>(<span class="ident">Clusterer</span>::<span class="ident">default</span>()),
+            <span class="ident">duration</span>: <span class="self">self</span>.<span class="ident">duration</span>
         };
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">myst_segment</span>))
     }
 }
 
 <span class="kw">impl</span> <span class="ident">MystSegment</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">shard_id</span>: <span class="ident">u32</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">MystSegment</span>::<span class="ident">new_with_block_entries</span>(<span class="ident">shard_id</span>, <span class="ident">epoch</span>, <span class="number">50000</span> <span class="kw">as</span> <span class="ident">usize</span>)
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_block_entries</span>(
+        <span class="ident">shard_id</span>: <span class="ident">u32</span>,
+        <span class="ident">epoch</span>: <span class="ident">u64</span>,
+        <span class="ident">docstore_block_entries</span>: <span class="ident">usize</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">MystSegment</span>::<span class="ident">new_with_block_entries_duration</span>(<span class="ident">shard_id</span>, <span class="ident">epoch</span>, <span class="ident">docstore_block_entries</span>, <span class="number">7200</span> <span class="kw">as</span> <span class="ident">i32</span>)
+    }
+
     <span class="doccomment">/// Creates a new MystSegment</span>
     <span class="doccomment">/// # Arguments</span>
     <span class="doccomment">/// * `shard_id` - Shard id for the segment.</span>
     <span class="doccomment">/// * `epoch` - The start epoch of the segment.</span>
     <span class="doccomment">/// * `docstore_block_entries` - Number of entries in each docstore block</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">shard_id</span>: <span class="ident">u32</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>, <span class="ident">docstore_block_entries</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="doccomment">/// * `duration` - The duration of data in the segment in seconds</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_block_entries_duration</span>(
+        <span class="ident">shard_id</span>: <span class="ident">u32</span>,
+        <span class="ident">epoch</span>: <span class="ident">u64</span>,
+        <span class="ident">docstore_block_entries</span>: <span class="ident">usize</span>,
+        <span class="ident">duration</span>: <span class="ident">i32</span>
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Creating new segment for shard id {}&quot;</span>, <span class="ident">shard_id</span>);
         <span class="self">Self</span> {
             <span class="ident">shard_id</span>,
@@ -943,6 +1072,7 @@
             <span class="ident">tag_key_prefix</span>: <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">TAG_KEYS</span>)),
             <span class="ident">dedup</span>: <span class="ident">HashSet</span>::<span class="ident">new</span>(), <span class="comment">// TODO remove</span>
             <span class="ident">cluster</span>: <span class="prelude-val">Some</span>(<span class="ident">Clusterer</span>::<span class="ident">default</span>()),
+            <span class="ident">duration</span>: <span class="ident">duration</span>,
         }
     }
 
@@ -1116,17 +1246,15 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_segment_filename</span>(<span class="ident">shard_id</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>, <span class="ident">created</span>: <span class="kw-2">&amp;</span><span class="ident">u64</span>, <span class="ident">data_root_path</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filename</span> <span class="op">=</span> <span class="ident">MystSegment</span>::<span class="ident">get_path_prefix</span>(<span class="ident">shard_id</span>, <span class="ident">created</span>, <span class="ident">data_root_path</span>);
-        <span class="ident">filename</span>.<span class="ident">push_str</span>(<span class="string">&quot;segment&quot;</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filename</span> <span class="op">=</span> <span class="ident">add_dir</span>(<span class="ident">filename</span>, <span class="string">&quot;segment&quot;</span>.<span class="ident">to_string</span>());
         <span class="kw">let</span> <span class="ident">ext</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;.myst&quot;</span>);
         <span class="ident">filename</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="ident">ext</span>);
         <span class="ident">filename</span>
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_path_prefix</span>(<span class="ident">shard_id</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>, <span class="ident">created</span>: <span class="kw-2">&amp;</span><span class="ident">u64</span>, <span class="kw-2">mut</span> <span class="ident">data_path</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-        <span class="ident">data_path</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="ident">shard_id</span>.<span class="ident">to_string</span>());
-        <span class="ident">data_path</span>.<span class="ident">push_str</span>(<span class="string">&quot;/&quot;</span>);
-        <span class="ident">data_path</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="ident">created</span>.<span class="ident">to_string</span>());
-        <span class="ident">data_path</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;/&quot;</span>));
+        <span class="kw">let</span> <span class="ident">data_path</span> <span class="op">=</span> <span class="ident">add_dir</span>(<span class="ident">data_path</span>, <span class="ident">shard_id</span>.<span class="ident">to_string</span>());
+        <span class="kw">let</span> <span class="ident">data_path</span> <span class="op">=</span> <span class="ident">add_dir</span>(<span class="ident">data_path</span>, <span class="ident">created</span>.<span class="ident">to_string</span>());
         <span class="kw">if</span> <span class="op">!</span><span class="ident">Path</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">data_path</span>).<span class="ident">exists</span>() {
             <span class="ident">fs</span>::<span class="ident">create_dir_all</span>(<span class="ident">Path</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">data_path</span>)).<span class="ident">unwrap</span>();
         }

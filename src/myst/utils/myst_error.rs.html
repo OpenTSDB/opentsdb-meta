@@ -91,6 +91,15 @@
 <span id="88">88</span>
 <span id="89">89</span>
 <span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -111,7 +120,7 @@
  *
  */</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">io</span>, <span class="ident">string</span>::<span class="ident">FromUtf8Error</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">io</span>, <span class="ident">num</span>::<span class="ident">ParseIntError</span>, <span class="ident">string</span>::<span class="ident">FromUtf8Error</span>};
 
 <span class="doccomment">/// Result type for myst&#39;s error type</span>
 <span class="kw">pub</span> <span class="kw">type</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">result</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">MystError</span><span class="op">&gt;</span>;
@@ -128,6 +137,7 @@
     <span class="ident">Fst</span>(<span class="ident">fst</span>::<span class="ident">Error</span>),
     <span class="ident">Regex</span>(<span class="ident">regex_automata</span>::<span class="ident">Error</span>),
     <span class="ident">UTF8</span>(<span class="ident">FromUtf8Error</span>),
+    <span class="ident">IntParse</span>(<span class="ident">ParseIntError</span>),
 }
 
 <span class="kw">impl</span> <span class="ident">MystError</span> {
@@ -180,6 +190,14 @@
         <span class="kw">return</span> <span class="ident">MystError</span> {
             <span class="ident">kind</span>: <span class="ident">ErrorKind</span>::<span class="ident">UTF8</span>(<span class="ident">e</span>),
         };
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ParseIntError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MystError</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">ParseIntError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MystError</span> {
+        <span class="ident">MystError</span> {
+            <span class="ident">kind</span>: <span class="ident">ErrorKind</span>::<span class="ident">IntParse</span>(<span class="ident">e</span>),
+        }
     }
 }
 </pre></div>

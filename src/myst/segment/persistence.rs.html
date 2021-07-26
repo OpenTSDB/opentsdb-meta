@@ -51,6 +51,15 @@
 <span id="48">48</span>
 <span id="49">49</span>
 <span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -101,6 +110,15 @@
     <span class="kw">fn</span> <span class="ident">put</span>(<span class="ident">segment</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>);
 
     <span class="kw">fn</span> <span class="ident">get</span>(<span class="ident">shard</span>: <span class="ident">u32</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">W</span><span class="op">&gt;</span>;
+}
+
+<span class="doccomment">/// This trait needs to be implemented</span>
+<span class="doccomment">/// by any Data structure needing a dynamic duration parameter.</span>
+<span class="doccomment">/// i.e Wherever there is a concept of an updating sub-epoch.</span>
+<span class="doccomment">/// Ex: Cached versions of data and MystSegment.</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">TimeSegmented</span> {
+    <span class="kw">fn</span> <span class="ident">get_duration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">set_duration</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">duration</span>: <span class="ident">i32</span>); 
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="myst"></div>
