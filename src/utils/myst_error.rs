@@ -17,7 +17,7 @@
  *
  */
 
-use std::{io, string::FromUtf8Error};
+use std::{io, num::ParseIntError, string::FromUtf8Error};
 
 /// Result type for myst's error type
 pub type Result<T> = std::result::Result<T, MystError>;
@@ -34,6 +34,7 @@ pub enum ErrorKind {
     Fst(fst::Error),
     Regex(regex_automata::Error),
     UTF8(FromUtf8Error),
+    IntParse(ParseIntError),
 }
 
 impl MystError {
@@ -86,5 +87,13 @@ impl From<FromUtf8Error> for MystError {
         return MystError {
             kind: ErrorKind::UTF8(e),
         };
+    }
+}
+
+impl From<ParseIntError> for MystError {
+    fn from(e: ParseIntError) -> MystError {
+        MystError {
+            kind: ErrorKind::IntParse(e),
+        }
     }
 }

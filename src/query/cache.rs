@@ -18,19 +18,19 @@
  */
 
 use crate::segment::store::docstore::DeserializedDocStore;
+use crate::segment::store::dict::DictHolder;
 use crate::utils::myst_error::MystError;
 
 use lru::LruCache;
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex, RwLock};
 use std::{fs, thread};
 
 pub struct ShardedCache {
     pub docstore_cache: Arc<Mutex<LruCache<(u64, u32), Arc<DeserializedDocStore>>>>,
-    pub dict_cache: Arc<Mutex<LruCache<u64, Arc<HashMap<u32, String>>>>>,
+    pub dict_cache: Arc<Mutex<LruCache<u64, Arc<DictHolder>>>>,
 }
 
 impl ShardedCache {
@@ -39,7 +39,7 @@ impl ShardedCache {
             docstore_cache: Arc::new(Mutex::new(
                 LruCache::<(u64, u32), Arc<DeserializedDocStore>>::new(200),
             )),
-            dict_cache: Arc::new(Mutex::new(LruCache::<u64, Arc<HashMap<u32, String>>>::new(
+            dict_cache: Arc::new(Mutex::new(LruCache::<u64, Arc<DictHolder>>::new(
                 48,
             ))),
         }
@@ -50,7 +50,7 @@ impl ShardedCache {
         lock.put((epoch, id), docstore);
     }
 
-    pub fn put_dict(&self, epoch: u64, dict: Arc<HashMap<u32, String>>) {
+    pub fn put_dict(&self, epoch: u64, dict: Arc<DictHolder>) {
         let mut lock = self.dict_cache.lock().unwrap();
         lock.put(epoch, dict);
     }

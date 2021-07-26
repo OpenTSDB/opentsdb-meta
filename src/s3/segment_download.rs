@@ -20,23 +20,25 @@
 //Periodically check for and download segments
 
 use crate::s3::remote_store::RemoteStore;
-use log::info;
+use log::{error, info};
 use std::fs::{create_dir_all, read_dir, rename, File};
 use std::path::Path;
 use std::{
-    collections::HashSet, io::Error, io::ErrorKind, io::Write, os::unix::prelude::FileExt,
-    sync::Arc, thread,
+    collections::HashSet,
+    io::Error,
+    io::{Read, Write},
+    sync::Arc,
+    thread,
 };
 use tokio::sync::RwLock;
 
 //This following imports will move to the main class
-use crate::utils::config::Config;
+use crate::utils::config::{Config, add_dir};
 use rusoto_core::credential::AwsCredentials;
 use rusoto_core::credential::StaticProvider;
 use rusoto_core::request::HttpClient;
 use rusoto_core::Region;
-use rusoto_s3::{GetObjectRequest, ListObjectsRequest, Object, S3Client, S3};
-
+use rusoto_s3::S3Client;
 pub struct SegmentDownload {
     remote_store: Arc<RemoteStore>,
     prefix_i: Arc<String>,
@@ -67,19 +69,23 @@ impl SegmentDownload {
 
     async fn download(self) -> Result<(), Error> {
         info!("In download function for {}", &self.prefix_i);
+
         let prefix = Arc::clone(&self.prefix_i);
 
         let mut downloaded_set_original: HashSet<String> = HashSet::new();
 
-        let mut shard_path = add_dir(self.root_path.to_string(), self.prefix_i.to_string());
+        let shard_path = add_dir(self.root_path.to_string(), self.prefix_i.to_string());
 
         let root_dir = Path::new(&shard_path);
+
+        info!("Checking if {:?} dir exists, {}", root_dir, root_dir.exists());
         if root_dir.exists() {
             info!("Reading for {:?} as dir exists", root_dir);
             let mut files: Vec<String> = Vec::new();
             //Recursively list files
             self.list_files(root_dir, &mut files)?;
             for sfile in files {
+                info!("Adding file {} to exists set", sfile);
                 downloaded_set_original.insert(sfile);
             }
         } else {
@@ -103,7 +109,7 @@ impl SegmentDownload {
                     }
                 },
                 Err(e) => {
-                    info!("Error fetching files for prefix: {}", prefix);
+                    info!("Error fetching files for prefix: {} {:?}", prefix, e);
                     continue;
                 }
             };
@@ -126,12 +132,68 @@ impl SegmentDownload {
 
                     let read_lock = futures::executor::block_on(downloaded_set_clone.read());
                     let file_path = fpath.as_path().to_str().unwrap_or("none").to_string();
-                    let skip = read_lock.contains(&file_path);
+                    let contains_file = read_lock.contains(&file_path);
                     drop(read_lock);
+		    info!("Is file {} present: {}", &file_path, contains_file);	
+                    let metadata = store_clone
+                        .get_metadata(file_name_clone.to_string().to_owned())
+                        .await;
+                    if metadata.is_err() {
+                        print!(
+                            "Error while reading metadata for file: {} {:?}",
+                            &file_name_clone,
+                            metadata
+                        );
+                        return;
+                    }
+                    let mut duration: i32 = -1;
+                    let mut fduration: i32 = -1;
+                    let unwrapped_meta = metadata.unwrap();
+                    if unwrapped_meta.is_some() {
+                        let map = unwrapped_meta.unwrap();
+                        if map.contains_key("duration") {
+                            duration = map
+                                .get("duration")
+                                .unwrap_or(&"-1".to_string())
+                                .parse()
+                                .unwrap();
+                        }
+                    }
+
+                    let duration_file =
+                        Path::new(fpath.parent().unwrap()).join(Path::new("duration"));
+
+                    let mut skip = true;
+                    // Download the file only if:
+                    // either, the file doesnt exist at all or,
+                    // the file exists and the duration is < remote file duration.
+                    if contains_file {
+                        info!("File {} is present. Will check duration file: {:?}", &file_path, duration_file);
+                        // Check the duration file
+                        if duration_file.exists() {
+                            let dur_result = File::open(duration_file.as_path());
+                            let mut dur_str = String::new();
+                            match dur_result {
+                                Ok(mut dur) => {
+                                    dur.read_to_string(&mut dur_str);
+                                    fduration = dur_str.parse().unwrap_or(-1);
+                                    info!("Read duration from file: {:?} string: {} i32: {}", duration_file, dur_str, fduration );
+                                    skip = duration <= fduration;
+                                },
+                                Err(e) => {
+                                    error!("Error reading duration from file: {:?} {:?}", duration_file, e);
+                                },
+                            }
+                        }
+                    } else {
+                        skip = false;
+                    }
+
                     let fpath_clone = fpath.clone();
+                    let parent_path = fpath.parent().unwrap();
                     if !skip {
                         create_dir_all(tpath.parent().unwrap());
-                        create_dir_all(fpath.parent().unwrap());
+                        create_dir_all(parent_path);
                         info!("Creating path: {:?}", tpath);
                         info!("Downloading file: {}", file_name_clone);
                         let mut f = File::create(tpath.clone()).unwrap();
@@ -147,12 +209,38 @@ impl SegmentDownload {
                                     tpath.to_str(),
                                     fpath.to_str()
                                 );
-                                rename(tpath, fpath);
+                                rename(tpath, fpath.clone());
+
+                                //Create duration file
+
+                                let duration_tmp_file = Path::new(parent_path)
+                                    .join(Path::new("duration_tmp"));
+                                {
+                                    let duration_tmp_path = duration_tmp_file.as_path();
+                                    let mut dt_file_res =
+                                        File::create(duration_tmp_path).unwrap();
+                                    let dur_as_str= duration.to_string();
+                                    let result = dt_file_res.write(dur_as_str.as_bytes());
+                                    match result {
+                                        Ok(o) => info!("Successfully written duration {} in {:?}. Size: {} bytes",
+                                         dur_as_str, duration_tmp_path, o),
+                                         Err(e) => error!("Error writing duration file: {:?} {:?}", duration_tmp_path, e),
+                                    }
+                                    let result = dt_file_res.flush();
+                                    match result {
+                                        Ok(o) => {},
+                                         Err(e) => error!("Error flushing duration file: {:?} {:?}", duration_tmp_path, e),
+                                    }
+                                } // File should be closed here.
+                                info!("Creating duration file: {:?} for duration: {}", &duration_file ,duration);
+                                rename(duration_tmp_file, duration_file);
                                 // Wait until lock is acquired. But what is the point of a blocking method, if it doesnt block by itself ?
                                 // I guess this is a side effect of async
-                                let mut lock =
+                                let file_name_str = fpath.to_str().unwrap().to_string();
+				info!("Writing file {} into cache", file_name_str);
+				let mut lock =
                                     futures::executor::block_on(downloaded_set_clone.write());
-                                lock.insert(file_name_clone.to_string().to_owned());
+                                lock.insert(file_name_str);
                                 drop(lock);
                             }
                             Err(e) => {
@@ -192,7 +280,7 @@ impl SegmentDownload {
                        }
                    }*/
             let download_count = handles.len();
-            let mut count = 0;
+            let mut count: i32 = 0;
             for h in handles {
                 let result = h.await;
                 match result {
@@ -229,15 +317,14 @@ impl SegmentDownload {
 
 pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting segment download");
-    let mut config = Config::new();
-
+    let config = Config::new();
     let processed_bucket = config.processed_bucket;
 
     let key = config.aws_key;
     let secret = config.aws_secret;
     let creds = AwsCredentials::new(key, secret, None, None);
     let namespace = config.namespace;
-    let root_data_path = config.data_path;
+    let root_data_path = config.data_download_path;
     let temp_data_path = config.temp_data_path;
     let frequency = config.download_frequency;
     let s3_client = S3Client::new_with(
@@ -284,12 +371,4 @@ pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => info!("Error while submitting jobs for download from remote store {:?}", e),
     }*/
     Ok(())
-}
-
-fn add_dir(mut root: String, child: String) -> String {
-    if !root.ends_with("/") {
-        root.push_str("/");
-    }
-    root.push_str(&child);
-    root
 }

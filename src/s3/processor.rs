@@ -59,6 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger(String::from(log_path));
     let poll_interval = config.polling_interval;
     let segment_duration = config.segment_duration;
+    let segment_full_duration = config.segment_full_duration;
     let namespace = config.namespace;
     let start_time = config.start_epoch;
     let bucket = config.input_bucket;
@@ -108,18 +109,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
         };
+
+        //Calculate if we need a new segement or we write into an older segment
+
         let arc_namespace = Arc::new(namespace.clone());
         let arc_s3_client = Arc::new(s3_client);
         let arc_processed_bucket = Arc::new(processed_bucket.clone());
         let num_shards = config.shards as usize;
-        let data_path = config.data_path.clone();
-        let rc_data_path = Arc::new(data_path);
+        let segment_gen_data_path = config.segment_gen_data_path.clone();
+        let rc_segment_gen_data_path = Arc::new(segment_gen_data_path);
         let senders = Arc::new(RwLock::new(HashMap::new()));
         //let segment_writers = Arc::new(RwLock::new(Vec::new()));
         let mut segment_signals = Vec::new();
         let mut handles = vec![];
         for i in 0..num_shards {
-            let path = rc_data_path.clone();
+            let path = rc_segment_gen_data_path.clone();
             let sender_ref_clone = Arc::clone(&senders);
             //  let segmentwriters_ref_clone = Arc::clone(&segment_writers);
             let signal = Arc::new(AtomicBool::new(false));
@@ -129,11 +133,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let clone_bucket = Arc::clone(&arc_processed_bucket);
             let clone_namespace = Arc::clone(&arc_namespace);
             let handle = thread::spawn(move || {
+                //Load myst segment
+
                 let mut segmentwriter = SegmentWriter::new(
                     i as u32,
                     clone_signal,
                     500,
                     running_time as u64,
+                    segment_duration as u64,
+                    (running_time - (running_time % segment_full_duration)) as u64,
                     path,
                     clone_namespace,
                     RemoteStore::new(clone_s3_client, clone_bucket),
@@ -144,7 +152,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // let mut guard = futures::executor::block_on(segmentwriters_ref_clone.write());
                 // guard.push(segmentwriter.);
                 // drop(guard);
-
                 segmentwriter.write_to_segment().unwrap();
             });
             handles.push(handle);
@@ -315,7 +322,7 @@ async fn fetch_and_process(
                 let mut read_buffer = vec![0u8; read_len as usize];
                 total_bytes += read_len;
                 let mut record = Record::default();
-                decoder.read_exact(&mut read_buffer);
+                decoder.read_exact(&mut read_buffer)?;
                 match record.parse(&mut read_buffer) {
                     Err(e) => {
                         info!("Error but continuing {:?}", e);
