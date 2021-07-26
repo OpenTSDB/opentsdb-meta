@@ -46,7 +46,7 @@ pub fn write_and_get_segment_readers() -> Vec<SegmentReader<File>> {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let mut segment = MystSegment::new(1, epoch, 200);
+    let mut segment = MystSegment::new_with_block_entries(1, epoch, 200);
     let shard_id = segment.shard_id;
     let created = segment.epoch;
     let cache = Arc::new(Cache::new());
@@ -54,7 +54,7 @@ pub fn write_and_get_segment_readers() -> Vec<SegmentReader<File>> {
     close_segment(segment);
     let file_path = MystSegment::get_segment_filename(&shard_id, &created, data_path);
     let reader = File::open(file_path.clone()).unwrap();
-    let segment_reader = SegmentReader::new(shard_id, created, reader, cache, file_path).unwrap();
+    let segment_reader = SegmentReader::new(shard_id, created, reader, cache, file_path, 0 as i32).unwrap();
 
     segment_readers.push(segment_reader);
     segment_readers
@@ -99,7 +99,7 @@ pub fn write_data_large_segment() -> Vec<SegmentReader<BufReader<File>>> {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let mut segment = MystSegment::new(1, epoch, 200);
+    let mut segment = MystSegment::new_with_block_entries(1, epoch, 200);
     let shard_id = segment.shard_id;
     let created = segment.epoch;
     let cache = Arc::new(Cache::new());
@@ -111,7 +111,7 @@ pub fn write_data_large_segment() -> Vec<SegmentReader<BufReader<File>>> {
     close_segment(segment);
     let file_path = MystSegment::get_segment_filename(&shard_id, &created, data_path);
     let reader = BufReader::new(File::open(file_path.clone()).unwrap());
-    let segment_reader = SegmentReader::new(shard_id, created, reader, cache, file_path).unwrap();
+    let segment_reader = SegmentReader::new(shard_id, created, reader, cache, file_path, 0 as i32).unwrap();
 
     segment_readers.push(segment_reader);
     segment_readers

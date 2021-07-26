@@ -23,6 +23,7 @@ use std::{collections::HashMap, io::Read, io::Write, rc::Rc};
 
 use crate::segment::persistence::Builder;
 use crate::segment::persistence::Loader;
+use crate::segment::persistence::TimeSegmented;
 use crate::segment::segment_reader::SegmentReader;
 use crate::utils::myst_error::MystError;
 use crate::utils::myst_error::Result;
@@ -58,13 +59,38 @@ impl<W: Write> Builder<W> for Dict {
         Ok(Some(self))
     }
 }
+#[derive(Debug, Default)]
+pub struct DictHolder {
+    pub dict: HashMap<u32, String>,
+    pub duration: i32
+}
+
+impl TimeSegmented for DictHolder {
+    fn get_duration(&self) -> Option<i32> {
+        Some(self.duration)
+    }
+
+    fn set_duration(&mut self, duration: i32) {
+        self.duration = duration;
+    }
+}
+
+impl DictHolder {
+    pub fn new(dict: HashMap<u32, String>, duration: i32) -> Self {
+        Self {
+            dict: dict,
+            duration: duration
+        }
+    }
+}
 
 impl<R: Read + Seek> Loader<R, Dict> for Dict {
     fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<Dict>> {
         buf.seek(SeekFrom::Start(*offset as u64))?;
-        let dict_map = SegmentReader::get_dict_from_reader(buf)?;
-        match Arc::try_unwrap(dict_map) {
-            Ok(dict) => {
+        let dict_holder = SegmentReader::get_dict_from_reader(buf, 0)?;
+        match Arc::try_unwrap(dict_holder) {
+            Ok(dict_holder_map) => {
+                let dict = dict_holder_map.dict;
                 let mut rc_dict = HashMap::new();
                 for (k, v) in dict {
                     rc_dict.insert(k, Rc::new(v));

@@ -19,16 +19,18 @@
 
 use crate::segment::persistence::Builder;
 use crate::segment::persistence::Loader;
+use crate::segment::persistence::TimeSegmented;
 use crate::segment::store::dict::Dict;
 use crate::segment::store::docstore::{DocStore, Timeseries};
 use crate::segment::store::metric_bitmap::MetricBitmap;
 use crate::segment::store::myst_fst::{MystFST, MystFSTContainer};
 use crate::segment::store::tag_bitmap::{TagKeysBitmap, TagValuesBitmap};
+use crate::utils::config::add_dir;
 
 use crate::utils::myst_error::{MystError, Result};
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use croaring::Bitmap;
-use log::info;
+use log::{info, debug};
 use std::collections::{HashMap, HashSet};
 
 pub use std::io::{Cursor, Read, Write};
@@ -67,15 +69,32 @@ pub struct MystSegment {
     segment_timeseries_id: u32,
     tag_key_prefix: Rc<String>,
     metric_prefix: Rc<String>,
-    dedup: HashSet<u64>, //TODO remove
+    dedup: HashSet<u64>,
 
     cluster: Option<Clusterer>,
+
+    duration: i32,
 }
 
+impl TimeSegmented  for MystSegment {
+    
+    fn get_duration(&self) -> Option<i32> {
+        Some(self.duration)
+    }
+
+    fn set_duration(&mut self, duration: i32) {
+        self.duration = duration;
+    }
+}
 /// Map that contains `MystSegmentHeaderKeys` and it's offset in the writer `W`
+
+/// TODO: Move reader to the same place as data.
+/// TODO: Add version and len.
 #[derive(Default)]
 pub struct MystSegmentHeader {
-    header: HashMap<u32, u32>,
+    pub header: HashMap<u32, u32>,
+    pub segment_timeseries_id: u32,
+    pub uid: u32,
 }
 
 /// Maps each datastructure to a integer for efficiency.
@@ -94,7 +113,8 @@ pub enum MystSegmentHeaderKeys {
 }
 
 impl MystSegmentHeader {
-    pub fn deserialize_header(data: &[u8]) -> Result<HashMap<u32, u32>> {
+    
+    pub fn from(data: &[u8]) -> Result<Self> {
         let mut reader = Cursor::new(data);
         let mut map = HashMap::new();
         for _i in 0..10 {
@@ -103,7 +123,15 @@ impl MystSegmentHeader {
                 reader.read_u32::<NativeEndian>()?,
             );
         }
-        Ok(map)
+        let segment_timeseries_id = reader.read_u32::<NativeEndian>()?;
+        let uid = reader.read_u32::<NativeEndian>()?;
+        debug!("Read uid {} and segment id: {}", uid, segment_timeseries_id);
+        let header = Self {
+            header: map,
+            segment_timeseries_id: segment_timeseries_id,
+            uid: uid,
+        };
+        Ok(header)
     }
 }
 
@@ -225,7 +253,9 @@ impl<W: Write> Builder<W> for MystSegment {
             buf.write_u32::<NativeEndian>(k)?;
             buf.write_u32::<NativeEndian>(v)?;
         }
-
+        info!("Writing segment timeseries id {} and uid: {} for shard: {} and epoch: {}", self.segment_timeseries_id, self.uid, self.shard_id, self.epoch);
+        buf.write_u32::<NativeEndian>(self.segment_timeseries_id)?;
+        buf.write_u32::<NativeEndian>(self.uid)?;
         info!(
             "Done building segment for {:?} and {:?}",
             self.shard_id, self.epoch
@@ -240,7 +270,10 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
     fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<MystSegment>> {
         //        let mut buffered_reader = BufReader::new(buf);
         // Read header first -- seek from end
-        let segment_header = SegmentReader::read_segment_header(buf)?;
+        
+        let full_segment_header = SegmentReader::read_segment_header(buf)?;
+
+        let segment_header = full_segment_header.header;
         // load fst
         let fst_offset = segment_header
             .get(&ToPrimitive::to_u32(&MystSegmentHeaderKeys::FstHeader).unwrap())
@@ -296,7 +329,16 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
             ))?;
         let mut docstore = DocStore::new(0);
         docstore = docstore.load(buf, docstore_header_offset)?.unwrap();
+        
+        /// Load xxhashes into dedup map.
+        let mut dedup: HashSet<u64> =  HashSet::new();
 
+        let doc_vec = &docstore.data;
+
+        for t in doc_vec {
+            dedup.insert(t.timeseries_id);
+        }
+        
         let ts_bitmaps_header_offset = segment_header
             .get(&ToPrimitive::to_u32(&MystSegmentHeaderKeys::EpochBitmapHeader).unwrap())
             .ok_or(MystError::new_query_error(
@@ -306,8 +348,12 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
         timeseries_bitmap = timeseries_bitmap
             .load(buf, ts_bitmaps_header_offset)?
             .unwrap();
-        // TODO: Doc store block entries should be segment specific ? (and not global ?)
-
+        /// TODO: Doc store block entries should be segment specific ? (and not global ?)
+        /// NOTE: It is ok to have a new clusterer because,
+        /// the exists check is performed while draining the clusters.
+        let last_id = full_segment_header.segment_timeseries_id;
+        let uid = full_segment_header.uid;
+        info!("Loading segment for shard: {} and epoch: {} with last segment id: {} uid: {}", self.shard_id, self.epoch, last_id, uid);
         let myst_segment = MystSegment {
             fsts: fst_container,
             dict,
@@ -317,26 +363,45 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
             epoch_bitmap: timeseries_bitmap,
             data: docstore,
             header: Default::default(),
-            shard_id: 0,
-            epoch: 0,
-            uid: 0,
-            segment_timeseries_id: 0,
+            shard_id: self.shard_id,
+            epoch: self.epoch,
+            uid: uid,
+            segment_timeseries_id: last_id,
             metric_prefix: Rc::new(String::from(crate::utils::config::METRIC)),
             tag_key_prefix: Rc::new(String::from(crate::utils::config::TAG_KEYS)),
-            dedup: HashSet::new(),
-            cluster: None,
+            dedup: dedup,
+            cluster: Some(Clusterer::default()),
+            duration: self.duration
         };
         Ok(Some(myst_segment))
     }
 }
 
 impl MystSegment {
+    pub fn new(shard_id: u32, epoch: u64) -> Self {
+        MystSegment::new_with_block_entries(shard_id, epoch, 50000 as usize)
+    }
+
+    pub fn new_with_block_entries(
+        shard_id: u32,
+        epoch: u64,
+        docstore_block_entries: usize,
+    ) -> Self {
+        MystSegment::new_with_block_entries_duration(shard_id, epoch, docstore_block_entries, 7200 as i32)
+    }
+
     /// Creates a new MystSegment
     /// # Arguments
     /// * `shard_id` - Shard id for the segment.
     /// * `epoch` - The start epoch of the segment.
     /// * `docstore_block_entries` - Number of entries in each docstore block
-    pub fn new(shard_id: u32, epoch: u64, docstore_block_entries: usize) -> Self {
+    /// * `duration` - The duration of data in the segment in seconds
+    pub fn new_with_block_entries_duration(
+        shard_id: u32,
+        epoch: u64,
+        docstore_block_entries: usize,
+        duration: i32
+    ) -> Self {
         info!("Creating new segment for shard id {}", shard_id);
         Self {
             shard_id,
@@ -358,6 +423,7 @@ impl MystSegment {
             tag_key_prefix: Rc::new(String::from(crate::utils::config::TAG_KEYS)),
             dedup: HashSet::new(), // TODO remove
             cluster: Some(Clusterer::default()),
+            duration: duration,
         }
     }
 
@@ -531,17 +597,15 @@ impl MystSegment {
 
     pub fn get_segment_filename(shard_id: &u32, created: &u64, data_root_path: String) -> String {
         let mut filename = MystSegment::get_path_prefix(shard_id, created, data_root_path);
-        filename.push_str("segment");
+        let mut filename = add_dir(filename, "segment".to_string());
         let ext = String::from(".myst");
         filename.push_str(&ext);
         filename
     }
 
     pub fn get_path_prefix(shard_id: &u32, created: &u64, mut data_path: String) -> String {
-        data_path.push_str(&shard_id.to_string());
-        data_path.push_str("/");
-        data_path.push_str(&created.to_string());
-        data_path.push_str(&String::from("/"));
+        let data_path = add_dir(data_path, shard_id.to_string());
+        let data_path = add_dir(data_path, created.to_string());
         if !Path::new(&data_path).exists() {
             fs::create_dir_all(Path::new(&data_path)).unwrap();
         }

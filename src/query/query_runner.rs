@@ -17,8 +17,7 @@
  *
  */
 
-use log::debug;
-use log::{error, info};
+use log::{error, info, debug};
 use std::collections::HashMap;
 use std::{
     collections::{hash_map::DefaultHasher, HashSet},
@@ -32,6 +31,7 @@ use croaring::Bitmap;
 use rayon::prelude::*;
 
 use crate::segment::segment_reader::SegmentReader;
+use crate::segment::store::dict::DictHolder;
 use crate::utils::myst_error::{MystError, Result};
 
 use super::{filter::FilterType, query::Query, query::QueryType, query_filter::QueryFilter};
@@ -303,7 +303,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                         cache,
                         explicit_filter,
                         explicit_tags_count,
-                        &dict,
+                        &dict.dict,
                         &group_key_ids,
                         docstore_block_size,
                         ts_data_time.clone(),
@@ -359,7 +359,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                 .or_insert_with(|| Vec::new())
                 .push(element);
         }
-        result
+        result 
     }
 
     fn process_docstore_block(
@@ -686,12 +686,15 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         let mut ts_bitmaps = segment_reader.get_all_ts_bitmaps()?;
         let mut final_ts_bitmap = Bitmap::create();
         for (epoch, ts_bitmap) in &mut ts_bitmaps {
+            debug!("Reading epoch from bitmap: {} {}", epoch, epoch_bitmap::EPOCH_DURATION);
             if start <= &(epoch + epoch_bitmap::EPOCH_DURATION) && end >= epoch {
+                let ts_card = ts_bitmap.cardinality();
                 final_ts_bitmap.or_inplace(ts_bitmap);
+                info!("Filtered in epoch from bitmap: {} {} {}", epoch, ts_card, final_ts_bitmap.cardinality());
             }
         }
         filtered_bitmap.and_inplace(&final_ts_bitmap);
-        info!(
+        debug!(
             "After filtering by time, number of elements: {:?}",
             filtered_bitmap.cardinality()
         );

@@ -21,6 +21,7 @@ use std::fs::File;
 use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 use std::{fs, path::Path, thread, time::SystemTime};
+use std::io::{Read, BufReader};
 
 use log::{error, info};
 use tokio::sync::mpsc;
@@ -29,12 +30,11 @@ use tokio::sync::mpsc::Receiver;
 use crate::query::cache::Cache;
 use crate::segment::myst_segment::MystSegment;
 use crate::segment::segment_reader::SegmentReader;
-use crate::utils::config::Config;
+use crate::utils::config::{Config, add_dir};
 use crate::utils::myst_error::{MystError, Result};
 
 use super::{query::Query, query_runner::QueryRunner};
 use metrics_reporter::MetricsReporter;
-use std::io::BufReader;
 
 
 
@@ -107,7 +107,7 @@ impl ShardQueryRunner {
 
     fn get_num_shards(config: &Config) -> Result<Vec<u32>> {
         let mut result = Vec::new();
-        let path = String::from(&config.data_path);
+        let path = String::from(&config.data_read_path);
         let dirs = fs::read_dir(path)?;
         for dir in dirs {
             result.push(
@@ -133,26 +133,50 @@ impl ShardQueryRunner {
     ) -> Result<()> {
         let curr_time = SystemTime::now();
         let s_time = SystemTime::now();
-        let mut path = String::from(&config.data_path);
-        path.push_str(&shard_id.to_string());
+        let mut path = String::from(&config.data_read_path);
+        let mut path = add_dir(path, shard_id.to_string());
         let dirs = fs::read_dir(path)?;
         let mut segment_readers = Vec::new();
-
+        
         for dir in dirs {
             let d = dir.unwrap();
             let mut path = d.path();
             path.push(".lock");
+            let mut duration_file = d.path();
+            duration_file.push("duration");
             if Path::new(&path).exists() {
                 let created = d.file_name().to_str().unwrap().parse::<u64>().unwrap();
-                if query.start <= created && query.end >= created {
+                let duration = if duration_file.exists() {
+                    let dur = File::open(duration_file.as_path());
+                    let mut dur_str = String::new();
+                    match dur {
+                        Ok(mut dur_file) => {
+                            dur_file.read_to_string(&mut dur_str)?;
+                            //If a duration file is present, it should have the right format.
+                            let fduration = dur_str.parse()?;
+                            info!("Read duration: {} for file: {:?}", fduration, &duration_file );
+                            fduration
+                        },
+                        Err(e) =>  {
+                            error!("Unable to read duration for file: {:?} {:?}", &duration_file, e );
+                            0
+                        },
+                    }
+                } else {
+                    0
+                };
+                info!("Duration read for {:?} as {}", &duration_file, duration);
+            
+                if query.start <= created && query.end >= created || 
+                (duration > 0 && query.start >= created && query.end <= (created + duration as u64) ) {
                     let file_path = MystSegment::get_segment_filename(
                         &shard_id,
                         &created,
-                        String::from(&config.data_path),
+                        String::from(&config.data_read_path),
                     );
                     let reader = BufReader::new(File::open(file_path.clone())?);
                     let segment_reader =
-                        SegmentReader::new(shard_id, created, reader, cache.clone(), file_path)?;
+                        SegmentReader::new(shard_id, created, reader, cache.clone(), file_path, duration)?;
                     segment_readers.push(segment_reader);
                     timeseries_response.streams = segment_readers.len() as i32;
                 }

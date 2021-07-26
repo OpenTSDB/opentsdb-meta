@@ -67,6 +67,8 @@ impl<W: Write> Builder<W> for EpochBitmap {
         let mut header = HashMap::new();
 
         for (k, v) in &mut self.epoch_bitmap {
+            let cardinality = v.cardinality();
+            info!("Flushing cardinality: {} for epoch {}", cardinality, k);
             v.run_optimize();
             header.insert(*k, tmp_offset);
             tmp_offset += 8;
@@ -91,10 +93,12 @@ impl<R: Read + Seek> Loader<R, EpochBitmap> for EpochBitmap {
     fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<EpochBitmap>> {
         let mut bitmaps = BTreeMap::new();
         let ts_bitmap_header = SegmentReader::get_ts_bitmap_header(buf, offset)?;
-        println!("Ts bitmap header {:?}", ts_bitmap_header);
+        info!("Ts bitmap header {:?}", ts_bitmap_header);
         for (epoch, offset) in ts_bitmap_header {
             let bitmap = SegmentReader::get_ts_bitmap_from_reader(buf, offset)?;
+            let size = bitmap.cardinality();
             bitmaps.insert(epoch, bitmap);
+            info!("Loading epoch bitmap: {} {} {}", epoch, offset, size);
         }
         let ts_bitmaps = EpochBitmap {
             epoch_bitmap: bitmaps,
@@ -132,7 +136,7 @@ impl EpochBitmap {
         let mut last_epoch = self.start_epoch;
         for (epoch, bitmap) in &mut self.epoch_bitmap {
             last_epoch = *epoch;
-            if timestamp < epoch + EPOCH_DURATION {
+            if (timestamp >= last_epoch) && (timestamp < last_epoch + EPOCH_DURATION) {
                 bitmap.add(timeseries_id);
                 return Ok(());
             }
