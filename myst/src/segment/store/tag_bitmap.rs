@@ -22,7 +22,7 @@ use super::myst_fst::MystFST;
 use crate::segment::persistence::Builder;
 use crate::segment::persistence::Loader;
 use crate::utils::myst_error::{MystError, Result};
-use byteorder::{NativeEndian, WriteBytesExt};
+use byteorder::{NetworkEndian, WriteBytesExt};
 use croaring::Bitmap;
 
 use std::io::Seek;
@@ -66,7 +66,7 @@ impl<W: Write> Builder<W> for TagKeysBitmap {
             // data = length +
             length = v.get_serialized_size_in_bytes() as u32;
             tmp_offset += 4;
-            serialized.write_u32::<NativeEndian>(length)?;
+            serialized.write_u32::<NetworkEndian>(length)?;
 
             tmp_offset += length;
             serialized.write_all(&mut v.serialize());
@@ -99,7 +99,7 @@ impl<W: Write> Builder<W> for TagValuesBitmap {
                 tv_fst.insert_with_id_and_offset(Rc::clone(&tv), id, tmp_offset);
                 length = bitmap.get_serialized_size_in_bytes() as u32;
                 tmp_offset += 4;
-                serialzed.write_u32::<NativeEndian>(length)?;
+                serialzed.write_u32::<NetworkEndian>(length)?;
                 tmp_offset += length;
                 let data = bitmap.serialize();
                 serialzed.extend(&data);

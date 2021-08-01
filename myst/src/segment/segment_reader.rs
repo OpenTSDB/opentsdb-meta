@@ -26,7 +26,7 @@ use crate::segment::store::myst_fst::MystFST;
 use crate::utils::myst_error::{MystError, Result};
 use crate::segment::persistence::TimeSegmented;
 
-use byteorder::{NativeEndian, ReadBytesExt};
+use byteorder::{NetworkEndian, ReadBytesExt};
 use croaring::Bitmap;
 use fst::{IntoStreamer, Map, Streamer};
 use log::debug;
@@ -108,14 +108,14 @@ impl<R: Read + Seek> SegmentReader<R> {
     }
     pub fn get_ts_bitmap_header(reader: &mut R, offset: &u32) -> Result<HashMap<u64, u32>> {
         reader.seek(SeekFrom::Start(*offset as u64))?;
-        let num_elements = reader.read_u32::<NativeEndian>()?;
+        let num_elements = reader.read_u32::<NetworkEndian>()?;
         // let start_of_header = offset - (num_elements * (8 + 4));
         // reader.seek(SeekFrom::Start(start_of_header as u64))?;
         let mut header = HashMap::with_capacity(num_elements as usize);
         for _i in 0..num_elements {
             header.insert(
-                reader.read_u64::<NativeEndian>()?,
-                reader.read_u32::<NativeEndian>()?,
+                reader.read_u64::<NetworkEndian>()?,
+                reader.read_u32::<NetworkEndian>()?,
             );
         }
         Ok(header)
@@ -136,13 +136,13 @@ impl<R: Read + Seek> SegmentReader<R> {
 
     pub fn read_fst_header(reader: &mut R, offset: &u32) -> Result<HashMap<String, u32>> {
         reader.seek(SeekFrom::Start(*offset as u64))?;
-        let mut len = reader.read_u32::<NativeEndian>()?;
+        let mut len = reader.read_u32::<NetworkEndian>()?;
         let mut header = HashMap::with_capacity(len as usize);
         while len > 0 {
-            let str_size = reader.read_u32::<NativeEndian>()?;
+            let str_size = reader.read_u32::<NetworkEndian>()?;
             let mut str_buf = vec![0; str_size as usize];
             reader.read_exact(&mut str_buf)?;
-            let offset = reader.read_u32::<NativeEndian>()?;
+            let offset = reader.read_u32::<NetworkEndian>()?;
             header.insert(String::from_utf8(str_buf)?, offset);
             len -= 1;
         }
@@ -153,13 +153,13 @@ impl<R: Read + Seek> SegmentReader<R> {
         info!("Reading docstore header");
 
         reader.seek(SeekFrom::Start(*offset as u64))?;
-        let docstore_header_len = reader.read_u32::<NativeEndian>()?;
+        let docstore_header_len = reader.read_u32::<NetworkEndian>()?;
 
         let mut docstore_header = HashMap::with_capacity(docstore_header_len as usize);
         for _i in 0..docstore_header_len {
             docstore_header.insert(
-                reader.read_u32::<NativeEndian>()?,
-                reader.read_u32::<NativeEndian>()?,
+                reader.read_u32::<NetworkEndian>()?,
+                reader.read_u32::<NetworkEndian>()?,
             );
         }
         Ok(docstore_header)
@@ -175,7 +175,7 @@ impl<R: Read + Seek> SegmentReader<R> {
     }
 
     pub fn read_fst_from_reader(reader: &mut R) -> Result<Map<Vec<u8>>> {
-        let fst_size = reader.read_u32::<NativeEndian>()?;
+        let fst_size = reader.read_u32::<NetworkEndian>()?;
         let mut buffer = vec![0; fst_size as usize];
         reader.read_exact(&mut buffer)?;
         let fst = Map::new(buffer)?;
@@ -245,7 +245,7 @@ impl<R: Read + Seek> SegmentReader<R> {
         let offset = MystFST::get_offset(val);
         reader.seek(SeekFrom::Start(offset as u64))?;
 
-        let length = reader.read_u32::<NativeEndian>()?;
+        let length = reader.read_u32::<NetworkEndian>()?;
         reader.seek(SeekFrom::Start(offset as u64 + 4))?;
         let mut data = vec![0; length as usize];
         reader.read_exact(&mut data)?;
@@ -352,8 +352,8 @@ impl<R: Read + Seek> SegmentReader<R> {
 
     pub fn get_ts_bitmap_from_reader(reader: &mut R, offset: u32) -> Result<Bitmap> {
         reader.seek(SeekFrom::Start(offset as u64))?;
-        let epoch = reader.read_u64::<NativeEndian>()?;
-        let bitmap_size = reader.read_u32::<NativeEndian>()?;
+        let epoch = reader.read_u64::<NetworkEndian>()?;
+        let bitmap_size = reader.read_u32::<NetworkEndian>()?;
         let mut buf = vec![0; bitmap_size as usize];
         reader.read_exact(&mut buf)?;
         let bitmap = Bitmap::deserialize(&mut buf);
@@ -453,9 +453,9 @@ impl<R: Read + Seek> SegmentReader<R> {
         duration: i32,
     ) -> Result<Arc<DeserializedDocStore>> {
         let mut curr_time = SystemTime::now();
-        let size = reader.read_u32::<NativeEndian>()?;
+        let size = reader.read_u32::<NetworkEndian>()?;
 
-        let compressed_size = reader.read_u32::<NativeEndian>()?;
+        let compressed_size = reader.read_u32::<NetworkEndian>()?;
         let mut compressed_data = vec![0; (compressed_size) as usize];
 
         reader.read_exact(&mut compressed_data)?;
@@ -568,11 +568,11 @@ impl<R: Read + Seek> SegmentReader<R> {
     }
 
     pub fn get_dict_from_reader(reader: &mut R, duration: i32) -> Result<Arc<DictHolder>> {
-        let dict_len = reader.read_u32::<NativeEndian>()?;
+        let dict_len = reader.read_u32::<NetworkEndian>()?;
         let mut dict = HashMap::new();
         for _i in 0..dict_len {
-            let id = reader.read_u32::<NativeEndian>()?;
-            let len = reader.read_u32::<NativeEndian>()?;
+            let id = reader.read_u32::<NetworkEndian>()?;
+            let len = reader.read_u32::<NetworkEndian>()?;
             let mut buf = vec![0; len as usize];
             reader.read_exact(&mut buf)?;
             dict.insert(id, String::from_utf8(buf)?);

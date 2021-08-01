@@ -20,7 +20,7 @@
 use std::rc::Rc;
 use std::{collections::HashMap, io::Read, io::Write};
 
-use byteorder::{NativeEndian, WriteBytesExt};
+use byteorder::{NetworkEndian, WriteBytesExt};
 use croaring::Bitmap;
 
 use super::myst_fst::MystFST;
@@ -56,13 +56,13 @@ impl<W: Write> Builder<W> for MetricBitmap {
             fst.insert_with_id_and_offset(Rc::clone(&k), metric_id, tmp_offset);
             length = v.get_serialized_size_in_bytes() as u32;
             tmp_offset += 4;
-            serialized.write_u32::<NativeEndian>(length)?;
+            serialized.write_u32::<NetworkEndian>(length)?;
 
             tmp_offset += length;
             serialized.extend_from_slice(&mut v.serialize());
         }
         // *offset += 4;
-        // buf.write_u32::<NativeEndian>(serialized.len() as u32);
+        // buf.write_u32::<NetworkEndian>(serialized.len() as u32);
         *offset += serialized.len() as u32;
         buf.write_all(&serialized)?;
         return Ok(Some(self));

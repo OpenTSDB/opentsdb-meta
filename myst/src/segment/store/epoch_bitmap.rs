@@ -20,7 +20,7 @@
 use log::{info, warn, LevelFilter};
 use std::{collections::HashMap, io::Read, io::Write, time::UNIX_EPOCH};
 
-use byteorder::{NativeEndian, WriteBytesExt};
+use byteorder::{NetworkEndian, WriteBytesExt};
 use croaring::Bitmap;
 
 use crate::segment::persistence::Builder;
@@ -46,12 +46,12 @@ pub struct EpochBitmapHeader {
 }
 impl<W: Write> Builder<W> for EpochBitmapHeader {
     fn build(mut self, buf: &mut W, offset: &mut u32) -> Result<Option<Self>> {
-        buf.write_u32::<NativeEndian>(self.header.len() as u32)?;
+        buf.write_u32::<NetworkEndian>(self.header.len() as u32)?;
         *offset += 4;
         for (k, v) in &self.header {
-            buf.write_u64::<NativeEndian>(*k)?;
+            buf.write_u64::<NetworkEndian>(*k)?;
             *offset += 8;
-            buf.write_u32::<NativeEndian>(*v)?;
+            buf.write_u32::<NetworkEndian>(*v)?;
             *offset += 4;
         }
 
@@ -72,10 +72,10 @@ impl<W: Write> Builder<W> for EpochBitmap {
             v.run_optimize();
             header.insert(*k, tmp_offset);
             tmp_offset += 8;
-            serialized.write_u64::<NativeEndian>(*k)?;
+            serialized.write_u64::<NetworkEndian>(*k)?;
             length = v.get_serialized_size_in_bytes() as u32;
             tmp_offset += 4;
-            serialized.write_u32::<NativeEndian>(length)?;
+            serialized.write_u32::<NetworkEndian>(length)?;
 
             tmp_offset += length;
             serialized.extend_from_slice(&mut v.serialize());

@@ -20,7 +20,7 @@
 use crate::segment::persistence::Builder;
 use crate::segment::persistence::Loader;
 use crate::utils::myst_error::{MystError, Result};
-use byteorder::{NativeEndian, WriteBytesExt};
+use byteorder::{NetworkEndian, WriteBytesExt};
 
 use fst::{MapBuilder, Streamer};
 
@@ -65,11 +65,11 @@ pub struct FSTHeader {
 impl<W: Write> Builder<W> for FSTHeader {
     fn build(self, buf: &mut W, offset: &mut u32) -> Result<Option<Self>> {
         let mut serialized = Vec::new();
-        serialized.write_u32::<NativeEndian>(self.header.len() as u32)?;
+        serialized.write_u32::<NetworkEndian>(self.header.len() as u32)?;
         for (k, v) in &self.header {
-            serialized.write_u32::<NativeEndian>(k.len() as u32)?;
+            serialized.write_u32::<NetworkEndian>(k.len() as u32)?;
             serialized.write_all(k.as_bytes())?;
-            serialized.write_u32::<NativeEndian>(*v as u32)?;
+            serialized.write_u32::<NetworkEndian>(*v as u32)?;
         }
 
         *offset += serialized.len() as u32;
@@ -83,10 +83,10 @@ impl<W: Write> Builder<W> for MystFSTContainer {
         let mut serialized = Vec::new();
 
         let fsts = self.serialize_fsts(offset)?;
-        serialized.write_u32::<NativeEndian>(fsts.len() as u32)?;
+        serialized.write_u32::<NetworkEndian>(fsts.len() as u32)?;
         serialized.extend(&fsts);
         // *offset += 4;
-        // buf.write_u32::<NativeEndian>(fsts.len() as u32);
+        // buf.write_u32::<NetworkEndian>(fsts.len() as u32);
         *offset += fsts.len() as u32;
         buf.write_all(&fsts)?;
         Ok(Some(self))
@@ -134,7 +134,7 @@ impl MystFSTContainer {
             self.header.header.insert(k.clone(), tmp_offset);
             tmp_offset += bytes.len() as u32;
             tmp_offset += 4;
-            serialized.write_u32::<NativeEndian>(bytes.len() as u32)?;
+            serialized.write_u32::<NetworkEndian>(bytes.len() as u32)?;
             serialized.extend(&bytes);
         }
         Ok(serialized)

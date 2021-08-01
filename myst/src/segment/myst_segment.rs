@@ -28,7 +28,7 @@ use crate::segment::store::tag_bitmap::{TagKeysBitmap, TagValuesBitmap};
 use crate::utils::config::add_dir;
 
 use crate::utils::myst_error::{MystError, Result};
-use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 use croaring::Bitmap;
 use log::{info, debug};
 use std::collections::{HashMap, HashSet};
@@ -119,12 +119,12 @@ impl MystSegmentHeader {
         let mut map = HashMap::new();
         for _i in 0..10 {
             map.insert(
-                reader.read_u32::<NativeEndian>()?,
-                reader.read_u32::<NativeEndian>()?,
+                reader.read_u32::<NetworkEndian>()?,
+                reader.read_u32::<NetworkEndian>()?,
             );
         }
-        let segment_timeseries_id = reader.read_u32::<NativeEndian>()?;
-        let uid = reader.read_u32::<NativeEndian>()?;
+        let segment_timeseries_id = reader.read_u32::<NetworkEndian>()?;
+        let uid = reader.read_u32::<NetworkEndian>()?;
         debug!("Read uid {} and segment id: {}", uid, segment_timeseries_id);
         let header = Self {
             header: map,
@@ -250,12 +250,12 @@ impl<W: Write> Builder<W> for MystSegment {
         );
         ret.header.build(buf, offset)?;
         for (k, v) in self.header.header {
-            buf.write_u32::<NativeEndian>(k)?;
-            buf.write_u32::<NativeEndian>(v)?;
+            buf.write_u32::<NetworkEndian>(k)?;
+            buf.write_u32::<NetworkEndian>(v)?;
         }
         info!("Writing segment timeseries id {} and uid: {} for shard: {} and epoch: {}", self.segment_timeseries_id, self.uid, self.shard_id, self.epoch);
-        buf.write_u32::<NativeEndian>(self.segment_timeseries_id)?;
-        buf.write_u32::<NativeEndian>(self.uid)?;
+        buf.write_u32::<NetworkEndian>(self.segment_timeseries_id)?;
+        buf.write_u32::<NetworkEndian>(self.uid)?;
         info!(
             "Done building segment for {:?} and {:?}",
             self.shard_id, self.epoch

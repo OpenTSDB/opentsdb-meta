@@ -17,7 +17,7 @@
  *
  */
 
-use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 use log::{debug, info};
 use std::time::SystemTime;
 use std::{
@@ -91,14 +91,14 @@ pub struct DocStoreHeader {
 impl<W: Write> Builder<W> for DocStoreHeader {
     fn build(self, buf: &mut W, offset: &mut u32) -> Result<Option<Self>> {
         let mut serialized = Vec::new();
-        serialized.write_u32::<NativeEndian>(self.header.len() as u32)?;
+        serialized.write_u32::<NetworkEndian>(self.header.len() as u32)?;
 
         for (k, v) in self.header.iter() {
-            serialized.write_u32::<NativeEndian>(*k)?;
-            serialized.write_u32::<NativeEndian>(*v)?;
+            serialized.write_u32::<NetworkEndian>(*k)?;
+            serialized.write_u32::<NetworkEndian>(*v)?;
         }
         // *offset += 4;
-        // buf.write_u32::<NativeEndian>(serialized.len() as u32);
+        // buf.write_u32::<NetworkEndian>(serialized.len() as u32);
         *offset += serialized.len() as u32;
         buf.write_all(&serialized)?;
         Ok(Some(self))
@@ -114,7 +114,7 @@ impl<W: Write> Builder<W> for DocStore {
             //let mut serialized = Vec::new();
             self.header.header.insert(i, *offset);
             *offset += 4;
-            buf.write_u32::<NativeEndian>(datum.len() as u32)?;
+            buf.write_u32::<NetworkEndian>(datum.len() as u32)?;
 
             let compression = self.compression.as_ref().unwrap();
 
@@ -125,7 +125,7 @@ impl<W: Write> Builder<W> for DocStore {
                     let (w, _Result) = encoder.finish();
 
                     *offset += 4;
-                    buf.write_u32::<NativeEndian>(w.len() as u32)?;
+                    buf.write_u32::<NetworkEndian>(w.len() as u32)?;
                     *offset += w.len() as u32;
                     buf.write_all(&w)?;
                 }
@@ -134,7 +134,7 @@ impl<W: Write> Builder<W> for DocStore {
                     std::io::copy(&mut datum.as_slice(), &mut encoder)?;
                     let w = encoder.finish()?;
                     *offset += 4;
-                    buf.write_u32::<NativeEndian>(w.len() as u32)?;
+                    buf.write_u32::<NetworkEndian>(w.len() as u32)?;
                     *offset += w.len() as u32;
                     buf.write_all(&w)?;
                 }
@@ -144,13 +144,13 @@ impl<W: Write> Builder<W> for DocStore {
                     let w = encoder.into_inner().unwrap();
 
                     *offset += 4;
-                    buf.write_u32::<NativeEndian>(w.len() as u32)?;
+                    buf.write_u32::<NetworkEndian>(w.len() as u32)?;
                     *offset += w.len() as u32;
                     buf.write_all(&w)?;
                 }
                 _ => {
                     *offset += 4;
-                    buf.write_u32::<NativeEndian>(datum.len() as u32)?;
+                    buf.write_u32::<NetworkEndian>(datum.len() as u32)?;
                     *offset += datum.len() as u32;
                     buf.write_all(&datum)?;
                 }
@@ -211,10 +211,10 @@ impl DocStore {
         let mut serialized = Vec::new();
         let mut written = 0;
         let mut size = min(self.block_entries, self.data.len() - written);
-        serialized.write_u32::<NativeEndian>(size as u32)?;
+        serialized.write_u32::<NetworkEndian>(size as u32)?;
         for datum in self.data.iter() {
             let ts_ser = DocStore::serialize_timeseries(datum)?;
-            serialized.write_u32::<NativeEndian>(ts_ser.len() as u32)?;
+            serialized.write_u32::<NetworkEndian>(ts_ser.len() as u32)?;
             serialized.extend(ts_ser);
             written = written + 1;
             size = size - 1;
@@ -222,7 +222,7 @@ impl DocStore {
                 all_serialized.push(serialized);
                 size = min(self.block_entries, self.data.len() - written);
                 serialized = Vec::new();
-                serialized.write_u32::<NativeEndian>(size as u32)?;
+                serialized.write_u32::<NetworkEndian>(size as u32)?;
             }
         }
         Ok(all_serialized)
@@ -231,11 +231,11 @@ impl DocStore {
     fn serialize_timeseries(datum: &Timeseries) -> Result<Vec<u8>> {
         let mut serialized = Vec::new();
         // let map_len = datum.tags.len();
-        // serialized.write_u32::<NativeEndian>((4 + (map_len*8)) as u32 )?;
-        serialized.write_u64::<NativeEndian>(datum.timeseries_id)?;
+        // serialized.write_u32::<NetworkEndian>((4 + (map_len*8)) as u32 )?;
+        serialized.write_u64::<NetworkEndian>(datum.timeseries_id)?;
         for (k, v) in datum.tags.iter() {
-            serialized.write_u32::<NativeEndian>(*k)?;
-            serialized.write_u32::<NativeEndian>(*v)?;
+            serialized.write_u32::<NetworkEndian>(*k)?;
+            serialized.write_u32::<NetworkEndian>(*v)?;
         }
         Ok(serialized)
     }
@@ -243,7 +243,7 @@ impl DocStore {
     pub fn deserialize(data: &[u8], duration: i32) -> Result<DeserializedDocStore> {
         let curr_time = SystemTime::now();
         let mut reader = Cursor::new(data);
-        let size = reader.read_u32::<NativeEndian>()?;
+        let size = reader.read_u32::<NetworkEndian>()?;
         let result_size = data.len() - (size as usize * 4);
         let mut result = Vec::with_capacity(result_size);
         unsafe {
@@ -252,7 +252,7 @@ impl DocStore {
         let mut sizes = Vec::with_capacity(size as usize);
         let mut offset = 0;
         for _i in 0..size {
-            let len = reader.read_u32::<NativeEndian>()?;
+            let len = reader.read_u32::<NetworkEndian>()?;
             let offset_len = OffsetLen {
                 offset,
                 len: len as usize,
@@ -283,13 +283,13 @@ impl DocStore {
     pub fn deserialize_timeseries(data: &[u8]) -> Result<Timeseries> {
         let mut len = data.len();
         let mut reader = Cursor::new(data);
-        let timeseries_id = reader.read_u64::<NativeEndian>()?;
+        let timeseries_id = reader.read_u64::<NetworkEndian>()?;
         len = len - 8;
         let mut timeseries = HashMap::with_capacity((len / 8) as usize);
         while len > 0 {
             timeseries.insert(
-                reader.read_u32::<NativeEndian>()?,
-                reader.read_u32::<NativeEndian>()?,
+                reader.read_u32::<NetworkEndian>()?,
+                reader.read_u32::<NetworkEndian>()?,
             );
             len = len - 8;
         }
@@ -393,8 +393,8 @@ mod test {
 
             let mut curr_time = SystemTime::now();
 
-            let size = reader.read_u32::<NativeEndian>().unwrap();
-            let compressed_size = reader.read_u32::<NativeEndian>().unwrap();
+            let size = reader.read_u32::<NetworkEndian>().unwrap();
+            let compressed_size = reader.read_u32::<NetworkEndian>().unwrap();
             let mut compressed_data = Vec::with_capacity(compressed_size as usize);
             reader.read_to_end(&mut compressed_data).unwrap();
             zstd_file_read_time.fetch_add(
@@ -437,8 +437,8 @@ mod test {
             let mut reader = BufReader::new(File::open(file).unwrap());
             let mut curr_time = SystemTime::now();
 
-            let size = reader.read_u32::<NativeEndian>().unwrap();
-            let compressed_size = reader.read_u32::<NativeEndian>().unwrap();
+            let size = reader.read_u32::<NetworkEndian>().unwrap();
+            let compressed_size = reader.read_u32::<NetworkEndian>().unwrap();
             let mut compressed_data = Vec::with_capacity(compressed_size as usize);
             reader.read_to_end(&mut compressed_data).unwrap();
             snappy_file_read_time.fetch_add(
@@ -481,8 +481,8 @@ mod test {
             let mut reader = BufReader::new(File::open(file).unwrap());
             let mut curr_time = SystemTime::now();
 
-            let size = reader.read_u32::<NativeEndian>().unwrap();
-            let compressed_size = reader.read_u32::<NativeEndian>().unwrap();
+            let size = reader.read_u32::<NetworkEndian>().unwrap();
+            let compressed_size = reader.read_u32::<NetworkEndian>().unwrap();
             let mut compressed_data = Vec::with_capacity(compressed_size as usize);
             reader.read_to_end(&mut compressed_data).unwrap();
             lz4_file_read_time.fetch_add(

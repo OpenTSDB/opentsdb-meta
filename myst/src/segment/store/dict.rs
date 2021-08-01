@@ -17,7 +17,7 @@
  *
  */
 
-use byteorder::{NativeEndian, WriteBytesExt};
+use byteorder::{NetworkEndian, WriteBytesExt};
 
 use std::{collections::HashMap, io::Read, io::Write, rc::Rc};
 
@@ -43,13 +43,13 @@ impl<W: Write> Builder<W> for Dict {
         let mut serialized = Vec::new();
         let mut len = 0;
         len += 4;
-        serialized.write_u32::<NativeEndian>(self.dict.len() as u32)?;
+        serialized.write_u32::<NetworkEndian>(self.dict.len() as u32)?;
 
         for (k, v) in self.dict.iter() {
             len += 4;
-            serialized.write_u32::<NativeEndian>(*k)?;
+            serialized.write_u32::<NetworkEndian>(*k)?;
             len += 4;
-            serialized.write_u32::<NativeEndian>(v.len() as u32)?;
+            serialized.write_u32::<NetworkEndian>(v.len() as u32)?;
             len += v.as_bytes().len();
             serialized.extend(v.as_bytes());
         }
