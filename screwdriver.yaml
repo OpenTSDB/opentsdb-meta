@@ -23,12 +23,45 @@ jobs:
   publish:
     requires: [~main]
     steps:
-      - build_image: curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh && docker build . -t opentsdb-meta
+      - create_tag:
+        CURRENT_VERSION=`git describe --abbrev=0 --tags 2>/dev/null`
+        if [[ $CURRENT_VERSION == '' ]]
+        then
+          CURRENT_VERSION='0.1.0'
+        fi
+        CURRENT_VERSION_PARTS=(${CURRENT_VERSION//./ })
+        VNUM1=${CURRENT_VERSION_PARTS[0]}
+        VNUM2=${CURRENT_VERSION_PARTS[1]}
+        VNUM3=${CURRENT_VERSION_PARTS[2]}
+        
+        VNUM3=$((VNUM3+1))
+
+        NEW_TAG="$VNUM1.$VNUM2.$VNUM3"
+
+        echo "Committing new tag $NEW_TAG"
+
+        git tag $NEW_TAG 
+        git push --tags
+      - build_image: 
+        VERSION=`git describe --tags --abbrev=0`
+        curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
+        docker build . -t opentsdb-meta 
+        docker tag opentsdb-meta:latest opentsdb/opentsdb-meta:$VERSION
+        docker login $DOCKER_REPO --username $DOCKER_USERNAME --password $DOCKER_REPOSITORY
+        echo Pushing to $DOCKER_REPO/opentsdb/opentsdb-meta:$VERSION
+        docker image push $DOCKER_REPO/opentsdb/opentsdb-meta:$VERSION
     annotations:
       screwdriver.cd/dockerEnabled: true
+    secrets:
+      - DOCKER_EMAIL
+      - DOCKER_REPO
+      - DOCKER_PASSWORD
+      - DOCKER_REPOSITORY
+      - DOCKER_USERNAME   
   publish-docs:
     requires: [~main]
     steps:
-      - publish: apt-get update && apt-get -y install clang openssl python3-pip && rustup component add rustfmt && cargo doc && echo '<meta http-equiv=refresh content=0;url=myst/index.md>' > target/doc/index.html && cp target/doc/index.html target/doc/index.md && pip3 install ghp-import && ghp-import -n target/doc && git push -qf https://$GITHUB_TOKEN@github.com/OpenTSDB/opentsdb-meta.git gh-pages
+      - publish: 
+        apt-get update && apt-get -y install clang openssl python3-pip && rustup component add rustfmt && cargo doc && echo '<meta http-equiv=refresh content=0;url=myst/index.md>' > target/doc/index.html && cp target/doc/index.html target/doc/index.md && pip3 install ghp-import && ghp-import -n target/doc && git push -qf https://$GITHUB_TOKEN@github.com/OpenTSDB/opentsdb-meta.git gh-pages
     secrets:
       - GITHUB_TOKEN
