@@ -27,7 +27,7 @@ jobs:
           sh create_git_tag.sh
       - build_and_publish_image: 
           VERSION=`git describe --tags --abbrev=0`
-          echo "Docker push version: ${VERSION}"
+          echo "Docker push version ${VERSION}"
           curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh 
           docker build . -t opentsdb-meta
           echo "Built the image"
