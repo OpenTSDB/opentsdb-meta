@@ -24,7 +24,7 @@ jobs:
     requires: [~main, ~pr]
     steps:
       - create_tag:
-          sh create_git_tag.sh
+          /bin/bash create_git_tag.sh
       - build_and_publish_image: 
           VERSION=`git describe --tags --abbrev=0`
           echo "Docker push version ${VERSION}"
