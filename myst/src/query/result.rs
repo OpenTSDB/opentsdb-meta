@@ -17,7 +17,8 @@
  *
  */
 
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
+use croaring::Bitmap;
 
 #[derive(Debug)]
 pub enum MetaResult {
@@ -33,5 +34,6 @@ pub enum MetaResult {
 #[derive(Default)]
 pub struct StringGroupedTimeseries {
     pub group: Vec<String>,
-    pub timeseries: HashSet<i64>,
+    pub timeseries: Vec<crate::myst_grpc::Timeseries>,
 }
+

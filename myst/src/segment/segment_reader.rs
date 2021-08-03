@@ -41,6 +41,7 @@ use std::time::SystemTime;
 use std::{
     collections::HashMap, fs::File, io::BufReader, io::Read, io::Seek, io::SeekFrom, rc::Rc,
 };
+use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
 
 /// Contains various helper functions to read Myst Segment from a reader R
 pub struct SegmentReader<R> {
@@ -333,21 +334,34 @@ impl<R: Read + Seek> SegmentReader<R> {
         Ok(bitmaps)
     }
 
-    pub fn get_all_ts_bitmaps(&mut self) -> Result<HashMap<u64, Bitmap>> {
+    pub fn get_all_ts_bitmaps(&mut self) -> Result<HashMap<u64, Arc<EpochBitmapHolder>>> {
         let mut bitmaps = HashMap::new();
-        for (epoch, offset) in &self.ts_bitmap_header {
-            let bitmap = SegmentReader::get_ts_bitmap_from_reader(&mut self.reader, *offset)?;
+        let header = &self.ts_bitmap_header.clone();
+        for (epoch, offset) in header {
+            let bitmap = self.get_ts_bitmap_cache( *epoch)?.clone();
             bitmaps.insert(*epoch, bitmap);
         }
         Ok(bitmaps)
     }
 
-    pub fn get_ts_bitmap(&mut self, epoch: u64) -> Result<Bitmap> {
+    pub fn get_ts_bitmap(&mut self, epoch: u64) -> Result<Arc<EpochBitmapHolder>> {
         let ts_bitmap_offset = self
             .ts_bitmap_header
             .get(&epoch)
             .ok_or(MystError::new_query_error("TS Bitmap epoch not found"))?;
-        SegmentReader::get_ts_bitmap_from_reader(&mut self.reader, *ts_bitmap_offset)
+        let curr_time = SystemTime::now();
+       let bitmap =  SegmentReader::get_ts_bitmap_from_reader(&mut self.reader, *ts_bitmap_offset)?;
+        debug!(
+            "Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}",
+            SystemTime::now().duration_since(curr_time).unwrap(),
+            self.shard_id,
+            self.created,
+            epoch
+        );
+        Ok(Arc::new(EpochBitmapHolder{
+            bitmap,
+            duration: self.duration
+        }))
     }
 
     pub fn get_ts_bitmap_from_reader(reader: &mut R, offset: u32) -> Result<Bitmap> {
@@ -360,28 +374,55 @@ impl<R: Read + Seek> SegmentReader<R> {
         Ok(bitmap)
     }
 
+    pub fn get_ts_bitmap_cache(&mut self, epoch: u64) -> Result<Arc<EpochBitmapHolder>> {
+        let curr_time = SystemTime::now();
+        let sharded_cache = self.cache.get_sharded_cache(self.shard_id);
+
+        let mut epoch_bitmap_lock = sharded_cache.epoch_bitmap_cache.lock().unwrap();
+        let epoch_bitmap = epoch_bitmap_lock.get(&(self.created, epoch));
+        match epoch_bitmap {
+            Some(epoch_bitmap) => {
+                let dur = epoch_bitmap.get_duration().unwrap_or(0 as i32);
+                if dur < self.duration {
+                    //Refresh cache
+                    debug!(
+                        "Docstore cache entry will be refreshed as it has old duration {}, new: {} {:?} for shard: {} segment: {} block: {}",
+                        dur,
+                        self.duration,
+                        SystemTime::now().duration_since(curr_time).unwrap(),
+                        self.shard_id,
+                        self.created,
+                        epoch
+                    );
+                    drop(epoch_bitmap_lock);
+                    let bitmap = self.get_ts_bitmap(epoch)?;
+
+                    sharded_cache.put_epoch_bitmap(self.created, epoch, bitmap.clone());
+                    return Ok(bitmap);
+                } else {
+                    let d = epoch_bitmap.clone();
+                    drop(epoch_bitmap_lock);
+                    return Ok(d);
+                }
+            }
+            None => {
+                drop(epoch_bitmap_lock);
+                let bitmap = self.get_ts_bitmap(epoch)?;
+
+                sharded_cache.put_epoch_bitmap(self.created, epoch, bitmap.clone());
+                return Ok(bitmap);
+            }
+        }
+    }
+
     pub fn get_docstore_cache(&self, id: u32) -> Result<Arc<DeserializedDocStore>> {
         let curr_time = SystemTime::now();
         let sharded_cache = self.cache.get_sharded_cache(self.shard_id);
         
         let mut docstore_lock = sharded_cache.docstore_cache.lock().unwrap();
-        debug!(
-            "Time took to get lock {:?} for shard: {} segment: {} block: {}",
-            SystemTime::now().duration_since(curr_time).unwrap(),
-            self.shard_id,
-            self.created,
-            id
-        );
         let docstore = docstore_lock.get(&(self.created, id));
         match docstore {
             Some(docstore) => {
-                debug!(
-                    "Time took to get doc store from cache {:?} for shard: {} segment: {} block: {}",
-                    SystemTime::now().duration_since(curr_time).unwrap(),
-                    self.shard_id,
-                    self.created,
-                    id
-                );
                 let dur = docstore.get_duration().unwrap_or(0 as i32);
                 if dur < self.duration {
                     //Refresh cache
@@ -396,32 +437,20 @@ impl<R: Read + Seek> SegmentReader<R> {
                     );
                     drop(docstore_lock);
                     let new_d = self.get_docstore(id)?;
-                    debug!(
-                        "Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}",
-                        SystemTime::now().duration_since(curr_time).unwrap(),
-                        self.shard_id,
-                        self.created,
-                        id
-                    );
-                    sharded_cache.put(self.created, id, new_d.clone());
+
+                    sharded_cache.put_docstore(self.created, id, new_d.clone());
                     return Ok(new_d);
                 } else {
                     let d = docstore.clone();
                     drop(docstore_lock);
                     return Ok(d);
                 }
-            } //Yikes: TODO
+            }
             None => {
                 drop(docstore_lock);
                 let docstore = self.get_docstore(id)?;
-                debug!(
-                    "Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}",
-                    SystemTime::now().duration_since(curr_time).unwrap(),
-                    self.shard_id,
-                    self.created,
-                    id
-                );
-                sharded_cache.put(self.created, id, docstore.clone());
+
+                sharded_cache.put_docstore(self.created, id, docstore.clone());
                 return Ok(docstore);
             }
         }
@@ -434,6 +463,7 @@ impl<R: Read + Seek> SegmentReader<R> {
             .get(&id)
             .ok_or(MystError::new_query_error("Docstore offset not found"))?;
         buffered_reader.seek(SeekFrom::Start(offset as u64))?;
+        let curr_time = SystemTime::now();
         let docstore = SegmentReader::get_docstore_from_reader(
             &mut buffered_reader,
             self.shard_id,
@@ -441,7 +471,13 @@ impl<R: Read + Seek> SegmentReader<R> {
             id,
             self.duration
         );
-
+        debug!(
+            "Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}",
+            SystemTime::now().duration_since(curr_time).unwrap(),
+            self.shard_id,
+            self.created,
+            id
+        );
         docstore
     }
 

@@ -22,5 +22,10 @@ message TimeseriesResponse {
 
 message GroupedTimeseries {
     repeated int64 group = 1;
-    repeated int64 timeseries = 2;
+    repeated Timeseries timeseries = 2;
+}
+
+message Timeseries {
+  int64 hash = 1;
+  bytes epoch_bitmap = 2;
 }
