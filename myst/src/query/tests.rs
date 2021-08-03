@@ -259,8 +259,11 @@ pub fn search_timeseries() {
         SystemTime::now().duration_since(curr_time).unwrap()
     );
     println!("{:?}", ts);
-    let bitmap = &ts.grouped_timeseries.get(0).unwrap().timeseries.get(0).unwrap().epoch_bitmap;
-    println!("{:?}", Bitmap::deserialize(bitmap));
+    let bitmap_serialized = &ts.grouped_timeseries.get(0).unwrap().timeseries.get(0).unwrap().epoch_bitmap;
+    let bitmap = Bitmap::deserialize(bitmap_serialized);
+    let epoch = query.start as u32;
+
+    assert_eq!(bitmap.contains(epoch), true);
     assert_eq!(ts.grouped_timeseries.len(), 1);
 }
 

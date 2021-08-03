@@ -23,12 +23,25 @@ jobs:
   publish:
     requires: [~main]
     steps:
-      - build_image: curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh && docker build . -t opentsdb-meta
+      - create_tag:
+          sh create_git_tag.sh
+      - build_and_publish_image: 
+          VERSION=`git describe --tags --abbrev=0`
+          echo "Docker push version ${VERSION}"
+          curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh 
+          docker build . -t opentsdb-meta
+          echo "Built the image"
+          docker tag opentsdb-meta:latest opentsdb/opentsdb-meta:$VERSION
+          echo "Tagged the image"
+          docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+          echo Pushing to opentsdb/opentsdb-meta:$VERSION
+          docker image push opentsdb/opentsdb-meta:$VERSION
+      - publish_docs:
+          apt-get update && apt-get -y install clang openssl python3-pip && rustup component add rustfmt && cargo doc && echo '<meta http-equiv=refresh content=0;url=myst/index.md>' > target/doc/index.html && cp target/doc/index.html target/doc/index.md && pip3 install ghp-import && ghp-import -n target/doc && git push -qf https://$GITHUB_TOKEN@github.com/OpenTSDB/opentsdb-meta.git gh-pages    
     annotations:
       screwdriver.cd/dockerEnabled: true
-  publish-docs:
-    requires: [~main]
-    steps:
-      - publish: apt-get update && apt-get -y install clang openssl python3-pip && rustup component add rustfmt && cargo doc && echo '<meta http-equiv=refresh content=0;url=myst/index.md>' > target/doc/index.html && cp target/doc/index.html target/doc/index.md && pip3 install ghp-import && ghp-import -n target/doc && git push -qf https://$GITHUB_TOKEN@github.com/OpenTSDB/opentsdb-meta.git gh-pages
     secrets:
+      - DOCKER_EMAIL
+      - DOCKER_PASSWORD
+      - DOCKER_USERNAME
       - GITHUB_TOKEN
