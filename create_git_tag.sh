@@ -14,4 +14,7 @@ let val=$VNUM3+1
 NEW_TAG="$VNUM1.$VNUM2.$val" 
 echo "Committing new tag $NEW_TAG"
 git tag $NEW_TAG
+USERNAME=$DOCKER_USERNAME
+USER=${DOCKER_USERNAME}
+echo "User: $USER $USERNAME"
 #git push --tags
