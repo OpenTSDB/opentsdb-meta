@@ -26,8 +26,7 @@ jobs:
       - create_tag:
           /bin/bash create_git_tag.sh
       - build_and_publish_image:
-        echo "User $DOCKER_USERNAME"
-        /bin/bash push_docker.sh
+        echo "User $DOCKER_USERNAME" && /bin/bash push_docker.sh
       - publish_docs:
           apt-get update && apt-get -y install clang openssl python3-pip && rustup component add rustfmt && cargo doc && echo '<meta http-equiv=refresh content=0;url=myst/index.md>' > target/doc/index.html && cp target/doc/index.html target/doc/index.md && pip3 install ghp-import && ghp-import -n target/doc && git push -qf https://$GITHUB_TOKEN@github.com/OpenTSDB/opentsdb-meta.git gh-pages    
     annotations:
