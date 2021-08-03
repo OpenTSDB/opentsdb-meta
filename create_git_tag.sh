@@ -1,4 +1,4 @@
-echo Current shell: $SHELL
+echo "Current shell: $SHELL"
 CURRENT_VERSION=`git describe --abbrev=0 --tags 2>/dev/null` 
 if [ $CURRENT_VERSION == '']
 then
