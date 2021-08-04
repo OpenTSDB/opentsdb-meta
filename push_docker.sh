@@ -7,4 +7,4 @@ docker tag opentsdb-meta:latest opentsdb/opentsdb-meta:$VERSION
 echo "Tagged the image."
 docker login --username $LOGIN_USERNAME --password $LOGIN_PASSWORD
 echo Pushing to opentsdb/opentsdb-meta:$VERSION
-#docker image push opentsdb/opentsdb-meta:$VERSION
+docker image push opentsdb/opentsdb-meta:$VERSION
