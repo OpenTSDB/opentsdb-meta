@@ -14,4 +14,4 @@ let val=$VNUM3+1
 NEW_TAG="$VNUM1.$VNUM2.$val" 
 echo "Committing new tag $NEW_TAG"
 git tag $NEW_TAG
-git push --tags
+#git push --tags
