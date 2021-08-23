@@ -23,6 +23,7 @@ use crate::s3::remote_store::RemoteStore;
 use log::{error, info};
 use std::fs::{create_dir_all, read_dir, rename, File};
 use std::path::Path;
+use std::str::FromStr;
 use std::{
     collections::HashSet,
     io::Error,
@@ -326,10 +327,22 @@ pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
     let root_data_path = config.data_download_path;
     let temp_data_path = config.temp_data_path;
     let frequency = config.download_frequency;
+
+    let region_name = config.aws_region;
+    let region = match Region::from_str(&region_name) {
+        Ok(region) => region,
+        Err(_) => {
+            Region::Custom {
+                name: region_name,
+                endpoint: config.aws_endpoint
+            }
+        },
+    };
+
     let s3_client = S3Client::new_with(
         HttpClient::new().expect("Failed to create client"),
         StaticProvider::from(creds),
-        Region::UsEast2,
+        region
     );
 
     let arc_s3_client = Arc::new(s3_client);

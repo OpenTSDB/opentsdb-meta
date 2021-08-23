@@ -48,6 +48,8 @@ pub struct Config {
     pub processed_bucket: String,
     pub aws_key: String,
     pub aws_secret: String,
+    pub aws_region: String,
+    pub aws_endpoint: String,
     pub temp_data_path: String,
     pub download_frequency: u64,
 
@@ -101,6 +103,8 @@ impl Config {
             processed_bucket: config.get_str("processed_bucket").unwrap().to_string(),
             aws_key: config.get_str("aws_key").unwrap().to_string(),
             aws_secret: config.get_str("aws_secret").unwrap().to_string(),
+            aws_region: config.get_str("aws_region").unwrap().to_string(),
+            aws_endpoint: config.get_str("aws_endpoint").unwrap_or("".to_string()),
             temp_data_path: config.get_str("temp_data_path").unwrap().to_string(),
             download_frequency: config.get_int("download_frequency").unwrap() as u64,
             plugin_path: config.get_str("plugin_path").unwrap(),

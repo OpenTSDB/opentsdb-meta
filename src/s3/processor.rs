@@ -46,6 +46,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
+use std::str::FromStr;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
@@ -67,6 +68,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut key_prefix = format!("{}/{}", namespace, start_time);
     let mut running_time = start_time;
 
+    let region_name = config.aws_region;
+    let region = match Region::from_str(&region_name) {
+        Ok(region) => region,
+        Err(_) => {
+            Region::Custom {
+                name: region_name,
+                endpoint: config.aws_endpoint
+            }
+        },
+    };
+
     loop {
         let key = config.aws_key.as_str();
         let secret = config.aws_secret.as_str();
@@ -75,7 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let s3_client = S3Client::new_with(
             HttpClient::new().expect("Failed to create client"),
             StaticProvider::from(creds),
-            Region::UsEast2,
+            region.clone(),
         );
 
         let mut list_request = ListObjectsRequest::default();
