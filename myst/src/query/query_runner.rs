@@ -184,7 +184,8 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                     result.insert(k, crate::query::result::StringGroupedTimeseries::default());
                     result.get_mut(&k).unwrap().group.extend(v.group);
                 }
-                result.get_mut(&k).unwrap().timeseries.extend(v.timeseries);
+
+                result.get_mut(&k).unwrap().add_all(v.timeseries);
             }
         }
 
@@ -192,9 +193,9 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         let mut grouped_timeseries = Vec::new();
         let mut dict = HashMap::new();
         let _id = 0;
-        for (_k, v) in result {
+        for (_k, mut v) in result {
             let mut hashes = Vec::with_capacity(v.group.len());
-            for tagval in v.group {
+            for tagval in &v.group {
                 let tval = tagval.to_string();
                 let hash = Hash64::hash(&tval) as i64;
                 dict.entry(hash).or_insert(tval);
@@ -203,7 +204,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
 
             grouped_timeseries.push(GroupedTimeseries {
                 group: hashes,
-                timeseries: v.timeseries.into(),
+                timeseries: v.convert(),
             });
         }
 
@@ -333,7 +334,9 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         for groups in all_groups {
             for (k, v) in groups?.into_iter() {
                 if result.contains_key(&k) {
-                    result.get_mut(&k).unwrap().timeseries.extend(v.timeseries);
+                    for (xxhash, ts) in v.timeseries {
+                        result.get_mut(&k).unwrap().timeseries.insert(xxhash, ts);
+                    }
                 } else {
                     result.insert(k, v);
                 }
@@ -453,9 +456,9 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                         .get_mut(&hash)
                         .unwrap()
                         .timeseries
-                        .push(crate::myst_grpc::Timeseries {
-                            hash: timeseries.timeseries_id as i64,
-                            epoch_bitmap: bitmap.serialize()});
+                        .insert(timeseries.timeseries_id as i64, crate::query::result::Timeseries {
+                            xxhash: timeseries.timeseries_id as i64,
+                            bitmap: bitmap});
                     //groups.insert(hash, group);
                 } else {
                     // let mut group = GroupedTimeseries::default();
@@ -467,9 +470,9 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                         .get_mut(&0)
                         .unwrap()
                         .timeseries
-                        .push(crate::myst_grpc::Timeseries {
-                            hash: timeseries.timeseries_id as i64,
-                            epoch_bitmap: bitmap.serialize()});
+                        .insert(timeseries.timeseries_id as i64, crate::query::result::Timeseries {
+                            xxhash: timeseries.timeseries_id as i64,
+                            bitmap: bitmap});
                 }
             } else {
                 error!(

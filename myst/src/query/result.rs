@@ -19,6 +19,8 @@
 
 use std::collections::{HashSet, HashMap};
 use croaring::Bitmap;
+use std::hash::{Hash, Hasher};
+use std::borrow::BorrowMut;
 
 #[derive(Debug)]
 pub enum MetaResult {
@@ -34,6 +36,38 @@ pub enum MetaResult {
 #[derive(Default)]
 pub struct StringGroupedTimeseries {
     pub group: Vec<String>,
-    pub timeseries: Vec<crate::myst_grpc::Timeseries>,
+    pub timeseries: HashMap<i64, Timeseries>,
 }
 
+pub struct Timeseries {
+    pub xxhash: i64,
+    pub bitmap: Bitmap,
+}
+
+impl StringGroupedTimeseries {
+    fn add(&mut self, xxhash: i64, timeseries: Timeseries) {
+        if self.timeseries.contains_key(&xxhash) {
+            let mut curr_timeseries = self.timeseries.get_mut(&xxhash).unwrap();
+            curr_timeseries.bitmap.add_many(&timeseries.bitmap.to_vec());
+        } else {
+            self.timeseries.insert(xxhash, timeseries);
+        }
+    }
+
+    pub fn add_all(&mut self, timeseries: HashMap<i64, Timeseries>) {
+        for (xxhash, ts) in timeseries {
+            self.add(xxhash, ts);
+        }
+    }
+
+    pub fn convert(&mut self) -> Vec<crate::myst_grpc::Timeseries> {
+        let mut result = Vec::with_capacity(self.timeseries.len());
+        for (xxhash, ts) in &self.timeseries {
+            result.push(crate::myst_grpc::Timeseries {
+                hash: *xxhash,
+                epoch_bitmap: ts.bitmap.serialize(),
+            });
+        }
+        result
+    }
+}
