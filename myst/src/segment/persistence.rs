@@ -42,6 +42,9 @@ pub trait Loader<R: Read + Seek, T> {
 }
 
 pub trait Compactor {
+    /// Compacts two segments
+    /// # Arguments
+    /// * `segment` - The segment that is to be current with the current.
     fn compact(&mut self, segment: Self) where Self: Sized;
 }
 pub trait RemoteSegmentStore<W>

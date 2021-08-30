@@ -17,6 +17,18 @@ use std::sync::Arc;
 
 impl Compactor for MystSegment {
 
+    /// Compacts two segment:
+    /// Merges the current segment `self` with the new segment `segment`
+    /// 1. FST - Go over the fst's of the new segment, identify missing terms
+    /// Add the missing terms to the corresponding fst and dict.
+    /// 2. For Metric, Tags and Epoch Bitmaps - Go over the bitmaps and either
+    /// add them to the map or merge them with the existing bitmap.
+    /// 3.Docstore - Add the current segments timeseries to the dedup set
+    /// For each timeseries in the new segment that is not present in the dedup
+    /// Create the tags hashmap based on the id's from the dict after they are merged in step 1
+    /// add the new segment's timeseries with the new tags map to current segment.
+    /// # Arguments
+    /// * `segment` - The segment that is to be current with the current.
     fn compact(&mut self, segment: MystSegment) {
         //compact fsts
         for (key, myst_fst) in segment.fsts.fsts {
