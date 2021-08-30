@@ -12,7 +12,7 @@ RUN cargo build --release
 
 FROM debian:buster-slim
 RUN apt-get update \
-    && apt-get -y install clang
+    && apt-get -y install clang ca-certificates
 RUN mkdir -p /usr/share/myst/bin     \
     && mkdir -p /usr/share/myst/plugins  \
     && mkdir -p /var/log/myst        \

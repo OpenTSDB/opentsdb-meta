@@ -57,6 +57,9 @@ pub struct Config {
     pub rollup_size: u32,
     pub num_containers: usize,
     pub container_id: usize,
+
+    pub aws_region: String,
+    pub aws_endpoint: String,
 }
 // TODO: Cleanup
 impl Config {
@@ -112,6 +115,8 @@ impl Config {
             rollup_size: config.get_int("rollup_size").unwrap_or(7*24*60*60) as u32,
             num_containers: config.get_int("num_containers").unwrap_or(5) as usize,
             container_id: config.get_int("container_id").unwrap_or(1) as usize,
+            aws_region: config.get_str("aws_region").unwrap().to_string(),
+            aws_endpoint: config.get_str("aws_endpoint").unwrap_or("".to_string()),
 
         }
     }
