@@ -53,6 +53,10 @@ pub struct Config {
 
     pub plugin_path: String,
     pub ssl_for_metrics: bool,
+
+    pub rollup_size: u32,
+    pub num_containers: usize,
+    pub container_id: usize,
 }
 // TODO: Cleanup
 impl Config {
@@ -105,6 +109,10 @@ impl Config {
             download_frequency: config.get_int("download_frequency").unwrap() as u64,
             plugin_path: config.get_str("plugin_path").unwrap_or(String::from("/usr/share/myst/plugins/metrics-reporter")),
             ssl_for_metrics: config.get_bool("ssl_for_metrics").unwrap(),
+            rollup_size: config.get_int("rollup_size").unwrap_or(7*24*60*60) as u32,
+            num_containers: config.get_int("num_containers").unwrap_or(5) as usize,
+            container_id: config.get_int("container_id").unwrap_or(1) as usize,
+
         }
     }
 }

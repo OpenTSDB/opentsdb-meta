@@ -39,6 +39,7 @@ use rusoto_core::credential::StaticProvider;
 use rusoto_core::request::HttpClient;
 use rusoto_core::Region;
 use rusoto_s3::S3Client;
+use crate::utils::myst_error::{MystError, Result};
 pub struct SegmentDownload {
     remote_store: Arc<RemoteStore>,
     prefix_i: Arc<String>,
@@ -67,7 +68,7 @@ impl SegmentDownload {
         }
     }
 
-    async fn download(self) -> Result<(), Error> {
+    async fn download(self) -> Result<()> {
         info!("In download function for {}", &self.prefix_i);
         let prefix = Arc::clone(&self.prefix_i);
 
@@ -297,7 +298,7 @@ impl SegmentDownload {
         }
     }
 
-    fn list_files(&self, root_dir: &Path, files: &mut Vec<String>) -> Result<(), Error> {
+    fn list_files(&self, root_dir: &Path, files: &mut Vec<String>) -> Result<()> {
         if root_dir.is_dir() {
             let dirs = read_dir(root_dir)?;
             for dir in dirs {
@@ -314,7 +315,7 @@ impl SegmentDownload {
     }
 }
 
-pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_download() -> Result<()> {
     info!("Starting segment download");
     let config = Config::new();
     let processed_bucket = config.processed_bucket;
@@ -334,20 +335,29 @@ pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
 
     let arc_s3_client = Arc::new(s3_client);
     let arc_processed_bucket = Arc::new(processed_bucket.clone());
-    let num_shards = config.shards as usize;
-    info!("Num shards: {} root path: {}", num_shards, root_data_path);
+    let remote_store = Arc::new(RemoteStore::new(arc_s3_client, arc_processed_bucket));
+    let data_path = add_dir(root_data_path.clone(), namespace.clone());
+    let total_num_shards = get_remote_shards(data_path, remote_store.clone()).await?;
+    let num_containers = config.num_containers;
+    let container_id = config.container_id;
+    let mut shards_to_download = Vec::new();
+    for i in 0..total_num_shards {
+        if i % num_containers == container_id {
+            shards_to_download.push(i);
+        }
+    }
+    info!("Downloading shards: {:?} root path: {}", shards_to_download, root_data_path);
 
     let mut handles = Vec::new();
-    for i in 0..num_shards {
-        let clone_s3_client = Arc::clone(&arc_s3_client);
-        let clone_processed_bucket = Arc::clone(&arc_processed_bucket);
+    for i in shards_to_download {
         let root_path_clone = root_data_path.clone();
         let remote_prefix = format!("{}/{}", &namespace.clone(), i.to_string());
         let temp_data_path_clone = temp_data_path.clone();
+        let remote_store_clone = remote_store.clone();
         let handle = tokio::spawn(async move {
-            let remote_store = RemoteStore::new(clone_s3_client, clone_processed_bucket);
+
             let segment_download = SegmentDownload::new(
-                Arc::new(remote_store),
+                remote_store_clone,
                 Arc::new(remote_prefix.to_owned()),
                 i,
                 Arc::new(root_path_clone.to_owned()),
@@ -370,4 +380,15 @@ pub async fn start_download() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => info!("Error while submitting jobs for download from remote store {:?}", e),
     }*/
     Ok(())
+}
+
+pub async fn get_remote_shards(data_path: String, remote_store: Arc<RemoteStore>) -> Result<usize> {
+
+    let files = remote_store.list_files(data_path.clone()).await?;
+    if files.is_some() {
+        return Ok(files.unwrap().len());
+    } else {
+        let error = format!("No files found for prefix {:?}", data_path);
+        return Err(MystError::new_query_error(&error));
+    }
 }
