@@ -34,6 +34,7 @@ pub mod query;
 pub mod s3;
 pub mod segment;
 pub mod utils;
+//pub mod rollup;
 
 pub fn setup_logger(filename: String) -> Result<(), fern::InitError> {
     fern::Dispatch::new()

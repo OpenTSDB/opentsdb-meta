@@ -40,6 +40,10 @@ pub trait Loader<R: Read + Seek, T> {
     where
         Self: Sized;
 }
+
+pub trait Compactor {
+    fn compact(&mut self, segment: Self) where Self: Sized;
+}
 pub trait RemoteSegmentStore<W>
 where
     W: Write,

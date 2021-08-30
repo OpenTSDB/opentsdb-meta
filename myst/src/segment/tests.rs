@@ -19,7 +19,7 @@
 
 use crate::query::cache::Cache;
 use crate::segment::myst_segment::MystSegment;
-use crate::segment::persistence::{Builder, Loader};
+use crate::segment::persistence::{Builder, Loader, Compactor};
 use crate::segment::segment_reader::SegmentReader;
 use crate::segment::store::docstore::DocStore;
 use std::collections::HashMap;
@@ -30,13 +30,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[test]
-pub fn test_load() {
-    let epoch = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    let mut segment = MystSegment::new_with_block_entries(1, epoch, 200);
+
+pub fn write_data(num_metrics_from: u32, num_metrics_to: u32, epoch: u64, segment: &mut MystSegment) {
     let mut tags = HashMap::new();
     tags.insert(String::from("foo"), String::from("bar"));
     let mut tags_rc = HashMap::new();
@@ -44,12 +39,22 @@ pub fn test_load() {
         tags_rc.insert(Rc::new(k.clone()), Rc::new(v.clone()));
     }
 
-    let mut metric = String::from("metric");
-    for i in 0..10 {
-        metric.push_str(&i.to_string());
-        segment.add_timeseries(Rc::new(metric.clone()), tags_rc.clone(), i, epoch);
-    }
 
+    for i in num_metrics_from..num_metrics_to {
+        let mut metric = String::from("metric");
+        metric.push_str(&i.to_string());
+        segment.add_timeseries(Rc::new(metric.clone()), tags_rc.clone(), i as u64, epoch);
+    }
+}
+#[test]
+pub fn test_load() {
+    let epoch = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let mut segment = MystSegment::new_with_block_entries(1, epoch, 200);
+
+    write_data(0, 10, epoch, &mut segment);
     let mut buf = Vec::new();
     let mut offset = 0 as u32;
     segment.build(&mut buf, &mut offset);
@@ -75,18 +80,7 @@ pub fn test() {
         .as_secs();
     let mut segment = MystSegment::new_with_block_entries(1, epoch, 200);
 
-    let mut tags = HashMap::new();
-    tags.insert(String::from("foo"), String::from("bar"));
-    let mut tags_rc = HashMap::new();
-    for (k, v) in &tags {
-        tags_rc.insert(Rc::new(k.clone()), Rc::new(v.clone()));
-    }
-
-    for i in 0..1000 {
-        let mut metric = String::from("metric");
-        metric.push_str(&i.to_string());
-        segment.add_timeseries(Rc::new(metric.clone()), tags_rc.clone(), i, epoch);
-    }
+   write_data(0, 1000, epoch, &mut segment);
 
     let mut buf = File::create(MystSegment::get_segment_filename(
         &1,
@@ -150,4 +144,48 @@ pub fn test() {
     }
 
     println!("Dict {:?}", segment_reader.get_dict());
+}
+
+#[test]
+pub fn test_compaction() {
+    let mut epoch = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+   let mut segment_one = MystSegment::new_with_block_entries(1, epoch, 200);
+
+    write_data(0, 8, epoch, &mut segment_one);
+    let mut buf_one = Vec::new();
+    let mut offset = 0 as u32;
+    segment_one.build(&mut buf_one, &mut offset);
+
+    epoch = epoch + 2*60*60;
+    let mut segment_two = MystSegment::new_with_block_entries(1, epoch, 200);
+    write_data(0, 15, epoch, &mut segment_two);
+    let mut buf_two = Vec::new();
+    let mut offset = 0 as u32;
+    segment_two.build(&mut buf_two, &mut offset).unwrap();
+
+
+
+    let mut loaded_segment_one = MystSegment::new_with_block_entries(0, 0, 200);
+    let mut cursor = Cursor::new(buf_one.as_slice());
+    loaded_segment_one = loaded_segment_one.load(&mut cursor, &0).unwrap().unwrap();
+
+    let mut loaded_segment_two = MystSegment::new_with_block_entries(0, 0, 200);
+    let mut cursor = Cursor::new(buf_two.as_slice());
+    loaded_segment_two = loaded_segment_two.load(&mut cursor, &0).unwrap().unwrap();
+
+
+   loaded_segment_one.compact(loaded_segment_two);
+
+   // println!("Fst Container {:?}", loaded_segment_one.fsts);
+    assert_eq!(loaded_segment_one.metrics_bitmap.metrics_bitmap.len(), 15);
+    assert_eq!(loaded_segment_one.tag_keys_bitmap.tag_keys_bitmap.get(&String::from("foo")).unwrap().cardinality(), 15);
+    let tag_vals_bitmaps = loaded_segment_one.tag_vals_bitmap.tag_vals_bitmap.get(&String::from("foo")).unwrap();
+    assert_eq!(tag_vals_bitmaps.get(&String::from("bar")).unwrap().cardinality(), 15);
+    assert_eq!(loaded_segment_one.dict.dict.len(), 17); //15 metrics and 2 tags
+    assert_eq!(loaded_segment_one.data.data.len(), 15);
+    //println!("Timeseries Bitmaps {:?}", loaded_segment_one.epoch_bitmap);
+
 }

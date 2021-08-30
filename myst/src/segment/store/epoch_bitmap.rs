@@ -36,7 +36,7 @@ pub const EPOCH_DURATION: u64 = 6 * 60 * 60;
 /// Stores a Bitmap for each epoch rolling every `EPOCH_DURATION` seconds.
 #[derive(Debug)]
 pub struct EpochBitmap {
-    epoch_bitmap: BTreeMap<u64, Bitmap>, // epoch -> bitmap
+    pub epoch_bitmap: BTreeMap<u64, Bitmap>, // epoch -> bitmap
     pub header: EpochBitmapHeader,
     start_epoch: u64,
 }

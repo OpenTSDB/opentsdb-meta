@@ -120,7 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_logger(String::from(&config.log_file))?;
 
-    start_download().await?;
+    start_download().await.unwrap();
 
     start_grpc_server(metrics_reporter, config).await
 }

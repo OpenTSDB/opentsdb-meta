@@ -22,3 +22,6 @@ pub mod persistence;
 pub mod segment_reader;
 pub mod store;
 pub mod tests;
+pub mod builder;
+pub mod loader;
+pub mod compactor;

@@ -17,7 +17,7 @@
  *
  */
 
-use crate::segment::persistence::Builder;
+use crate::segment::persistence::{Builder, Compactor};
 use crate::segment::persistence::Loader;
 use crate::segment::persistence::TimeSegmented;
 use crate::segment::store::dict::Dict;
@@ -60,20 +60,20 @@ pub struct MystSegment {
     pub epoch_bitmap: EpochBitmap,
     pub data: DocStore,
 
-    header: MystSegmentHeader,
+    pub(crate) header: MystSegmentHeader,
 
     pub shard_id: u32,
     pub epoch: u64,
 
-    uid: u32,
-    segment_timeseries_id: u32,
-    tag_key_prefix: Rc<String>,
-    metric_prefix: Rc<String>,
-    dedup: HashSet<u64>,
+    pub(crate) uid: u32,
+    pub(crate) segment_timeseries_id: u32,
+    pub(crate) tag_key_prefix: Rc<String>,
+    pub(crate) metric_prefix: Rc<String>,
+    pub(crate) dedup: HashSet<u64>,
 
-    cluster: Option<Clusterer>,
+    pub(crate) cluster: Option<Clusterer>,
 
-    duration: i32,
+    pub(crate) duration: i32,
 }
 
 impl TimeSegmented  for MystSegment {
@@ -132,248 +132,6 @@ impl MystSegmentHeader {
             uid: uid,
         };
         Ok(header)
-    }
-}
-
-impl<W: Write> Builder<W> for MystSegment {
-    /// Builds the MystSegment.
-    /// Order of the segment is as follows.
-    /// 1. Metric Bitmaps
-    /// 2. Tag Keys Bitmaps
-    /// 3. Tag Values Bitmaps
-    /// 4. Epoch Bitmaps
-    /// 5. Epoch Bitmap header
-    /// 6. Dictionary
-    /// 7. Docstore
-    /// 8. Docstore header
-    /// 9. FST
-    /// 10. FST Header
-    /// 11. Myst Segment Header
-    /// The offset before start of each structure is written to header `MystSegmentHeader`
-    ///
-    fn build(mut self, buf: &mut W, offset: &mut u32) -> Result<Option<Self>> {
-        info!(
-            "Building segment for {:?} and {:?}",
-            self.shard_id, self.epoch
-        );
-        &self.drain_clustered_data();
-
-        self.header.header.insert(
-            ToPrimitive::to_u32(&MystSegmentHeaderKeys::MetricBitmap).unwrap(),
-            *offset,
-        );
-        self.metrics_bitmap.fsts = Some(self.fsts.fsts);
-
-        let ret = self
-            .metrics_bitmap
-            .build(buf, offset)?
-            .ok_or(MystError::new_query_error("Unable to build segment"))?;
-
-        self.header.header.insert(
-            ToPrimitive::to_u32(&MystSegmentHeaderKeys::TagKeysBitmap).unwrap(),
-            *offset,
-        );
-        self.tag_keys_bitmap.fsts = ret.fsts;
-
-        let ret = self
-            .tag_keys_bitmap
-            .build(buf, offset)?
-            .ok_or(MystError::new_query_error("Unable to build segment"))?;
-
-        self.header.header.insert(
-            ToPrimitive::to_u32(&MystSegmentHeaderKeys::TagValsBitmap).unwrap(),
-            *offset,
-        );
-
-        self.tag_vals_bitmap.fsts = ret.fsts;
-        let mut ret = self
-            .tag_vals_bitmap
-            .build(buf, offset)?
-            .ok_or(MystError::new_query_error("Unable to build segment"))?;
-
-        self.fsts.fsts = ret
-            .fsts
-            .take()
-            .ok_or(MystError::new_query_error("Unable to build segment"))?;
-
-        self.header.header.insert(
-            ToPrimitive::to_u32(&MystSegmentHeaderKeys::EpochBitmap).unwrap(),
-            *offset,
-        );
-        let ts_bitmap = self
-            .epoch_bitmap
-            .build(buf, offset)?
-            .ok_or(MystError::new_query_error("Unable to build segment"))?;
-
-        self.header.header.insert(
-            ToPrimitive::to_u32(&MystSegmentHeaderKeys::EpochBitmapHeader).unwrap(),
-            *offset,
-        );
-        ts_bitmap
-            .header
-            .build(buf, offset)?
-            .ok_or(MystError::new_query_error("Unable to build segment"))?;
-
-        self.header.header.insert(
-            ToPrimitive::to_u32(&MystSegmentHeaderKeys::Dict).unwrap(),
-            *offset,
-        );
-        self.dict.build(buf, offset)?;
-
-        self.header.header.insert(
-            ToPrimitive::to_u32(&MystSegmentHeaderKeys::Docstore).unwrap(),
-            *offset,
-        );
-
-        let ret = self
-            .data
-            .build(buf, offset)?
-            .ok_or(MystError::new_query_error("Unable to build segment"))?;
-        self.header.header.insert(
-            ToPrimitive::to_u32(&MystSegmentHeaderKeys::DocstoreHeader).unwrap(),
-            *offset,
-        );
-        ret.header.build(buf, offset)?;
-
-        self.header.header.insert(
-            ToPrimitive::to_u32(&MystSegmentHeaderKeys::Fst).unwrap(),
-            *offset,
-        );
-        let ret = self
-            .fsts
-            .build(buf, offset)?
-            .ok_or(MystError::new_query_error("Unable to build segment"))?;
-
-        self.header.header.insert(
-            ToPrimitive::to_u32(&MystSegmentHeaderKeys::FstHeader).unwrap(),
-            *offset,
-        );
-        ret.header.build(buf, offset)?;
-        for (k, v) in self.header.header {
-            buf.write_u32::<NetworkEndian>(k)?;
-            buf.write_u32::<NetworkEndian>(v)?;
-        }
-        info!("Writing segment timeseries id {} and uid: {} for shard: {} and epoch: {}", self.segment_timeseries_id, self.uid, self.shard_id, self.epoch);
-        buf.write_u32::<NetworkEndian>(self.segment_timeseries_id)?;
-        buf.write_u32::<NetworkEndian>(self.uid)?;
-        info!(
-            "Done building segment for {:?} and {:?}",
-            self.shard_id, self.epoch
-        );
-        Ok(None)
-    }
-}
-
-impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
-    /// Loads and deserializes the buffer `buf` and returns a MystSegment.
-    ///
-    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<MystSegment>> {
-        //        let mut buffered_reader = BufReader::new(buf);
-        // Read header first -- seek from end
-        
-        let full_segment_header = SegmentReader::read_segment_header(buf)?;
-
-        let segment_header = full_segment_header.header;
-        // load fst
-        let fst_offset = segment_header
-            .get(&ToPrimitive::to_u32(&MystSegmentHeaderKeys::FstHeader).unwrap())
-            .unwrap();
-        let mut fst_container = MystFSTContainer::new();
-        fst_container = fst_container.load(buf, fst_offset)?.unwrap();
-        // load metric bit map
-        let mut metrics_bitmap = MetricBitmap::new();
-        let metric_fst = fst_container.fsts.get(&self.metric_prefix).unwrap();
-        for (metric_name, offset_id) in &metric_fst.buf {
-            let offset = MystFST::get_offset(*offset_id);
-            let bitmap = SegmentReader::get_bitmap_from_reader(buf, offset as u64)?;
-            metrics_bitmap
-                .metrics_bitmap
-                .insert(metric_name.clone(), bitmap);
-        }
-        // load tag key bitmap
-        let mut tag_keys_bitmap = TagKeysBitmap::new();
-        let tag_key_fst = fst_container.fsts.get(&self.tag_key_prefix).unwrap();
-        for (tag_key, offset_id) in &tag_key_fst.buf {
-            let offset = MystFST::get_offset(*offset_id);
-            let bitmap = SegmentReader::get_bitmap_from_reader(buf, offset as u64)?;
-            tag_keys_bitmap
-                .tag_keys_bitmap
-                .insert(tag_key.clone(), bitmap);
-        }
-        // load tag val bitmap
-        let mut tag_vals_bitmap = TagValuesBitmap::new();
-        let tag_key_fst = fst_container.fsts.get(&self.tag_key_prefix).unwrap();
-        for (tag_key, offset_id) in &tag_key_fst.buf {
-            let tag_val_fst = fst_container.fsts.get(tag_key).unwrap();
-            let mut curr_tag_vals_bitmaps = HashMap::new();
-            for (tag_val, offset_id) in &tag_val_fst.buf {
-                let offset = MystFST::get_offset(*offset_id);
-                let bitmap = SegmentReader::get_bitmap_from_reader(buf, offset as u64)?;
-                curr_tag_vals_bitmaps.insert(tag_val.clone(), bitmap);
-            }
-            tag_vals_bitmap
-                .tag_vals_bitmap
-                .insert(tag_key.clone(), curr_tag_vals_bitmaps);
-        }
-        // load dict
-        let dict_offset = segment_header
-            .get(&ToPrimitive::to_u32(&MystSegmentHeaderKeys::Dict).unwrap())
-            .ok_or(MystError::new_query_error("No valid dict offset found"))?;
-        let mut dict = Dict::new();
-        dict = dict.load(buf, dict_offset)?.unwrap();
-        // load doc store
-        let docstore_header_offset = segment_header
-            .get(&ToPrimitive::to_u32(&MystSegmentHeaderKeys::DocstoreHeader).unwrap())
-            .ok_or(MystError::new_query_error(
-                "No docstore header offset found",
-            ))?;
-        let mut docstore = DocStore::new(0);
-        docstore = docstore.load(buf, docstore_header_offset)?.unwrap();
-        
-        /// Load xxhashes into dedup map.
-        let mut dedup: HashSet<u64> =  HashSet::new();
-
-        let doc_vec = &docstore.data;
-
-        for t in doc_vec {
-            dedup.insert(t.timeseries_id);
-        }
-        
-        let ts_bitmaps_header_offset = segment_header
-            .get(&ToPrimitive::to_u32(&MystSegmentHeaderKeys::EpochBitmapHeader).unwrap())
-            .ok_or(MystError::new_query_error(
-                "No Timeseries Bitmap header offset found",
-            ))?;
-        let mut timeseries_bitmap = EpochBitmap::new(0);
-        timeseries_bitmap = timeseries_bitmap
-            .load(buf, ts_bitmaps_header_offset)?
-            .unwrap();
-        /// TODO: Doc store block entries should be segment specific ? (and not global ?)
-        /// NOTE: It is ok to have a new clusterer because,
-        /// the exists check is performed while draining the clusters.
-        let last_id = full_segment_header.segment_timeseries_id;
-        let uid = full_segment_header.uid;
-        info!("Loading segment for shard: {} and epoch: {} with last segment id: {} uid: {}", self.shard_id, self.epoch, last_id, uid);
-        let myst_segment = MystSegment {
-            fsts: fst_container,
-            dict,
-            tag_keys_bitmap,
-            tag_vals_bitmap,
-            metrics_bitmap,
-            epoch_bitmap: timeseries_bitmap,
-            data: docstore,
-            header: Default::default(),
-            shard_id: self.shard_id,
-            epoch: self.epoch,
-            uid: uid,
-            segment_timeseries_id: last_id,
-            metric_prefix: Rc::new(String::from(crate::utils::config::METRIC)),
-            tag_key_prefix: Rc::new(String::from(crate::utils::config::TAG_KEYS)),
-            dedup: dedup,
-            cluster: Some(Clusterer::default()),
-            duration: self.duration
-        };
-        Ok(Some(myst_segment))
     }
 }
 
@@ -572,7 +330,8 @@ impl MystSegment {
         }
     }
 
-    fn drain_clustered_data(&mut self) -> Result<()> {
+
+    pub(crate) fn drain_clustered_data(&mut self) -> Result<()> {
         let cluster = self.cluster.take().unwrap().cluster;
         for (metric, tags) in cluster {
             for ts in tags {
@@ -615,7 +374,7 @@ impl MystSegment {
 
 /// Groups the timeseries so that all timeseries for a metric are close to each other.
 #[derive(Default, Debug)]
-struct Clusterer {
+pub struct Clusterer {
     cluster: HashMap<u32, Vec<TagsAndTimestamp>>,
 }
 #[derive(Default, Debug)]
