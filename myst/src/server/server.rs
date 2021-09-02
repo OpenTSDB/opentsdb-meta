@@ -74,9 +74,12 @@ impl MystService for TimeseriesService {
         let query = r.query;
         let curr_time = SystemTime::now();
         info!("Running query {:?}", query);
-        let batch_query = Query::from_json(&query).unwrap();
+        let batch_query = Query::from_json(&query);
+        if batch_query.is_err() {
+           return Err(tonic::Status::internal("Unable to parse query"));
+        }
         let res = Query::run_query(
-            &batch_query,
+            &batch_query.unwrap(),
             &self.thread_pool,
             self.cache.clone(),
             &self.config,

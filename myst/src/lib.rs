@@ -27,7 +27,6 @@ use std::time::Duration;
 
 use crate::utils::config::Config;
 
-pub mod client;
 pub mod myst_grpc;
 pub mod query;
 

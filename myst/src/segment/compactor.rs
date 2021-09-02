@@ -1,3 +1,21 @@
+/*
+ *
+ *  * This file is part of OpenTSDB.
+ *  * Copyright (C) 2021  Yahoo.
+ *  *
+ *  * Licensed under the Apache License, Version 2.0 (the "License");
+ *  * you may not use this file except in compliance with the License.
+ *  * You may obtain a copy of the License at
+ *  *
+ *  *   http://www.apache.org/licenses/LICENSE-2.0
+ *  *
+ *  * Unless required by applicable law or agreed to in writing, software
+ *  * distributed under the License is distributed on an "AS IS" BASIS,
+ *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  * See the License for the specific language governing permissions and
+ *  * limitations under the License.
+ *
+ */
 use crate::segment::myst_segment::{MystSegment, MystSegmentHeaderKeys};
 use std::rc::Rc;
 use std::io::{Read, Seek};
@@ -14,6 +32,10 @@ use crate::segment::store::epoch_bitmap::EpochBitmap;
 use crate::utils::myst_error::{MystError, Result};
 use log::info;
 use std::sync::Arc;
+use std::{
+
+    time::SystemTime,
+};use std::time::UNIX_EPOCH;
 
 impl Compactor for MystSegment {
 
@@ -104,6 +126,7 @@ impl Compactor for MystSegment {
         for t in doc_vec {
             dedup.insert(t.timeseries_id);
         }
+
         for timeseries in segment.data.data {
             if ! dedup.contains(&timeseries.timeseries_id) {
                 //convert tags in timeseries that have old dict id's to new dict id's
@@ -111,20 +134,22 @@ impl Compactor for MystSegment {
                 for (key, val) in timeseries.tags.iter() {
                     let key_str = segment.dict.dict.get(key).unwrap();
                     let val_str = segment.dict.dict.get(val).unwrap();
-                    let mut new_key_id= 0;
-                    let mut new_val_id= 0;
-                    for (key, fst) in self.fsts.fsts.iter() {
-                        if fst.buf.contains_key(key_str) {
-                            new_key_id = *fst.buf.get(key_str).unwrap();
-                        }
-                        if fst.buf.contains_key(val_str) {
-                            new_val_id = *fst.buf.get(val_str).unwrap();
+                    let mut new_key_id= None;
+                    let mut new_val_id= None;
+                  
+                    let tag_keys_fst = self.fsts.fsts.get(&self.tag_key_prefix).unwrap();
+                    if tag_keys_fst.buf.contains_key(key_str) {
+                        new_key_id =  Some(*tag_keys_fst.buf.get(key_str).unwrap());
+                        let tag_vals_fst = self.fsts.fsts.get(key_str).unwrap();
+                        if tag_vals_fst.buf.contains_key(val_str) {
+                            new_val_id = Some(*tag_vals_fst.buf.get(val_str).unwrap());
                         }
                     }
-                    if new_key_id == 0 || new_val_id == 0 {
+                    if new_key_id == None || new_val_id == None {
                         panic!("Should not happen!! Either Tag Key or Value is missing in the merged fst. ");
                     }
-                    tags.insert(MystFST::get_id(new_key_id), MystFST::get_id(new_val_id));
+
+                    tags.insert(MystFST::get_id(new_key_id.unwrap()), MystFST::get_id(new_val_id.unwrap()));
                 }
                 let new_timeseries = Timeseries{
                     timeseries_id: timeseries.timeseries_id,
@@ -132,7 +157,6 @@ impl Compactor for MystSegment {
                 };
                 self.data.data.push(new_timeseries);
             }
-
         }
 
     }

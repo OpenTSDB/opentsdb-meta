@@ -35,7 +35,7 @@ use crate::utils::myst_error::{MystError, Result};
 
 use super::{query::Query, query_runner::QueryRunner};
 use metrics_reporter::MetricsReporter;
-
+use tonic::Code;
 
 
 /// Runs a query for all shards
@@ -86,12 +86,15 @@ impl ShardQueryRunner {
                         &mut timeseries_response,
                     ); // TODO: panic_handler
                     if res.is_err() {
+                        let message = format!("Error running query {:?}", res);
+                        sender.try_send(Err(tonic::Status::new(Code::Internal, message)));
                         error!(
                             "Error running query for shard {} {:?} {:?}",
                             shard_id,
                             timeseries_response,
                             res.err()
                         );
+
                     } else {
                         // timeseries_response.streams = num_shards as i32;
                         let res = sender.try_send(Ok(timeseries_response));

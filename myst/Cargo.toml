@@ -70,9 +70,9 @@ metrics-reporter = { path = "../metrics-reporter", version = "*" }
 [build-dependencies]
 tonic-build = { version = "0.4.0", features = ["prost"] }
 
-[[bin]]
-name="client"
-path= "src/client/client.rs"
+#[[bin]]
+#name="client"
+#path= "src/client/client.rs"
 
 [[bin]]
 name="server"
