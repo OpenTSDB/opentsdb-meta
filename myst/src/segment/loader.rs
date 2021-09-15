@@ -16,21 +16,21 @@
  *  * limitations under the License.
  *
  */
-use crate::segment::myst_segment::{MystSegment, MystSegmentHeaderKeys, Clusterer};
-use std::rc::Rc;
-use std::io::{Read, Seek};
+use crate::segment::myst_segment::{Clusterer, MystSegment, MystSegmentHeaderKeys};
 use crate::segment::persistence::Loader;
 use crate::segment::segment_reader::SegmentReader;
-use num_traits::ToPrimitive;
-use crate::segment::store::myst_fst::{MystFSTContainer, MystFST};
-use crate::segment::store::metric_bitmap::MetricBitmap;
-use crate::segment::store::tag_bitmap::{TagKeysBitmap, TagValuesBitmap};
-use std::collections::{HashMap, HashSet};
 use crate::segment::store::dict::Dict;
 use crate::segment::store::docstore::DocStore;
 use crate::segment::store::epoch_bitmap::EpochBitmap;
+use crate::segment::store::metric_bitmap::MetricBitmap;
+use crate::segment::store::myst_fst::{MystFST, MystFSTContainer};
+use crate::segment::store::tag_bitmap::{TagKeysBitmap, TagValuesBitmap};
 use crate::utils::myst_error::{MystError, Result};
 use log::info;
+use num_traits::ToPrimitive;
+use std::collections::{HashMap, HashSet};
+use std::io::{Read, Seek};
+use std::rc::Rc;
 
 impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
     /// Loads and deserializes the buffer `buf` and returns a MystSegment.
@@ -99,7 +99,7 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
         docstore = docstore.load(buf, docstore_header_offset)?.unwrap();
 
         /// Load xxhashes into dedup map.
-        let mut dedup: HashSet<u64> =  HashSet::new();
+        let mut dedup: HashSet<u64> = HashSet::new();
 
         let doc_vec = &docstore.data;
 
@@ -121,7 +121,10 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
         /// the exists check is performed while draining the clusters.
         let last_id = full_segment_header.segment_timeseries_id;
         let uid = full_segment_header.uid;
-        info!("Loading segment for shard: {} and epoch: {} with last segment id: {} uid: {}", self.shard_id, self.epoch, last_id, uid);
+        info!(
+            "Loading segment for shard: {} and epoch: {} with last segment id: {} uid: {}",
+            self.shard_id, self.epoch, last_id, uid
+        );
         let myst_segment = MystSegment {
             fsts: fst_container,
             dict,
@@ -139,7 +142,7 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
             tag_key_prefix: Rc::new(String::from(crate::utils::config::TAG_KEYS)),
             dedup: dedup,
             cluster: Some(Clusterer::default()),
-            duration: self.duration
+            duration: self.duration,
         };
         Ok(Some(myst_segment))
     }

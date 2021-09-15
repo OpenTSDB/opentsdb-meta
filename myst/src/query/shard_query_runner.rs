@@ -18,10 +18,10 @@
  */
 
 use std::fs::File;
+use std::io::{BufReader, Read};
 use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 use std::{fs, path::Path, thread, time::SystemTime};
-use std::io::{Read, BufReader};
 
 use log::{error, info};
 use tokio::sync::mpsc;
@@ -30,13 +30,12 @@ use tokio::sync::mpsc::Receiver;
 use crate::query::cache::Cache;
 use crate::segment::myst_segment::MystSegment;
 use crate::segment::segment_reader::SegmentReader;
-use crate::utils::config::{Config, add_dir};
+use crate::utils::config::{add_dir, Config};
 use crate::utils::myst_error::{MystError, Result};
 
 use super::{query::Query, query_runner::QueryRunner};
 use metrics_reporter::MetricsReporter;
 use tonic::Code;
-
 
 /// Runs a query for all shards
 pub struct ShardQueryRunner {}
@@ -94,7 +93,6 @@ impl ShardQueryRunner {
                             timeseries_response,
                             res.err()
                         );
-
                     } else {
                         // timeseries_response.streams = num_shards as i32;
                         let res = sender.try_send(Ok(timeseries_response));
@@ -140,7 +138,7 @@ impl ShardQueryRunner {
         let mut path = add_dir(path, shard_id.to_string());
         let dirs = fs::read_dir(path)?;
         let mut segment_readers = Vec::new();
-        
+
         for dir in dirs {
             let d = dir.unwrap();
             let mut path = d.path();
@@ -157,29 +155,44 @@ impl ShardQueryRunner {
                             dur_file.read_to_string(&mut dur_str)?;
                             //If a duration file is present, it should have the right format.
                             let fduration = dur_str.parse()?;
-                            info!("Read duration: {} for file: {:?}", fduration, &duration_file );
+                            info!(
+                                "Read duration: {} for file: {:?}",
+                                fduration, &duration_file
+                            );
                             fduration
-                        },
-                        Err(e) =>  {
-                            error!("Unable to read duration for file: {:?} {:?}", &duration_file, e );
+                        }
+                        Err(e) => {
+                            error!(
+                                "Unable to read duration for file: {:?} {:?}",
+                                &duration_file, e
+                            );
                             0
-                        },
+                        }
                     }
                 } else {
                     0
                 };
                 info!("Duration read for {:?} as {}", &duration_file, duration);
-            
-                if query.start <= created && query.end >= created || 
-                (duration > 0 && query.start >= created && query.end <= (created + duration as u64) ) {
+
+                if query.start <= created && query.end >= created
+                    || (duration > 0
+                        && query.start >= created
+                        && query.end <= (created + duration as u64))
+                {
                     let file_path = MystSegment::get_segment_filename(
                         &shard_id,
                         &created,
                         String::from(&config.data_read_path),
                     );
                     let reader = BufReader::new(File::open(file_path.clone())?);
-                    let segment_reader =
-                        SegmentReader::new(shard_id, created, reader, cache.clone(), file_path, duration)?;
+                    let segment_reader = SegmentReader::new(
+                        shard_id,
+                        created,
+                        reader,
+                        cache.clone(),
+                        file_path,
+                        duration,
+                    )?;
                     segment_readers.push(segment_reader);
                     timeseries_response.streams = segment_readers.len() as i32;
                 }

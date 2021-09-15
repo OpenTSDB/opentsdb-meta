@@ -17,10 +17,10 @@
  *
  */
 
-use std::collections::{HashSet, HashMap};
 use croaring::Bitmap;
-use std::hash::{Hash, Hasher};
 use std::borrow::BorrowMut;
+use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug)]
 pub enum MetaResult {

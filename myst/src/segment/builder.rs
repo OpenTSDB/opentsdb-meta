@@ -17,21 +17,21 @@
  *
  */
 use crate::segment::myst_segment::{MystSegment, MystSegmentHeaderKeys};
-use std::rc::Rc;
-use std::io::{Read, Seek, Write};
 use crate::segment::persistence::Builder;
 use crate::segment::segment_reader::SegmentReader;
-use num_traits::ToPrimitive;
-use crate::segment::store::myst_fst::{MystFSTContainer, MystFST};
-use crate::segment::store::metric_bitmap::MetricBitmap;
-use crate::segment::store::tag_bitmap::{TagKeysBitmap, TagValuesBitmap};
-use std::collections::{HashMap, HashSet};
 use crate::segment::store::dict::Dict;
 use crate::segment::store::docstore::DocStore;
 use crate::segment::store::epoch_bitmap::EpochBitmap;
+use crate::segment::store::metric_bitmap::MetricBitmap;
+use crate::segment::store::myst_fst::{MystFST, MystFSTContainer};
+use crate::segment::store::tag_bitmap::{TagKeysBitmap, TagValuesBitmap};
 use crate::utils::myst_error::{MystError, Result};
-use byteorder::{WriteBytesExt, NetworkEndian};
+use byteorder::{NetworkEndian, WriteBytesExt};
 use log::info;
+use num_traits::ToPrimitive;
+use std::collections::{HashMap, HashSet};
+use std::io::{Read, Seek, Write};
+use std::rc::Rc;
 
 impl<W: Write> Builder<W> for MystSegment {
     /// Builds the MystSegment.
@@ -151,7 +151,10 @@ impl<W: Write> Builder<W> for MystSegment {
             buf.write_u32::<NetworkEndian>(k)?;
             buf.write_u32::<NetworkEndian>(v)?;
         }
-        info!("Writing segment timeseries id {} and uid: {} for shard: {} and epoch: {}", self.segment_timeseries_id, self.uid, self.shard_id, self.epoch);
+        info!(
+            "Writing segment timeseries id {} and uid: {} for shard: {} and epoch: {}",
+            self.segment_timeseries_id, self.uid, self.shard_id, self.epoch
+        );
         buf.write_u32::<NetworkEndian>(self.segment_timeseries_id)?;
         buf.write_u32::<NetworkEndian>(self.uid)?;
         info!(

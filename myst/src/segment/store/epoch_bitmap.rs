@@ -23,8 +23,8 @@ use std::{collections::HashMap, io::Read, io::Write, time::UNIX_EPOCH};
 use byteorder::{NetworkEndian, WriteBytesExt};
 use croaring::Bitmap;
 
-use crate::segment::persistence::{Builder, TimeSegmented};
 use crate::segment::persistence::Loader;
+use crate::segment::persistence::{Builder, TimeSegmented};
 use crate::segment::segment_reader::SegmentReader;
 use crate::utils::myst_error::{MystError, Result};
 use std::collections::BTreeMap;
@@ -154,7 +154,7 @@ impl EpochBitmap {
 #[derive(Debug)]
 pub struct EpochBitmapHolder {
     pub bitmap: Bitmap,
-    pub duration: i32
+    pub duration: i32,
 }
 
 impl TimeSegmented for EpochBitmapHolder {
@@ -171,7 +171,7 @@ impl EpochBitmapHolder {
     pub fn new(bitmap: Bitmap, duration: i32) -> Self {
         Self {
             bitmap: bitmap,
-            duration: duration
+            duration: duration,
         }
     }
 }

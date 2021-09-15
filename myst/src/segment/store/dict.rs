@@ -62,7 +62,7 @@ impl<W: Write> Builder<W> for Dict {
 #[derive(Debug, Default)]
 pub struct DictHolder {
     pub dict: HashMap<u32, String>,
-    pub duration: i32
+    pub duration: i32,
 }
 
 impl TimeSegmented for DictHolder {
@@ -79,7 +79,7 @@ impl DictHolder {
     pub fn new(dict: HashMap<u32, String>, duration: i32) -> Self {
         Self {
             dict: dict,
-            duration: duration
+            duration: duration,
         }
     }
 }

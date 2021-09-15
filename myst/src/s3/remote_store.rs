@@ -18,23 +18,17 @@
  */
 
 use log::info;
-use rusoto_s3::{
-    GetObjectRequest,
-    ListObjectsRequest,
-    HeadObjectRequest,
-    HeadObjectError,
-    PutObjectRequest, 
-    S3Client, 
-    StreamingBody, 
-    S3,
-};
 use rusoto_core::RusotoError;
+use rusoto_s3::{
+    GetObjectRequest, HeadObjectError, HeadObjectRequest, ListObjectsRequest, PutObjectRequest,
+    S3Client, StreamingBody, S3,
+};
 use std::{
+    collections::HashMap,
     io,
     io::{Error, ErrorKind},
     sync::Arc,
     time::SystemTime,
-    collections::HashMap
 };
 
 use tokio::io::AsyncReadExt;
@@ -51,8 +45,13 @@ impl RemoteStore {
     pub fn new(s3_client: Arc<S3Client>, bucket: Arc<String>) -> RemoteStore {
         Self { s3_client, bucket }
     }
- 
-    pub async fn upload(&self, file_name: String, data: Vec<u8>, metadata: HashMap<String, String>) -> Result<i32,Error> {
+
+    pub async fn upload(
+        &self,
+        file_name: String,
+        data: Vec<u8>,
+        metadata: HashMap<String, String>,
+    ) -> Result<i32, Error> {
         let b = std::path::Path::new(&file_name).exists();
         info!("Upload Path exists: {} {}", &file_name, b);
         //let stream_from_file = fs::read(file_name.to_string().to_owned())
@@ -124,8 +123,10 @@ impl RemoteStore {
         return Ok(());
     }
 
-    pub async fn get_metadata(&self, file_name: String) -> Result<Option<HashMap<String,String>>, Error> {
-
+    pub async fn get_metadata(
+        &self,
+        file_name: String,
+    ) -> Result<Option<HashMap<String, String>>, Error> {
         let mut head_request = HeadObjectRequest::default();
 
         head_request.bucket = self.bucket.to_string();
@@ -141,18 +142,15 @@ impl RemoteStore {
                 } else {
                     return Ok(Some(HashMap::new()));
                 }
-            },
-            Err(e) => {
-                match e {
-                    RusotoError::Service(HeadObjectError::NoSuchKey(_)) => {},
-                    _ => {
-                        return Err(Error::new(ErrorKind::Other, e.to_string()));
-                    },
+            }
+            Err(e) => match e {
+                RusotoError::Service(HeadObjectError::NoSuchKey(_)) => {}
+                _ => {
+                    return Err(Error::new(ErrorKind::Other, e.to_string()));
                 }
             },
         }
         Ok(None)
-
     }
 
     pub async fn list_files(&self, file_prefix: String) -> Result<Option<Vec<String>>, Error> {

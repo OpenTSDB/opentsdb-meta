@@ -17,18 +17,18 @@
  *
  */
 
-use crate::segment::store::docstore::DeserializedDocStore;
 use crate::segment::store::dict::DictHolder;
+use crate::segment::store::docstore::DeserializedDocStore;
 use crate::utils::myst_error::MystError;
 
 use lru::LruCache;
 
+use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
+use croaring::Bitmap;
 use std::collections::HashMap;
 use std::fs::File;
 use std::sync::{Arc, Mutex, RwLock};
 use std::{fs, thread};
-use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
-use croaring::Bitmap;
 
 pub struct ShardedCache {
     pub docstore_cache: Arc<Mutex<LruCache<(u64, u32), Arc<DeserializedDocStore>>>>, //key->(segment_name, docstore_id)
@@ -42,10 +42,10 @@ impl ShardedCache {
             docstore_cache: Arc::new(Mutex::new(
                 LruCache::<(u64, u32), Arc<DeserializedDocStore>>::new(200),
             )),
-            dict_cache: Arc::new(Mutex::new(LruCache::<u64, Arc<DictHolder>>::new(
-                48,
-            ))),
-            epoch_bitmap_cache: Arc::new(Mutex::new(LruCache::<(u64, u64), Arc<EpochBitmapHolder>>::new(48))),
+            dict_cache: Arc::new(Mutex::new(LruCache::<u64, Arc<DictHolder>>::new(48))),
+            epoch_bitmap_cache: Arc::new(Mutex::new(
+                LruCache::<(u64, u64), Arc<EpochBitmapHolder>>::new(48),
+            )),
         }
     }
 

@@ -63,7 +63,7 @@ pub struct Timeseries {
 pub struct DeserializedDocStore {
     pub data: Option<Vec<u8>>,
     pub offset_len: Option<Vec<OffsetLen>>,
-    pub duration: i32
+    pub duration: i32,
 }
 
 impl TimeSegmented for DeserializedDocStore {
@@ -75,7 +75,6 @@ impl TimeSegmented for DeserializedDocStore {
         self.duration = duration;
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct OffsetLen {
@@ -171,7 +170,8 @@ impl<R: Read + Seek> Loader<R, DocStore> for DocStore {
         let mut block_entries = 0;
         for (id, offset) in docstore_header {
             buf.seek(SeekFrom::Start(offset as u64))?;
-            let docstore_deserialized = SegmentReader::get_docstore_from_reader(buf, 0, 0, id, 0 as i32)?;
+            let docstore_deserialized =
+                SegmentReader::get_docstore_from_reader(buf, 0, 0, id, 0 as i32)?;
             let offset_length = docstore_deserialized.offset_len.as_ref().unwrap();
             let docstore_result = docstore_deserialized.data.as_ref().unwrap();
 
@@ -271,7 +271,7 @@ impl DocStore {
         Ok(DeserializedDocStore {
             data: Some(result),
             offset_len: Some(sizes),
-            duration: duration
+            duration: duration,
         })
     }
 

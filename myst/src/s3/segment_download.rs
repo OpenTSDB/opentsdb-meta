@@ -33,13 +33,13 @@ use std::{
 use tokio::sync::RwLock;
 
 //This following imports will move to the main class
-use crate::utils::config::{Config, add_dir};
+use crate::utils::config::{add_dir, Config};
+use crate::utils::myst_error::{MystError, Result};
 use rusoto_core::credential::AwsCredentials;
 use rusoto_core::credential::StaticProvider;
 use rusoto_core::request::HttpClient;
 use rusoto_core::Region;
 use rusoto_s3::S3Client;
-use crate::utils::myst_error::{MystError, Result};
 use std::str::FromStr;
 
 pub struct SegmentDownload {
@@ -80,7 +80,11 @@ impl SegmentDownload {
 
         let root_dir = Path::new(&shard_path);
 
-        info!("Checking if {:?} dir exists, {}", root_dir, root_dir.exists());
+        info!(
+            "Checking if {:?} dir exists, {}",
+            root_dir,
+            root_dir.exists()
+        );
         if root_dir.exists() {
             info!("Reading for {:?} as dir exists", root_dir);
             let mut files: Vec<String> = Vec::new();
@@ -332,11 +336,9 @@ pub async fn start_download() -> Result<()> {
     let region_name = config.aws_region;
     let region = match Region::from_str(&region_name) {
         Ok(region) => region,
-        Err(_) => {
-            Region::Custom {
-                name: region_name,
-                endpoint: config.aws_endpoint
-            }
+        Err(_) => Region::Custom {
+            name: region_name,
+            endpoint: config.aws_endpoint,
         },
     };
     let s3_client = S3Client::new_with(
@@ -358,7 +360,10 @@ pub async fn start_download() -> Result<()> {
             shards_to_download.push(i);
         }
     }
-    info!("Downloading shards: {:?} root path: {}", shards_to_download, root_data_path);
+    info!(
+        "Downloading shards: {:?} root path: {}",
+        shards_to_download, root_data_path
+    );
 
     let mut handles = Vec::new();
     for i in shards_to_download {
@@ -367,7 +372,6 @@ pub async fn start_download() -> Result<()> {
         let temp_data_path_clone = temp_data_path.clone();
         let remote_store_clone = remote_store.clone();
         let handle = tokio::spawn(async move {
-
             let segment_download = SegmentDownload::new(
                 remote_store_clone,
                 Arc::new(remote_prefix.to_owned()),
@@ -397,11 +401,10 @@ pub async fn start_download() -> Result<()> {
 pub async fn get_remote_shards(data_path: String, remote_store: Arc<RemoteStore>) -> Result<usize> {
     let files = remote_store.list_files(data_path.clone()).await?;
 
-        if files.is_some() {
-            return Ok(files.unwrap().len());
-        } else {
-            let error = format!("No files found for prefix {:?}", data_path);
-            return Err(MystError::new_query_error(&error));
-        }
-
+    if files.is_some() {
+        return Ok(files.unwrap().len());
+    } else {
+        let error = format!("No files found for prefix {:?}", data_path);
+        return Err(MystError::new_query_error(&error));
+    }
 }

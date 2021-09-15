@@ -17,7 +17,7 @@
  *
  */
 
-use log::{error, info, debug};
+use log::{debug, error, info};
 use std::collections::HashMap;
 use std::{
     collections::{hash_map::DefaultHasher, HashSet},
@@ -42,16 +42,16 @@ use crate::segment::store::myst_fst::MystFST;
 use fasthash::xx::Hash64;
 use fasthash::FastHash;
 
-use crate::query::result::{StringGroupedTimeseries};
+use crate::query::result::StringGroupedTimeseries;
 use crate::segment::myst_segment::MystSegmentHeaderKeys::EpochBitmap;
 use crate::segment::store::epoch_bitmap;
+use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
 use crate::utils::config::Config;
 use metrics_reporter::MetricsReporter;
 use std::fs::File;
 use std::io::{Read, Seek};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
-use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
 
 const METRIC_PREFIX: &str = crate::utils::config::METRIC;
 const TAG_KEY_PREFIX: &str = crate::utils::config::TAG_KEYS;
@@ -365,7 +365,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                 .or_insert_with(|| Vec::new())
                 .push(element);
         }
-        result 
+        result
     }
 
     fn process_docstore_block(
@@ -381,7 +381,6 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         epoch_bitmap: &HashMap<u64, Arc<EpochBitmapHolder>>,
         groups: &mut HashMap<u64, StringGroupedTimeseries>,
     ) -> Result<()> {
-
         let mut docstore = Arc::new(DeserializedDocStore::default()); //TODO: Don't initialize
         let mut docstore_result = &Vec::new(); //TODO: Don't initialize
         let mut docstore_offsetlen = &Vec::new(); //TODO: Don't initialize
@@ -452,13 +451,13 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                         );
                         groups.get_mut(&hash).unwrap().group.extend(group_strs_vec);
                     }
-                    groups
-                        .get_mut(&hash)
-                        .unwrap()
-                        .timeseries
-                        .insert(timeseries.timeseries_id as i64, crate::query::result::Timeseries {
+                    groups.get_mut(&hash).unwrap().timeseries.insert(
+                        timeseries.timeseries_id as i64,
+                        crate::query::result::Timeseries {
                             xxhash: timeseries.timeseries_id as i64,
-                            bitmap: bitmap});
+                            bitmap: bitmap,
+                        },
+                    );
                     //groups.insert(hash, group);
                 } else {
                     // let mut group = GroupedTimeseries::default();
@@ -466,13 +465,13 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                     groups
                         .entry(0)
                         .or_insert(crate::query::result::StringGroupedTimeseries::default());
-                    groups
-                        .get_mut(&0)
-                        .unwrap()
-                        .timeseries
-                        .insert(timeseries.timeseries_id as i64, crate::query::result::Timeseries {
+                    groups.get_mut(&0).unwrap().timeseries.insert(
+                        timeseries.timeseries_id as i64,
+                        crate::query::result::Timeseries {
                             xxhash: timeseries.timeseries_id as i64,
-                            bitmap: bitmap});
+                            bitmap: bitmap,
+                        },
+                    );
                 }
             } else {
                 error!(
@@ -704,11 +703,20 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         let mut ts_bitmaps = segment_reader.get_all_ts_bitmaps()?;
         let mut final_ts_bitmap = Bitmap::create();
         for (epoch, ts_bitmap) in &mut ts_bitmaps {
-            debug!("Reading epoch from bitmap: {} {}", epoch, epoch_bitmap::EPOCH_DURATION);
+            debug!(
+                "Reading epoch from bitmap: {} {}",
+                epoch,
+                epoch_bitmap::EPOCH_DURATION
+            );
             if start <= &(epoch + epoch_bitmap::EPOCH_DURATION) && end >= epoch {
                 let ts_card = ts_bitmap.bitmap.cardinality();
                 final_ts_bitmap.or_inplace(&ts_bitmap.bitmap);
-                info!("Filtered in epoch from bitmap: {} {} {}", epoch, ts_card, final_ts_bitmap.cardinality());
+                info!(
+                    "Filtered in epoch from bitmap: {} {} {}",
+                    epoch,
+                    ts_card,
+                    final_ts_bitmap.cardinality()
+                );
             }
         }
         filtered_bitmap.and_inplace(&final_ts_bitmap);

@@ -23,4 +23,3 @@ pub trait MetricsReporter: Send + Sync {
     fn count(&self, metric: &str, tags: &[&str], value: u64);
     fn gauge(&self, metric: &str, tags: &[&str], value: u64);
 }
-

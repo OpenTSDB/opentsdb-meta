@@ -76,7 +76,7 @@ impl MystService for TimeseriesService {
         info!("Running query {:?}", query);
         let batch_query = Query::from_json(&query);
         if batch_query.is_err() {
-           return Err(tonic::Status::internal("Unable to parse query"));
+            return Err(tonic::Status::internal("Unable to parse query"));
         }
         let res = Query::run_query(
             &batch_query.unwrap(),
@@ -109,13 +109,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let new_metrics_reporter: libloading::Symbol<
                 fn(&str, &str, &str) -> Box<dyn MetricsReporter>,
             > = unsafe { lib.get(b"new_with_ssl") }.expect("load symbol");
-            let mut metrics_reporter = new_metrics_reporter(&config.ssl_key, &config.ssl_cert, &config.ca_cert);
+            let mut metrics_reporter =
+                new_metrics_reporter(&config.ssl_key, &config.ssl_cert, &config.ca_cert);
             metrics_reporter
-        },
+        }
         false => {
-            let new_metrics_reporter: libloading::Symbol<
-                fn() -> Box<dyn MetricsReporter>,
-            > = unsafe { lib.get(b"new") }.expect("load symbol");
+            let new_metrics_reporter: libloading::Symbol<fn() -> Box<dyn MetricsReporter>> =
+                unsafe { lib.get(b"new") }.expect("load symbol");
             let mut metrics_reporter = new_metrics_reporter();
             metrics_reporter
         }

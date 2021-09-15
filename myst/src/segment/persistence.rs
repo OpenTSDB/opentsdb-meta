@@ -45,7 +45,9 @@ pub trait Compactor {
     /// Compacts two segments
     /// # Arguments
     /// * `segment` - The segment that is to be current with the current.
-    fn compact(&mut self, segment: Self) where Self: Sized;
+    fn compact(&mut self, segment: Self)
+    where
+        Self: Sized;
 }
 pub trait RemoteSegmentStore<W>
 where
@@ -62,5 +64,5 @@ where
 /// Ex: Cached versions of data and MystSegment.
 pub trait TimeSegmented {
     fn get_duration(&self) -> Option<i32>;
-    fn set_duration(&mut self, duration: i32); 
+    fn set_duration(&mut self, duration: i32);
 }

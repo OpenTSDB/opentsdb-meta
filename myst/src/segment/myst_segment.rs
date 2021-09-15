@@ -17,9 +17,9 @@
  *
  */
 
-use crate::segment::persistence::{Builder, Compactor};
 use crate::segment::persistence::Loader;
 use crate::segment::persistence::TimeSegmented;
+use crate::segment::persistence::{Builder, Compactor};
 use crate::segment::store::dict::Dict;
 use crate::segment::store::docstore::{DocStore, Timeseries};
 use crate::segment::store::metric_bitmap::MetricBitmap;
@@ -30,7 +30,7 @@ use crate::utils::config::add_dir;
 use crate::utils::myst_error::{MystError, Result};
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 use croaring::Bitmap;
-use log::{info, debug};
+use log::{debug, info};
 use std::collections::{HashMap, HashSet};
 
 pub use std::io::{Cursor, Read, Write};
@@ -76,8 +76,7 @@ pub struct MystSegment {
     pub(crate) duration: i32,
 }
 
-impl TimeSegmented  for MystSegment {
-    
+impl TimeSegmented for MystSegment {
     fn get_duration(&self) -> Option<i32> {
         Some(self.duration)
     }
@@ -113,7 +112,6 @@ pub enum MystSegmentHeaderKeys {
 }
 
 impl MystSegmentHeader {
-    
     pub fn from(data: &[u8]) -> Result<Self> {
         let mut reader = Cursor::new(data);
         let mut map = HashMap::new();
@@ -145,7 +143,12 @@ impl MystSegment {
         epoch: u64,
         docstore_block_entries: usize,
     ) -> Self {
-        MystSegment::new_with_block_entries_duration(shard_id, epoch, docstore_block_entries, 7200 as i32)
+        MystSegment::new_with_block_entries_duration(
+            shard_id,
+            epoch,
+            docstore_block_entries,
+            7200 as i32,
+        )
     }
 
     /// Creates a new MystSegment
@@ -158,7 +161,7 @@ impl MystSegment {
         shard_id: u32,
         epoch: u64,
         docstore_block_entries: usize,
-        duration: i32
+        duration: i32,
     ) -> Self {
         info!("Creating new segment for shard id {}", shard_id);
         Self {
@@ -329,7 +332,6 @@ impl MystSegment {
             self.dedup.insert(xxhash);
         }
     }
-
 
     pub(crate) fn drain_clustered_data(&mut self) -> Result<()> {
         let cluster = self.cluster.take().unwrap().cluster;

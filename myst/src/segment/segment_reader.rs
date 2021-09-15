@@ -20,11 +20,11 @@
 use super::store::docstore::DocStore;
 use crate::query::cache::Cache;
 use crate::segment::myst_segment::{MystSegmentHeader, MystSegmentHeaderKeys};
-use crate::segment::store::docstore::DeserializedDocStore;
+use crate::segment::persistence::TimeSegmented;
 use crate::segment::store::dict::DictHolder;
+use crate::segment::store::docstore::DeserializedDocStore;
 use crate::segment::store::myst_fst::MystFST;
 use crate::utils::myst_error::{MystError, Result};
-use crate::segment::persistence::TimeSegmented;
 
 use byteorder::{NetworkEndian, ReadBytesExt};
 use croaring::Bitmap;
@@ -34,6 +34,7 @@ use log::info;
 
 use regex_automata::dense;
 
+use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
 use lz4::Decoder;
 use num::ToPrimitive;
 use std::sync::Arc;
@@ -41,7 +42,6 @@ use std::time::SystemTime;
 use std::{
     collections::HashMap, fs::File, io::BufReader, io::Read, io::Seek, io::SeekFrom, rc::Rc,
 };
-use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
 
 /// Contains various helper functions to read Myst Segment from a reader R
 pub struct SegmentReader<R> {
@@ -67,7 +67,7 @@ impl<R: Read + Seek> SegmentReader<R> {
         mut reader: R,
         cache: Arc<Cache>,
         file_path: String,
-        duration: i32
+        duration: i32,
     ) -> Result<Self> {
         let segment_header = SegmentReader::read_segment_header(&mut reader)?.header;
         let fst_header_offset = segment_header
@@ -125,9 +125,12 @@ impl<R: Read + Seek> SegmentReader<R> {
     pub fn read_segment_header(reader: &mut R) -> Result<MystSegmentHeader> {
         info!("Reading segment header");
         let len = reader.seek(SeekFrom::End(0))?;
-        let bytes_header =  (4 * 2 * 10) + (4 * 2);
+        let bytes_header = (4 * 2 * 10) + (4 * 2);
         let header_start = len - bytes_header;
-        debug!("Seeking from start: {} {} {}", header_start, len, bytes_header); 
+        debug!(
+            "Seeking from start: {} {} {}",
+            header_start, len, bytes_header
+        );
         reader.seek(SeekFrom::Start(header_start))?;
         let mut header_buf = vec![0; bytes_header as usize];
         reader.read_exact(&mut header_buf)?;
@@ -338,7 +341,7 @@ impl<R: Read + Seek> SegmentReader<R> {
         let mut bitmaps = HashMap::new();
         let header = &self.ts_bitmap_header.clone();
         for (epoch, offset) in header {
-            let bitmap = self.get_ts_bitmap_cache( *epoch)?.clone();
+            let bitmap = self.get_ts_bitmap_cache(*epoch)?.clone();
             bitmaps.insert(*epoch, bitmap);
         }
         Ok(bitmaps)
@@ -350,7 +353,7 @@ impl<R: Read + Seek> SegmentReader<R> {
             .get(&epoch)
             .ok_or(MystError::new_query_error("TS Bitmap epoch not found"))?;
         let curr_time = SystemTime::now();
-       let bitmap =  SegmentReader::get_ts_bitmap_from_reader(&mut self.reader, *ts_bitmap_offset)?;
+        let bitmap = SegmentReader::get_ts_bitmap_from_reader(&mut self.reader, *ts_bitmap_offset)?;
         debug!(
             "Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}",
             SystemTime::now().duration_since(curr_time).unwrap(),
@@ -358,9 +361,9 @@ impl<R: Read + Seek> SegmentReader<R> {
             self.created,
             epoch
         );
-        Ok(Arc::new(EpochBitmapHolder{
+        Ok(Arc::new(EpochBitmapHolder {
             bitmap,
-            duration: self.duration
+            duration: self.duration,
         }))
     }
 
@@ -418,7 +421,7 @@ impl<R: Read + Seek> SegmentReader<R> {
     pub fn get_docstore_cache(&self, id: u32) -> Result<Arc<DeserializedDocStore>> {
         let curr_time = SystemTime::now();
         let sharded_cache = self.cache.get_sharded_cache(self.shard_id);
-        
+
         let mut docstore_lock = sharded_cache.docstore_cache.lock().unwrap();
         let docstore = docstore_lock.get(&(self.created, id));
         match docstore {
@@ -469,7 +472,7 @@ impl<R: Read + Seek> SegmentReader<R> {
             self.shard_id,
             self.created,
             id,
-            self.duration
+            self.duration,
         );
         debug!(
             "Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}",
@@ -564,7 +567,7 @@ impl<R: Read + Seek> SegmentReader<R> {
                         self.created,
                     );
                     sharded_cache.put_dict(self.created, new_dict.clone());
-                    return Ok(new_dict)
+                    return Ok(new_dict);
                 } else {
                     let d = dict.clone();
                     drop(lock);

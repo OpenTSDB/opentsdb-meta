@@ -19,26 +19,29 @@
 
 use crate::query::cache::Cache;
 use crate::segment::myst_segment::MystSegment;
-use crate::segment::persistence::{Builder, Loader, Compactor};
+use crate::segment::persistence::{Builder, Compactor, Loader};
 use crate::segment::segment_reader::SegmentReader;
 use crate::segment::store::docstore::DocStore;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Cursor};
+use std::io::{BufReader, Cursor, Read};
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-
-pub fn write_data(num_metrics_from: u32, num_metrics_to: u32, epoch: u64, segment: &mut MystSegment) {
+pub fn write_data(
+    num_metrics_from: u32,
+    num_metrics_to: u32,
+    epoch: u64,
+    segment: &mut MystSegment,
+) {
     let mut tags = HashMap::new();
     tags.insert(String::from("foo"), String::from("bar"));
     let mut tags_rc = HashMap::new();
     for (k, v) in &tags {
         tags_rc.insert(Rc::new(k.clone()), Rc::new(v.clone()));
     }
-
 
     for i in num_metrics_from..num_metrics_to {
         let mut metric = String::from("metric");
@@ -80,7 +83,7 @@ pub fn test() {
         .as_secs();
     let mut segment = MystSegment::new_with_block_entries(1, epoch, 200);
 
-   write_data(0, 1000, epoch, &mut segment);
+    write_data(0, 1000, epoch, &mut segment);
 
     let mut buf = File::create(MystSegment::get_segment_filename(
         &1,
@@ -94,7 +97,8 @@ pub fn test() {
     let cache = Arc::new(Cache::new());
     let file_path = MystSegment::get_segment_filename(&1, &epoch, data_path);
     let file = File::open(file_path.clone()).unwrap();
-    let mut segment_reader = SegmentReader::new(1, epoch, file, cache, file_path, 0 as i32).unwrap();
+    let mut segment_reader =
+        SegmentReader::new(1, epoch, file, cache, file_path, 0 as i32).unwrap();
     println!("{:?}", segment_reader.segment_header);
     let fst_header_from_reader = &segment_reader.fst_header;
     for (k, v) in fst_header {
@@ -152,21 +156,19 @@ pub fn test_compaction() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-   let mut segment_one = MystSegment::new_with_block_entries(1, epoch, 200);
+    let mut segment_one = MystSegment::new_with_block_entries(1, epoch, 200);
 
     write_data(0, 8, epoch, &mut segment_one);
     let mut buf_one = Vec::new();
     let mut offset = 0 as u32;
     segment_one.build(&mut buf_one, &mut offset);
 
-    epoch = epoch + 2*60*60;
+    epoch = epoch + 2 * 60 * 60;
     let mut segment_two = MystSegment::new_with_block_entries(1, epoch, 200);
     write_data(0, 15, epoch, &mut segment_two);
     let mut buf_two = Vec::new();
     let mut offset = 0 as u32;
     segment_two.build(&mut buf_two, &mut offset).unwrap();
-
-
 
     let mut loaded_segment_one = MystSegment::new_with_block_entries(0, 0, 200);
     let mut cursor = Cursor::new(buf_one.as_slice());
@@ -176,16 +178,33 @@ pub fn test_compaction() {
     let mut cursor = Cursor::new(buf_two.as_slice());
     loaded_segment_two = loaded_segment_two.load(&mut cursor, &0).unwrap().unwrap();
 
+    loaded_segment_one.compact(loaded_segment_two);
 
-   loaded_segment_one.compact(loaded_segment_two);
-
-   // println!("Fst Container {:?}", loaded_segment_one.fsts);
+    println!("Fst Container {:?}", loaded_segment_one.fsts.fsts);
     assert_eq!(loaded_segment_one.metrics_bitmap.metrics_bitmap.len(), 15);
-    assert_eq!(loaded_segment_one.tag_keys_bitmap.tag_keys_bitmap.get(&String::from("foo")).unwrap().cardinality(), 15);
-    let tag_vals_bitmaps = loaded_segment_one.tag_vals_bitmap.tag_vals_bitmap.get(&String::from("foo")).unwrap();
-    assert_eq!(tag_vals_bitmaps.get(&String::from("bar")).unwrap().cardinality(), 15);
+    assert_eq!(
+        loaded_segment_one
+            .tag_keys_bitmap
+            .tag_keys_bitmap
+            .get(&String::from("foo"))
+            .unwrap()
+            .cardinality(),
+        15
+    );
+    let tag_vals_bitmaps = loaded_segment_one
+        .tag_vals_bitmap
+        .tag_vals_bitmap
+        .get(&String::from("foo"))
+        .unwrap();
+    assert_eq!(
+        tag_vals_bitmaps
+            .get(&String::from("bar"))
+            .unwrap()
+            .cardinality(),
+        15
+    );
     assert_eq!(loaded_segment_one.dict.dict.len(), 17); //15 metrics and 2 tags
     assert_eq!(loaded_segment_one.data.data.len(), 15);
     //println!("Timeseries Bitmaps {:?}", loaded_segment_one.epoch_bitmap);
-
 }
+

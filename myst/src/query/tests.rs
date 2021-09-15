@@ -37,7 +37,7 @@ use croaring::Bitmap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub fn write_and_get_segment_readers() -> Vec<SegmentReader<File>> {
     let data_path = String::from("./data/");
@@ -54,7 +54,8 @@ pub fn write_and_get_segment_readers() -> Vec<SegmentReader<File>> {
     close_segment(segment);
     let file_path = MystSegment::get_segment_filename(&shard_id, &created, data_path);
     let reader = File::open(file_path.clone()).unwrap();
-    let segment_reader = SegmentReader::new(shard_id, created, reader, cache, file_path, 0 as i32).unwrap();
+    let segment_reader =
+        SegmentReader::new(shard_id, created, reader, cache, file_path, 0 as i32).unwrap();
 
     segment_readers.push(segment_reader);
     segment_readers
@@ -111,7 +112,8 @@ pub fn write_data_large_segment() -> Vec<SegmentReader<BufReader<File>>> {
     close_segment(segment);
     let file_path = MystSegment::get_segment_filename(&shard_id, &created, data_path);
     let reader = BufReader::new(File::open(file_path.clone()).unwrap());
-    let segment_reader = SegmentReader::new(shard_id, created, reader, cache, file_path, 0 as i32).unwrap();
+    let segment_reader =
+        SegmentReader::new(shard_id, created, reader, cache, file_path, 0 as i32).unwrap();
 
     segment_readers.push(segment_reader);
     segment_readers
@@ -225,7 +227,7 @@ pub fn build_timeseries_query(filter: QueryFilter) -> Query {
 #[test]
 pub fn test_query() {
     //  let data = r#"{"from":0,"to":1,"start":1617815836,"end":1617837436,"order":"ASCENDING","type":"TIMESERIES","group":["foo", "do"],"namespace":"ssp","query":{"filters":[{"filter":"prod","type":"TagValueLiteralOr","tagKey":"corp:Environment"}],"op":"AND","type":"Chain"}}"#;
-    let data = r#"{"from":0,"to":1,"start":1619475054,"end":1619496654,"order":"ASCENDING","type":"TIMESERIES","group":[],"namespace":"ssp","query":{"filters":[{"metric":"med.req.ad.Requests","type":"MetricLiteral"}],"op":"AND","type":"Chain"}}"#;
+    let data = r#"{"from":0,"to":1,"start":1630599720,"end":1630621920,"order":"ASCENDING","type":"TIMESERIES","group":[],"namespace":"ssp","query":{"filters":[{"filter":".*","tagKey":"flid","type":"TagValueRegex"},{"filter":".*","tagKey":"InstanceId","type":"TagValueRegex"},{"metric":"exch.auct.Requests","type":"MetricLiteral"}],"op":"AND","type":"Chain"}}"#;
     let q = Query::from_json(data);
     println!("{:?}", q);
     //info!("{:?}", q);
@@ -259,7 +261,14 @@ pub fn search_timeseries() {
         SystemTime::now().duration_since(curr_time).unwrap()
     );
     println!("{:?}", ts);
-    let bitmap_serialized = &ts.grouped_timeseries.get(0).unwrap().timeseries.get(0).unwrap().epoch_bitmap;
+    let bitmap_serialized = &ts
+        .grouped_timeseries
+        .get(0)
+        .unwrap()
+        .timeseries
+        .get(0)
+        .unwrap()
+        .epoch_bitmap;
     let bitmap = Bitmap::deserialize(bitmap_serialized);
     let epoch = query.start as u32;
 
@@ -300,7 +309,14 @@ pub fn search_timeseries_multiple_segments() {
         SystemTime::now().duration_since(curr_time).unwrap()
     );
     println!("{:?}", ts);
-    let bitmap_serialized = &ts.grouped_timeseries.get(0).unwrap().timeseries.get(0).unwrap().epoch_bitmap;
+    let bitmap_serialized = &ts
+        .grouped_timeseries
+        .get(0)
+        .unwrap()
+        .timeseries
+        .get(0)
+        .unwrap()
+        .epoch_bitmap;
     let bitmap = Bitmap::deserialize(bitmap_serialized);
     let epoch = query.start as u32;
 

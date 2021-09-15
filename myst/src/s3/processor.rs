@@ -41,6 +41,7 @@ use std::io::{Error, ErrorKind};
 
 use myst::utils::config::Config;
 use std::panic;
+use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -49,7 +50,6 @@ use std::time::SystemTime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
-use std::str::FromStr;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -71,11 +71,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let region_name = config.aws_region;
     let region = match Region::from_str(&region_name) {
         Ok(region) => region,
-        Err(_) => {
-            Region::Custom {
-                name: region_name,
-                endpoint: config.aws_endpoint
-            }
+        Err(_) => Region::Custom {
+            name: region_name,
+            endpoint: config.aws_endpoint,
         },
     };
     loop {
