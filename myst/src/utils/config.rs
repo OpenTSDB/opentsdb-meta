@@ -65,26 +65,24 @@ pub struct Config {
 impl Config {
     /// Loads and builds the config.
     pub fn new() -> Self {
-        let path = PathBuf::from("/etc/myst/myst");
-        let file = config::File::from(path);
-        let mut config = config::Config::new();
-        config.merge(file).unwrap();
+        let config = load_config();
         let cache_str = config.get_str("cache").unwrap_or(String::from(""));
         let split = cache_str.split(",");
         let mut cache = Vec::new();
         for s in split {
             cache.push(String::from(s));
         }
-        let data_download_path=  config
-                                    .get_str("data_download_path")
-                                    .unwrap_or(String::from("/var/myst/data/"))
-                                    .to_string();
-        let data_read_path_root = data_download_path.clone();                                    
-        let namespace= config.get_str("namespace").unwrap().to_string();
+        let namespace = config.get_str("namespace").unwrap().to_string();
+        let data_download_path = config
+            .get_str("data_download_path")
+            .unwrap_or(String::from("/var/myst/data/"))
+            .to_string();
+        let data_read_path_root = data_download_path.clone();
         Self {
+            namespace: namespace.clone(),
+            data_download_path,
             shards: config.get_int("shards").unwrap_or(10) as usize,
-            data_download_path: data_download_path,
-            data_read_path: add_dir(data_read_path_root, namespace.clone()),   
+            data_read_path: add_dir(data_read_path_root, namespace),
             segment_gen_data_path: config
                 .get_str("segment_gen_data_path")
                 .unwrap_or(String::from("/var/myst/segment_gen/data/"))
@@ -102,7 +100,6 @@ impl Config {
             polling_interval: config.get_int("polling_interval").unwrap() as u64,
             segment_duration: config.get_int("segment_duration").unwrap() as u64,
             segment_full_duration: config.get_int("segment_full_duration").unwrap() as u64,
-            namespace: namespace,
             start_epoch: config.get_int("start_epoch").unwrap() as u64,
             input_bucket: config.get_str("input_bucket").unwrap().to_string(),
             processed_bucket: config.get_str("processed_bucket").unwrap().to_string(),
@@ -110,16 +107,28 @@ impl Config {
             aws_secret: config.get_str("aws_secret").unwrap().to_string(),
             temp_data_path: config.get_str("temp_data_path").unwrap().to_string(),
             download_frequency: config.get_int("download_frequency").unwrap() as u64,
-            plugin_path: config.get_str("plugin_path").unwrap_or(String::from("/usr/share/myst/plugins/metrics-reporter")),
+            plugin_path: config
+                .get_str("plugin_path")
+                .unwrap_or(String::from("/usr/share/myst/plugins/metrics-reporter")),
             ssl_for_metrics: config.get_bool("ssl_for_metrics").unwrap(),
-            rollup_size: config.get_int("rollup_size").unwrap_or(7*24*60*60) as u32,
+            rollup_size: config.get_int("rollup_size").unwrap_or(7 * 24 * 60 * 60) as u32,
             num_containers: config.get_int("num_containers").unwrap_or(5) as usize,
             container_id: config.get_int("container_id").unwrap_or(1) as usize,
             aws_region: config.get_str("aws_region").unwrap().to_string(),
             aws_endpoint: config.get_str("aws_endpoint").unwrap_or("".to_string()),
-
         }
     }
+}
+
+fn load_config() -> config::Config {
+    let path = PathBuf::from("/etc/myst/myst");
+    let file = config::File::from(path);
+    let mut config = config::Config::new();
+    config.merge(file).unwrap();
+    let shard_config_path = PathBuf::from("/etc/myst/shard-config/shard-config");
+    let shard_config_file = config::File::from(shard_config_path);
+    config.merge(shard_config_file).unwrap();
+    config
 }
 
 pub fn add_dir(mut root: String, child: String) -> String {
