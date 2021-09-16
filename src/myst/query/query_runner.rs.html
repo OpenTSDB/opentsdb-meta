@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/query/query_runner.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>query_runner.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `myst/src/query/query_runner.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>query_runner.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png">
 <link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../myst/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
                 <a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
@@ -844,6 +844,32 @@
 <span id="841">841</span>
 <span id="842">842</span>
 <span id="843">843</span>
+<span id="844">844</span>
+<span id="845">845</span>
+<span id="846">846</span>
+<span id="847">847</span>
+<span id="848">848</span>
+<span id="849">849</span>
+<span id="850">850</span>
+<span id="851">851</span>
+<span id="852">852</span>
+<span id="853">853</span>
+<span id="854">854</span>
+<span id="855">855</span>
+<span id="856">856</span>
+<span id="857">857</span>
+<span id="858">858</span>
+<span id="859">859</span>
+<span id="860">860</span>
+<span id="861">861</span>
+<span id="862">862</span>
+<span id="863">863</span>
+<span id="864">864</span>
+<span id="865">865</span>
+<span id="866">866</span>
+<span id="867">867</span>
+<span id="868">868</span>
+<span id="869">869</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -864,7 +890,7 @@
  *
  */</span>
 
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">error</span>, <span class="ident">info</span>, <span class="ident">debug</span>};
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::{<span class="ident">hash_map</span>::<span class="ident">DefaultHasher</span>, <span class="ident">HashSet</span>},
@@ -892,6 +918,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">query</span>::<span class="ident">result</span>::<span class="ident">StringGroupedTimeseries</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">myst_segment</span>::<span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">EpochBitmap</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">epoch_bitmap</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">epoch_bitmap</span>::<span class="ident">EpochBitmapHolder</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">Config</span>;
 <span class="kw">use</span> <span class="ident">metrics_reporter</span>::<span class="ident">MetricsReporter</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">File</span>;
@@ -1030,7 +1057,8 @@
                     <span class="ident">result</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="kw">crate</span>::<span class="ident">query</span>::<span class="ident">result</span>::<span class="ident">StringGroupedTimeseries</span>::<span class="ident">default</span>());
                     <span class="ident">result</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>).<span class="ident">unwrap</span>().<span class="ident">group</span>.<span class="ident">extend</span>(<span class="ident">v</span>.<span class="ident">group</span>);
                 }
-                <span class="ident">result</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>).<span class="ident">unwrap</span>().<span class="ident">timeseries</span>.<span class="ident">extend</span>(<span class="ident">v</span>.<span class="ident">timeseries</span>);
+
+                <span class="ident">result</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>).<span class="ident">unwrap</span>().<span class="ident">add_all</span>(<span class="ident">v</span>.<span class="ident">timeseries</span>);
             }
         }
 
@@ -1038,9 +1066,9 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grouped_timeseries</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dict</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="ident">_id</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">for</span> (<span class="ident">_k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">result</span> {
+        <span class="kw">for</span> (<span class="ident">_k</span>, <span class="kw-2">mut</span> <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">result</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hashes</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">v</span>.<span class="ident">group</span>.<span class="ident">len</span>());
-            <span class="kw">for</span> <span class="ident">tagval</span> <span class="kw">in</span> <span class="ident">v</span>.<span class="ident">group</span> {
+            <span class="kw">for</span> <span class="ident">tagval</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">v</span>.<span class="ident">group</span> {
                 <span class="kw">let</span> <span class="ident">tval</span> <span class="op">=</span> <span class="ident">tagval</span>.<span class="ident">to_string</span>();
                 <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="ident">Hash64</span>::<span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="ident">tval</span>) <span class="kw">as</span> <span class="ident">i64</span>;
                 <span class="ident">dict</span>.<span class="ident">entry</span>(<span class="ident">hash</span>).<span class="ident">or_insert</span>(<span class="ident">tval</span>);
@@ -1049,7 +1077,7 @@
 
             <span class="ident">grouped_timeseries</span>.<span class="ident">push</span>(<span class="ident">GroupedTimeseries</span> {
                 <span class="ident">group</span>: <span class="ident">hashes</span>,
-                <span class="ident">timeseries</span>: <span class="ident">v</span>.<span class="ident">timeseries</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>(),
+                <span class="ident">timeseries</span>: <span class="ident">v</span>.<span class="ident">convert</span>(),
             });
         }
 
@@ -1139,6 +1167,7 @@
             <span class="ident">thread</span>::<span class="ident">current</span>()
         );
 
+        <span class="kw">let</span> <span class="ident">epoch_bitmap</span> <span class="op">=</span> <span class="ident">segment_reader</span>.<span class="ident">get_all_ts_bitmaps</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">all_groups</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">StringGroupedTimeseries</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">docstore_blocks</span>
                 .<span class="ident">par_iter</span>()
                 .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">_id</span>, <span class="ident">chunk</span>)<span class="op">|</span> {
@@ -1154,6 +1183,7 @@
                         <span class="kw-2">&amp;</span><span class="ident">group_key_ids</span>,
                         <span class="ident">docstore_block_size</span>,
                         <span class="ident">ts_data_time</span>.<span class="ident">clone</span>(),
+                        <span class="kw-2">&amp;</span><span class="ident">epoch_bitmap</span>,
                         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">groups</span>,
                     )<span class="question-mark">?</span>;
                     <span class="macro">debug</span><span class="macro">!</span>(
@@ -1177,7 +1207,9 @@
         <span class="kw">for</span> <span class="ident">groups</span> <span class="kw">in</span> <span class="ident">all_groups</span> {
             <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">groups</span><span class="question-mark">?</span>.<span class="ident">into_iter</span>() {
                 <span class="kw">if</span> <span class="ident">result</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>) {
-                    <span class="ident">result</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>).<span class="ident">unwrap</span>().<span class="ident">timeseries</span>.<span class="ident">extend</span>(<span class="ident">v</span>.<span class="ident">timeseries</span>);
+                    <span class="kw">for</span> (<span class="ident">xxhash</span>, <span class="ident">ts</span>) <span class="kw">in</span> <span class="ident">v</span>.<span class="ident">timeseries</span> {
+                        <span class="ident">result</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>).<span class="ident">unwrap</span>().<span class="ident">timeseries</span>.<span class="ident">insert</span>(<span class="ident">xxhash</span>, <span class="ident">ts</span>);
+                    }
                 } <span class="kw">else</span> {
                     <span class="ident">result</span>.<span class="ident">insert</span>(<span class="ident">k</span>, <span class="ident">v</span>);
                 }
@@ -1206,7 +1238,7 @@
                 .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Vec</span>::<span class="ident">new</span>())
                 .<span class="ident">push</span>(<span class="ident">element</span>);
         }
-        <span class="ident">result</span> 
+        <span class="ident">result</span>
     }
 
     <span class="kw">fn</span> <span class="ident">process_docstore_block</span>(
@@ -1219,6 +1251,7 @@
         <span class="ident">group_key_ids</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
         <span class="ident">docstore_block_size</span>: <span class="ident">usize</span>,
         <span class="ident">ts_data_time</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">AtomicU32</span><span class="op">&gt;</span>,
+        <span class="ident">epoch_bitmap</span>: <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">EpochBitmapHolder</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">groups</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">StringGroupedTimeseries</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">docstore</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">DeserializedDocStore</span>::<span class="ident">default</span>()); <span class="comment">//TODO: Don&#39;t initialize</span>
@@ -1262,7 +1295,13 @@
                 {
                     <span class="kw">continue</span>;
                 }
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="ident">Bitmap</span>::<span class="ident">create</span>();
                 <span class="kw">let</span> <span class="ident">timeseries</span> <span class="op">=</span> <span class="ident">DocStore</span>::<span class="ident">deserialize_timeseries</span>(<span class="ident">timeseries_vec</span>)<span class="question-mark">?</span>;
+                <span class="kw">for</span> (<span class="ident">epoch</span>, <span class="ident">bitmap_holder</span>) <span class="kw">in</span> <span class="ident">epoch_bitmap</span> {
+                    <span class="kw">if</span> <span class="ident">bitmap_holder</span>.<span class="ident">bitmap</span>.<span class="ident">contains</span>(<span class="kw-2">*</span><span class="ident">element</span>) {
+                        <span class="ident">bitmap</span>.<span class="ident">add</span>(<span class="kw-2">*</span><span class="ident">epoch</span> <span class="kw">as</span> <span class="ident">u32</span>);
+                    }
+                }
 
                 <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">group_key_ids</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="number">0</span> {
                     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">group_strs_vec</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
@@ -1285,11 +1324,13 @@
                         );
                         <span class="ident">groups</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">hash</span>).<span class="ident">unwrap</span>().<span class="ident">group</span>.<span class="ident">extend</span>(<span class="ident">group_strs_vec</span>);
                     }
-                    <span class="ident">groups</span>
-                        .<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">hash</span>)
-                        .<span class="ident">unwrap</span>()
-                        .<span class="ident">timeseries</span>
-                        .<span class="ident">insert</span>(<span class="ident">timeseries</span>.<span class="ident">timeseries_id</span> <span class="kw">as</span> <span class="ident">i64</span>);
+                    <span class="ident">groups</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">hash</span>).<span class="ident">unwrap</span>().<span class="ident">timeseries</span>.<span class="ident">insert</span>(
+                        <span class="ident">timeseries</span>.<span class="ident">timeseries_id</span> <span class="kw">as</span> <span class="ident">i64</span>,
+                        <span class="kw">crate</span>::<span class="ident">query</span>::<span class="ident">result</span>::<span class="ident">Timeseries</span> {
+                            <span class="ident">xxhash</span>: <span class="ident">timeseries</span>.<span class="ident">timeseries_id</span> <span class="kw">as</span> <span class="ident">i64</span>,
+                            <span class="ident">bitmap</span>: <span class="ident">bitmap</span>,
+                        },
+                    );
                     <span class="comment">//groups.insert(hash, group);</span>
                 } <span class="kw">else</span> {
                     <span class="comment">// let mut group = GroupedTimeseries::default();</span>
@@ -1297,11 +1338,13 @@
                     <span class="ident">groups</span>
                         .<span class="ident">entry</span>(<span class="number">0</span>)
                         .<span class="ident">or_insert</span>(<span class="kw">crate</span>::<span class="ident">query</span>::<span class="ident">result</span>::<span class="ident">StringGroupedTimeseries</span>::<span class="ident">default</span>());
-                    <span class="ident">groups</span>
-                        .<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="number">0</span>)
-                        .<span class="ident">unwrap</span>()
-                        .<span class="ident">timeseries</span>
-                        .<span class="ident">insert</span>(<span class="ident">timeseries</span>.<span class="ident">timeseries_id</span> <span class="kw">as</span> <span class="ident">i64</span>);
+                    <span class="ident">groups</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="number">0</span>).<span class="ident">unwrap</span>().<span class="ident">timeseries</span>.<span class="ident">insert</span>(
+                        <span class="ident">timeseries</span>.<span class="ident">timeseries_id</span> <span class="kw">as</span> <span class="ident">i64</span>,
+                        <span class="kw">crate</span>::<span class="ident">query</span>::<span class="ident">result</span>::<span class="ident">Timeseries</span> {
+                            <span class="ident">xxhash</span>: <span class="ident">timeseries</span>.<span class="ident">timeseries_id</span> <span class="kw">as</span> <span class="ident">i64</span>,
+                            <span class="ident">bitmap</span>: <span class="ident">bitmap</span>,
+                        },
+                    );
                 }
             } <span class="kw">else</span> {
                 <span class="macro">error</span><span class="macro">!</span>(
@@ -1533,11 +1576,20 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ts_bitmaps</span> <span class="op">=</span> <span class="ident">segment_reader</span>.<span class="ident">get_all_ts_bitmaps</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">final_ts_bitmap</span> <span class="op">=</span> <span class="ident">Bitmap</span>::<span class="ident">create</span>();
         <span class="kw">for</span> (<span class="ident">epoch</span>, <span class="ident">ts_bitmap</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ts_bitmaps</span> {
-            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Reading epoch from bitmap: {} {}&quot;</span>, <span class="ident">epoch</span>, <span class="ident">epoch_bitmap</span>::<span class="ident">EPOCH_DURATION</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(
+                <span class="string">&quot;Reading epoch from bitmap: {} {}&quot;</span>,
+                <span class="ident">epoch</span>,
+                <span class="ident">epoch_bitmap</span>::<span class="ident">EPOCH_DURATION</span>
+            );
             <span class="kw">if</span> <span class="ident">start</span> <span class="op">&lt;</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="ident">epoch</span> <span class="op">+</span> <span class="ident">epoch_bitmap</span>::<span class="ident">EPOCH_DURATION</span>) <span class="op">&amp;&amp;</span> <span class="ident">end</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">epoch</span> {
-                <span class="kw">let</span> <span class="ident">ts_card</span> <span class="op">=</span> <span class="ident">ts_bitmap</span>.<span class="ident">cardinality</span>();
-                <span class="ident">final_ts_bitmap</span>.<span class="ident">or_inplace</span>(<span class="ident">ts_bitmap</span>);
-                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Filtered in epoch from bitmap: {} {} {}&quot;</span>, <span class="ident">epoch</span>, <span class="ident">ts_card</span>, <span class="ident">final_ts_bitmap</span>.<span class="ident">cardinality</span>());
+                <span class="kw">let</span> <span class="ident">ts_card</span> <span class="op">=</span> <span class="ident">ts_bitmap</span>.<span class="ident">bitmap</span>.<span class="ident">cardinality</span>();
+                <span class="ident">final_ts_bitmap</span>.<span class="ident">or_inplace</span>(<span class="kw-2">&amp;</span><span class="ident">ts_bitmap</span>.<span class="ident">bitmap</span>);
+                <span class="macro">info</span><span class="macro">!</span>(
+                    <span class="string">&quot;Filtered in epoch from bitmap: {} {} {}&quot;</span>,
+                    <span class="ident">epoch</span>,
+                    <span class="ident">ts_card</span>,
+                    <span class="ident">final_ts_bitmap</span>.<span class="ident">cardinality</span>()
+                );
             }
         }
         <span class="ident">filtered_bitmap</span>.<span class="ident">and_inplace</span>(<span class="kw-2">&amp;</span><span class="ident">final_ts_bitmap</span>);

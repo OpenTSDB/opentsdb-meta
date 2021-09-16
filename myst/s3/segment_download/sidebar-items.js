@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["start_download",""]],"struct":[["SegmentDownload",""]]});
+initSidebarItems({"fn":[["get_remote_shards",""],["start_download",""]],"struct":[["SegmentDownload",""]]});

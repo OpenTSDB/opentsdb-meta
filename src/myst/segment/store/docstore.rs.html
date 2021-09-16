@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/segment/store/docstore.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>docstore.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `myst/src/segment/store/docstore.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>docstore.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png">
 <link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../../myst/index.html'><div class='logo-container rust-logo'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
                 <a id="settings-menu" href="../../../../settings.html"><img src="../../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
@@ -548,7 +548,7 @@
  *
  */</span>
 
-<span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">NativeEndian</span>, <span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
+<span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">NetworkEndian</span>, <span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">SystemTime</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -594,7 +594,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DeserializedDocStore</span> {
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">offset_len</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OffsetLen</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">duration</span>: <span class="ident">i32</span>
+    <span class="kw">pub</span> <span class="ident">duration</span>: <span class="ident">i32</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">TimeSegmented</span> <span class="kw">for</span> <span class="ident">DeserializedDocStore</span> {
@@ -606,7 +606,6 @@
         <span class="self">self</span>.<span class="ident">duration</span> <span class="op">=</span> <span class="ident">duration</span>;
     }
 }
-
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OffsetLen</span> {
@@ -622,14 +621,14 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span><span class="op">&gt;</span> <span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">W</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DocStoreHeader</span> {
     <span class="kw">fn</span> <span class="ident">build</span>(<span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">serialized</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">header</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
+        <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">header</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
 
         <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">iter</span>() {
-            <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">k</span>)<span class="question-mark">?</span>;
-            <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">v</span>)<span class="question-mark">?</span>;
+            <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">k</span>)<span class="question-mark">?</span>;
+            <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">v</span>)<span class="question-mark">?</span>;
         }
         <span class="comment">// *offset += 4;</span>
-        <span class="comment">// buf.write_u32::&lt;NativeEndian&gt;(serialized.len() as u32);</span>
+        <span class="comment">// buf.write_u32::&lt;NetworkEndian&gt;(serialized.len() as u32);</span>
         <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="ident">serialized</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>;
         <span class="ident">buf</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="ident">serialized</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>))
@@ -645,7 +644,7 @@
             <span class="comment">//let mut serialized = Vec::new();</span>
             <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(<span class="ident">i</span>, <span class="kw-2">*</span><span class="ident">offset</span>);
             <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="number">4</span>;
-            <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">datum</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
+            <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">datum</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="ident">compression</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">compression</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
 
@@ -656,7 +655,7 @@
                     <span class="kw">let</span> (<span class="ident">w</span>, <span class="ident">_Result</span>) <span class="op">=</span> <span class="ident">encoder</span>.<span class="ident">finish</span>();
 
                     <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="number">4</span>;
-                    <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">w</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
+                    <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">w</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
                     <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="ident">w</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>;
                     <span class="ident">buf</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="ident">w</span>)<span class="question-mark">?</span>;
                 }
@@ -665,7 +664,7 @@
                     <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">copy</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">datum</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">encoder</span>)<span class="question-mark">?</span>;
                     <span class="kw">let</span> <span class="ident">w</span> <span class="op">=</span> <span class="ident">encoder</span>.<span class="ident">finish</span>()<span class="question-mark">?</span>;
                     <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="number">4</span>;
-                    <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">w</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
+                    <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">w</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
                     <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="ident">w</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>;
                     <span class="ident">buf</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="ident">w</span>)<span class="question-mark">?</span>;
                 }
@@ -675,13 +674,13 @@
                     <span class="kw">let</span> <span class="ident">w</span> <span class="op">=</span> <span class="ident">encoder</span>.<span class="ident">into_inner</span>().<span class="ident">unwrap</span>();
 
                     <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="number">4</span>;
-                    <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">w</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
+                    <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">w</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
                     <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="ident">w</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>;
                     <span class="ident">buf</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="ident">w</span>)<span class="question-mark">?</span>;
                 }
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="number">4</span>;
-                    <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">datum</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
+                    <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">datum</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
                     <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="ident">datum</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>;
                     <span class="ident">buf</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="ident">datum</span>)<span class="question-mark">?</span>;
                 }
@@ -702,7 +701,8 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">block_entries</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">for</span> (<span class="ident">id</span>, <span class="ident">offset</span>) <span class="kw">in</span> <span class="ident">docstore_header</span> {
             <span class="ident">buf</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>))<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">docstore_deserialized</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_docstore_from_reader</span>(<span class="ident">buf</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="ident">id</span>, <span class="number">0</span> <span class="kw">as</span> <span class="ident">i32</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">docstore_deserialized</span> <span class="op">=</span>
+                <span class="ident">SegmentReader</span>::<span class="ident">get_docstore_from_reader</span>(<span class="ident">buf</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="ident">id</span>, <span class="number">0</span> <span class="kw">as</span> <span class="ident">i32</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">offset_length</span> <span class="op">=</span> <span class="ident">docstore_deserialized</span>.<span class="ident">offset_len</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="ident">docstore_result</span> <span class="op">=</span> <span class="ident">docstore_deserialized</span>.<span class="ident">data</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
 
@@ -742,10 +742,10 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">serialized</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">written</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">min</span>(<span class="self">self</span>.<span class="ident">block_entries</span>, <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">written</span>);
-        <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
+        <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
         <span class="kw">for</span> <span class="ident">datum</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">iter</span>() {
             <span class="kw">let</span> <span class="ident">ts_ser</span> <span class="op">=</span> <span class="ident">DocStore</span>::<span class="ident">serialize_timeseries</span>(<span class="ident">datum</span>)<span class="question-mark">?</span>;
-            <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">ts_ser</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
+            <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">ts_ser</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
             <span class="ident">serialized</span>.<span class="ident">extend</span>(<span class="ident">ts_ser</span>);
             <span class="ident">written</span> <span class="op">=</span> <span class="ident">written</span> <span class="op">+</span> <span class="number">1</span>;
             <span class="ident">size</span> <span class="op">=</span> <span class="ident">size</span> <span class="op">-</span> <span class="number">1</span>;
@@ -753,7 +753,7 @@
                 <span class="ident">all_serialized</span>.<span class="ident">push</span>(<span class="ident">serialized</span>);
                 <span class="ident">size</span> <span class="op">=</span> <span class="ident">min</span>(<span class="self">self</span>.<span class="ident">block_entries</span>, <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">written</span>);
                 <span class="ident">serialized</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-                <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
+                <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
             }
         }
         <span class="prelude-val">Ok</span>(<span class="ident">all_serialized</span>)
@@ -762,11 +762,11 @@
     <span class="kw">fn</span> <span class="ident">serialize_timeseries</span>(<span class="ident">datum</span>: <span class="kw-2">&amp;</span><span class="ident">Timeseries</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">serialized</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
         <span class="comment">// let map_len = datum.tags.len();</span>
-        <span class="comment">// serialized.write_u32::&lt;NativeEndian&gt;((4 + (map_len*8)) as u32 )?;</span>
-        <span class="ident">serialized</span>.<span class="ident">write_u64</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">datum</span>.<span class="ident">timeseries_id</span>)<span class="question-mark">?</span>;
+        <span class="comment">// serialized.write_u32::&lt;NetworkEndian&gt;((4 + (map_len*8)) as u32 )?;</span>
+        <span class="ident">serialized</span>.<span class="ident">write_u64</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">datum</span>.<span class="ident">timeseries_id</span>)<span class="question-mark">?</span>;
         <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">datum</span>.<span class="ident">tags</span>.<span class="ident">iter</span>() {
-            <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">k</span>)<span class="question-mark">?</span>;
-            <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">v</span>)<span class="question-mark">?</span>;
+            <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">k</span>)<span class="question-mark">?</span>;
+            <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">v</span>)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(<span class="ident">serialized</span>)
     }
@@ -774,7 +774,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">deserialize</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">duration</span>: <span class="ident">i32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DeserializedDocStore</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">data</span>);
-        <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">result_size</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">len</span>() <span class="op">-</span> (<span class="ident">size</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">*</span> <span class="number">4</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">result_size</span>);
         <span class="kw">unsafe</span> {
@@ -783,7 +783,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sizes</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">usize</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">offset</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">for</span> <span class="ident">_i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">size</span> {
-            <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">offset_len</span> <span class="op">=</span> <span class="ident">OffsetLen</span> {
                 <span class="ident">offset</span>,
                 <span class="ident">len</span>: <span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span>,
@@ -802,7 +802,7 @@
         <span class="prelude-val">Ok</span>(<span class="ident">DeserializedDocStore</span> {
             <span class="ident">data</span>: <span class="prelude-val">Some</span>(<span class="ident">result</span>),
             <span class="ident">offset_len</span>: <span class="prelude-val">Some</span>(<span class="ident">sizes</span>),
-            <span class="ident">duration</span>: <span class="ident">duration</span>
+            <span class="ident">duration</span>: <span class="ident">duration</span>,
         })
     }
 
@@ -814,13 +814,13 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">deserialize_timeseries</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Timeseries</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">len</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">data</span>);
-        <span class="kw">let</span> <span class="ident">timeseries_id</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">timeseries_id</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="ident">len</span> <span class="op">=</span> <span class="ident">len</span> <span class="op">-</span> <span class="number">8</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">timeseries</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">with_capacity</span>((<span class="ident">len</span> <span class="op">/</span> <span class="number">8</span>) <span class="kw">as</span> <span class="ident">usize</span>);
         <span class="kw">while</span> <span class="ident">len</span> <span class="op">&gt;</span> <span class="number">0</span> {
             <span class="ident">timeseries</span>.<span class="ident">insert</span>(
-                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
-                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
             );
             <span class="ident">len</span> <span class="op">=</span> <span class="ident">len</span> <span class="op">-</span> <span class="number">8</span>;
         }
@@ -924,8 +924,8 @@
 
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
 
-            <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">compressed_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">compressed_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">compressed_data</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">compressed_size</span> <span class="kw">as</span> <span class="ident">usize</span>);
             <span class="ident">reader</span>.<span class="ident">read_to_end</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">compressed_data</span>).<span class="ident">unwrap</span>();
             <span class="ident">zstd_file_read_time</span>.<span class="ident">fetch_add</span>(
@@ -968,8 +968,8 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">BufReader</span>::<span class="ident">new</span>(<span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">file</span>).<span class="ident">unwrap</span>());
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
 
-            <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">compressed_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">compressed_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">compressed_data</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">compressed_size</span> <span class="kw">as</span> <span class="ident">usize</span>);
             <span class="ident">reader</span>.<span class="ident">read_to_end</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">compressed_data</span>).<span class="ident">unwrap</span>();
             <span class="ident">snappy_file_read_time</span>.<span class="ident">fetch_add</span>(
@@ -1012,8 +1012,8 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">BufReader</span>::<span class="ident">new</span>(<span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">file</span>).<span class="ident">unwrap</span>());
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
 
-            <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">compressed_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">compressed_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>().<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">compressed_data</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">compressed_size</span> <span class="kw">as</span> <span class="ident">usize</span>);
             <span class="ident">reader</span>.<span class="ident">read_to_end</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">compressed_data</span>).<span class="ident">unwrap</span>();
             <span class="ident">lz4_file_read_time</span>.<span class="ident">fetch_add</span>(

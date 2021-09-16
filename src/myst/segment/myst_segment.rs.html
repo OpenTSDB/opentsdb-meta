@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/segment/myst_segment.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>myst_segment.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `myst/src/segment/myst_segment.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>myst_segment.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png">
 <link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../myst/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
                 <a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
@@ -407,245 +407,6 @@
 <span id="404">404</span>
 <span id="405">405</span>
 <span id="406">406</span>
-<span id="407">407</span>
-<span id="408">408</span>
-<span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
-<span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
-<span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
-<span id="418">418</span>
-<span id="419">419</span>
-<span id="420">420</span>
-<span id="421">421</span>
-<span id="422">422</span>
-<span id="423">423</span>
-<span id="424">424</span>
-<span id="425">425</span>
-<span id="426">426</span>
-<span id="427">427</span>
-<span id="428">428</span>
-<span id="429">429</span>
-<span id="430">430</span>
-<span id="431">431</span>
-<span id="432">432</span>
-<span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
-<span id="455">455</span>
-<span id="456">456</span>
-<span id="457">457</span>
-<span id="458">458</span>
-<span id="459">459</span>
-<span id="460">460</span>
-<span id="461">461</span>
-<span id="462">462</span>
-<span id="463">463</span>
-<span id="464">464</span>
-<span id="465">465</span>
-<span id="466">466</span>
-<span id="467">467</span>
-<span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
-<span id="477">477</span>
-<span id="478">478</span>
-<span id="479">479</span>
-<span id="480">480</span>
-<span id="481">481</span>
-<span id="482">482</span>
-<span id="483">483</span>
-<span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
-<span id="491">491</span>
-<span id="492">492</span>
-<span id="493">493</span>
-<span id="494">494</span>
-<span id="495">495</span>
-<span id="496">496</span>
-<span id="497">497</span>
-<span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
-<span id="511">511</span>
-<span id="512">512</span>
-<span id="513">513</span>
-<span id="514">514</span>
-<span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-<span id="582">582</span>
-<span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
-<span id="602">602</span>
-<span id="603">603</span>
-<span id="604">604</span>
-<span id="605">605</span>
-<span id="606">606</span>
-<span id="607">607</span>
-<span id="608">608</span>
-<span id="609">609</span>
-<span id="610">610</span>
-<span id="611">611</span>
-<span id="612">612</span>
-<span id="613">613</span>
-<span id="614">614</span>
-<span id="615">615</span>
-<span id="616">616</span>
-<span id="617">617</span>
-<span id="618">618</span>
-<span id="619">619</span>
-<span id="620">620</span>
-<span id="621">621</span>
-<span id="622">622</span>
-<span id="623">623</span>
-<span id="624">624</span>
-<span id="625">625</span>
-<span id="626">626</span>
-<span id="627">627</span>
-<span id="628">628</span>
-<span id="629">629</span>
-<span id="630">630</span>
-<span id="631">631</span>
-<span id="632">632</span>
-<span id="633">633</span>
-<span id="634">634</span>
-<span id="635">635</span>
-<span id="636">636</span>
-<span id="637">637</span>
-<span id="638">638</span>
-<span id="639">639</span>
-<span id="640">640</span>
-<span id="641">641</span>
-<span id="642">642</span>
-<span id="643">643</span>
-<span id="644">644</span>
-<span id="645">645</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -666,9 +427,9 @@
  *
  */</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">Builder</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">Loader</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">TimeSegmented</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::{<span class="ident">Builder</span>, <span class="ident">Compactor</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">dict</span>::<span class="ident">Dict</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">docstore</span>::{<span class="ident">DocStore</span>, <span class="ident">Timeseries</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">metric_bitmap</span>::<span class="ident">MetricBitmap</span>;
@@ -677,9 +438,9 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">add_dir</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">myst_error</span>::{<span class="ident">MystError</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">NativeEndian</span>, <span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
+<span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">NetworkEndian</span>, <span class="ident">ReadBytesExt</span>, <span class="ident">WriteBytesExt</span>};
 <span class="kw">use</span> <span class="ident">croaring</span>::<span class="ident">Bitmap</span>;
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">info</span>, <span class="ident">debug</span>};
+<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>};
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">Cursor</span>, <span class="ident">Read</span>, <span class="ident">Write</span>};
@@ -709,24 +470,23 @@
     <span class="kw">pub</span> <span class="ident">epoch_bitmap</span>: <span class="ident">EpochBitmap</span>,
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">DocStore</span>,
 
-    <span class="ident">header</span>: <span class="ident">MystSegmentHeader</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">header</span>: <span class="ident">MystSegmentHeader</span>,
 
     <span class="kw">pub</span> <span class="ident">shard_id</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">epoch</span>: <span class="ident">u64</span>,
 
-    <span class="ident">uid</span>: <span class="ident">u32</span>,
-    <span class="ident">segment_timeseries_id</span>: <span class="ident">u32</span>,
-    <span class="ident">tag_key_prefix</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="ident">metric_prefix</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="ident">dedup</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">uid</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">segment_timeseries_id</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">tag_key_prefix</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">metric_prefix</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">dedup</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 
-    <span class="ident">cluster</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Clusterer</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">cluster</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Clusterer</span><span class="op">&gt;</span>,
 
-    <span class="ident">duration</span>: <span class="ident">i32</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">duration</span>: <span class="ident">i32</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">TimeSegmented</span>  <span class="kw">for</span> <span class="ident">MystSegment</span> {
-    
+<span class="kw">impl</span> <span class="ident">TimeSegmented</span> <span class="kw">for</span> <span class="ident">MystSegment</span> {
     <span class="kw">fn</span> <span class="ident">get_duration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span> {
         <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">duration</span>)
     }
@@ -762,18 +522,17 @@
 }
 
 <span class="kw">impl</span> <span class="ident">MystSegmentHeader</span> {
-    
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">data</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
         <span class="kw">for</span> <span class="ident">_i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">10</span> {
             <span class="ident">map</span>.<span class="ident">insert</span>(
-                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
-                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
             );
         }
-        <span class="kw">let</span> <span class="ident">segment_timeseries_id</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">uid</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">segment_timeseries_id</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">uid</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Read uid {} and segment id: {}&quot;</span>, <span class="ident">uid</span>, <span class="ident">segment_timeseries_id</span>);
         <span class="kw">let</span> <span class="ident">header</span> <span class="op">=</span> <span class="self">Self</span> {
             <span class="ident">header</span>: <span class="ident">map</span>,
@@ -781,248 +540,6 @@
             <span class="ident">uid</span>: <span class="ident">uid</span>,
         };
         <span class="prelude-val">Ok</span>(<span class="ident">header</span>)
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span><span class="op">&gt;</span> <span class="ident">Builder</span><span class="op">&lt;</span><span class="ident">W</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MystSegment</span> {
-    <span class="doccomment">/// Builds the MystSegment.</span>
-    <span class="doccomment">/// Order of the segment is as follows.</span>
-    <span class="doccomment">/// 1. Metric Bitmaps</span>
-    <span class="doccomment">/// 2. Tag Keys Bitmaps</span>
-    <span class="doccomment">/// 3. Tag Values Bitmaps</span>
-    <span class="doccomment">/// 4. Epoch Bitmaps</span>
-    <span class="doccomment">/// 5. Epoch Bitmap header</span>
-    <span class="doccomment">/// 6. Dictionary</span>
-    <span class="doccomment">/// 7. Docstore</span>
-    <span class="doccomment">/// 8. Docstore header</span>
-    <span class="doccomment">/// 9. FST</span>
-    <span class="doccomment">/// 10. FST Header</span>
-    <span class="doccomment">/// 11. Myst Segment Header</span>
-    <span class="doccomment">/// The offset before start of each structure is written to header `MystSegmentHeader`</span>
-    <span class="doccomment">///</span>
-    <span class="kw">fn</span> <span class="ident">build</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="macro">info</span><span class="macro">!</span>(
-            <span class="string">&quot;Building segment for {:?} and {:?}&quot;</span>,
-            <span class="self">self</span>.<span class="ident">shard_id</span>, <span class="self">self</span>.<span class="ident">epoch</span>
-        );
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">drain_clustered_data</span>();
-
-        <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(
-            <span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">MetricBitmap</span>).<span class="ident">unwrap</span>(),
-            <span class="kw-2">*</span><span class="ident">offset</span>,
-        );
-        <span class="self">self</span>.<span class="ident">metrics_bitmap</span>.<span class="ident">fsts</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">fsts</span>.<span class="ident">fsts</span>);
-
-        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">metrics_bitmap</span>
-            .<span class="ident">build</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;Unable to build segment&quot;</span>))<span class="question-mark">?</span>;
-
-        <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(
-            <span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">TagKeysBitmap</span>).<span class="ident">unwrap</span>(),
-            <span class="kw-2">*</span><span class="ident">offset</span>,
-        );
-        <span class="self">self</span>.<span class="ident">tag_keys_bitmap</span>.<span class="ident">fsts</span> <span class="op">=</span> <span class="ident">ret</span>.<span class="ident">fsts</span>;
-
-        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">tag_keys_bitmap</span>
-            .<span class="ident">build</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;Unable to build segment&quot;</span>))<span class="question-mark">?</span>;
-
-        <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(
-            <span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">TagValsBitmap</span>).<span class="ident">unwrap</span>(),
-            <span class="kw-2">*</span><span class="ident">offset</span>,
-        );
-
-        <span class="self">self</span>.<span class="ident">tag_vals_bitmap</span>.<span class="ident">fsts</span> <span class="op">=</span> <span class="ident">ret</span>.<span class="ident">fsts</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ret</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">tag_vals_bitmap</span>
-            .<span class="ident">build</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;Unable to build segment&quot;</span>))<span class="question-mark">?</span>;
-
-        <span class="self">self</span>.<span class="ident">fsts</span>.<span class="ident">fsts</span> <span class="op">=</span> <span class="ident">ret</span>
-            .<span class="ident">fsts</span>
-            .<span class="ident">take</span>()
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;Unable to build segment&quot;</span>))<span class="question-mark">?</span>;
-
-        <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(
-            <span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">EpochBitmap</span>).<span class="ident">unwrap</span>(),
-            <span class="kw-2">*</span><span class="ident">offset</span>,
-        );
-        <span class="kw">let</span> <span class="ident">ts_bitmap</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">epoch_bitmap</span>
-            .<span class="ident">build</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;Unable to build segment&quot;</span>))<span class="question-mark">?</span>;
-
-        <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(
-            <span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">EpochBitmapHeader</span>).<span class="ident">unwrap</span>(),
-            <span class="kw-2">*</span><span class="ident">offset</span>,
-        );
-        <span class="ident">ts_bitmap</span>
-            .<span class="ident">header</span>
-            .<span class="ident">build</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;Unable to build segment&quot;</span>))<span class="question-mark">?</span>;
-
-        <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(
-            <span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">Dict</span>).<span class="ident">unwrap</span>(),
-            <span class="kw-2">*</span><span class="ident">offset</span>,
-        );
-        <span class="self">self</span>.<span class="ident">dict</span>.<span class="ident">build</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
-
-        <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(
-            <span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">Docstore</span>).<span class="ident">unwrap</span>(),
-            <span class="kw-2">*</span><span class="ident">offset</span>,
-        );
-
-        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">data</span>
-            .<span class="ident">build</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;Unable to build segment&quot;</span>))<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(
-            <span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">DocstoreHeader</span>).<span class="ident">unwrap</span>(),
-            <span class="kw-2">*</span><span class="ident">offset</span>,
-        );
-        <span class="ident">ret</span>.<span class="ident">header</span>.<span class="ident">build</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
-
-        <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(
-            <span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">Fst</span>).<span class="ident">unwrap</span>(),
-            <span class="kw-2">*</span><span class="ident">offset</span>,
-        );
-        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">fsts</span>
-            .<span class="ident">build</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;Unable to build segment&quot;</span>))<span class="question-mark">?</span>;
-
-        <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span>.<span class="ident">insert</span>(
-            <span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">FstHeader</span>).<span class="ident">unwrap</span>(),
-            <span class="kw-2">*</span><span class="ident">offset</span>,
-        );
-        <span class="ident">ret</span>.<span class="ident">header</span>.<span class="ident">build</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
-        <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="self">self</span>.<span class="ident">header</span>.<span class="ident">header</span> {
-            <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">k</span>)<span class="question-mark">?</span>;
-            <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="ident">v</span>)<span class="question-mark">?</span>;
-        }
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Writing segment timeseries id {} and uid: {} for shard: {} and epoch: {}&quot;</span>, <span class="self">self</span>.<span class="ident">segment_timeseries_id</span>, <span class="self">self</span>.<span class="ident">uid</span>, <span class="self">self</span>.<span class="ident">shard_id</span>, <span class="self">self</span>.<span class="ident">epoch</span>);
-        <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">segment_timeseries_id</span>)<span class="question-mark">?</span>;
-        <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>(<span class="self">self</span>.<span class="ident">uid</span>)<span class="question-mark">?</span>;
-        <span class="macro">info</span><span class="macro">!</span>(
-            <span class="string">&quot;Done building segment for {:?} and {:?}&quot;</span>,
-            <span class="self">self</span>.<span class="ident">shard_id</span>, <span class="self">self</span>.<span class="ident">epoch</span>
-        );
-        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Read</span> <span class="op">+</span> <span class="ident">Seek</span><span class="op">&gt;</span> <span class="ident">Loader</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">MystSegment</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MystSegment</span> {
-    <span class="doccomment">/// Loads and deserializes the buffer `buf` and returns a MystSegment.</span>
-    <span class="doccomment">///</span>
-    <span class="kw">fn</span> <span class="ident">load</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">MystSegment</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="comment">//        let mut buffered_reader = BufReader::new(buf);</span>
-        <span class="comment">// Read header first -- seek from end</span>
-        
-        <span class="kw">let</span> <span class="ident">full_segment_header</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">read_segment_header</span>(<span class="ident">buf</span>)<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> <span class="ident">segment_header</span> <span class="op">=</span> <span class="ident">full_segment_header</span>.<span class="ident">header</span>;
-        <span class="comment">// load fst</span>
-        <span class="kw">let</span> <span class="ident">fst_offset</span> <span class="op">=</span> <span class="ident">segment_header</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">FstHeader</span>).<span class="ident">unwrap</span>())
-            .<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fst_container</span> <span class="op">=</span> <span class="ident">MystFSTContainer</span>::<span class="ident">new</span>();
-        <span class="ident">fst_container</span> <span class="op">=</span> <span class="ident">fst_container</span>.<span class="ident">load</span>(<span class="ident">buf</span>, <span class="ident">fst_offset</span>)<span class="question-mark">?</span>.<span class="ident">unwrap</span>();
-        <span class="comment">// load metric bit map</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">metrics_bitmap</span> <span class="op">=</span> <span class="ident">MetricBitmap</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="ident">metric_fst</span> <span class="op">=</span> <span class="ident">fst_container</span>.<span class="ident">fsts</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">metric_prefix</span>).<span class="ident">unwrap</span>();
-        <span class="kw">for</span> (<span class="ident">metric_name</span>, <span class="ident">offset_id</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">metric_fst</span>.<span class="ident">buf</span> {
-            <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">MystFST</span>::<span class="ident">get_offset</span>(<span class="kw-2">*</span><span class="ident">offset_id</span>);
-            <span class="kw">let</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_bitmap_from_reader</span>(<span class="ident">buf</span>, <span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>)<span class="question-mark">?</span>;
-            <span class="ident">metrics_bitmap</span>
-                .<span class="ident">metrics_bitmap</span>
-                .<span class="ident">insert</span>(<span class="ident">metric_name</span>.<span class="ident">clone</span>(), <span class="ident">bitmap</span>);
-        }
-        <span class="comment">// load tag key bitmap</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tag_keys_bitmap</span> <span class="op">=</span> <span class="ident">TagKeysBitmap</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="ident">tag_key_fst</span> <span class="op">=</span> <span class="ident">fst_container</span>.<span class="ident">fsts</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">tag_key_prefix</span>).<span class="ident">unwrap</span>();
-        <span class="kw">for</span> (<span class="ident">tag_key</span>, <span class="ident">offset_id</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">tag_key_fst</span>.<span class="ident">buf</span> {
-            <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">MystFST</span>::<span class="ident">get_offset</span>(<span class="kw-2">*</span><span class="ident">offset_id</span>);
-            <span class="kw">let</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_bitmap_from_reader</span>(<span class="ident">buf</span>, <span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>)<span class="question-mark">?</span>;
-            <span class="ident">tag_keys_bitmap</span>
-                .<span class="ident">tag_keys_bitmap</span>
-                .<span class="ident">insert</span>(<span class="ident">tag_key</span>.<span class="ident">clone</span>(), <span class="ident">bitmap</span>);
-        }
-        <span class="comment">// load tag val bitmap</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tag_vals_bitmap</span> <span class="op">=</span> <span class="ident">TagValuesBitmap</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="ident">tag_key_fst</span> <span class="op">=</span> <span class="ident">fst_container</span>.<span class="ident">fsts</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">tag_key_prefix</span>).<span class="ident">unwrap</span>();
-        <span class="kw">for</span> (<span class="ident">tag_key</span>, <span class="ident">offset_id</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">tag_key_fst</span>.<span class="ident">buf</span> {
-            <span class="kw">let</span> <span class="ident">tag_val_fst</span> <span class="op">=</span> <span class="ident">fst_container</span>.<span class="ident">fsts</span>.<span class="ident">get</span>(<span class="ident">tag_key</span>).<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_tag_vals_bitmaps</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
-            <span class="kw">for</span> (<span class="ident">tag_val</span>, <span class="ident">offset_id</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">tag_val_fst</span>.<span class="ident">buf</span> {
-                <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">MystFST</span>::<span class="ident">get_offset</span>(<span class="kw-2">*</span><span class="ident">offset_id</span>);
-                <span class="kw">let</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_bitmap_from_reader</span>(<span class="ident">buf</span>, <span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>)<span class="question-mark">?</span>;
-                <span class="ident">curr_tag_vals_bitmaps</span>.<span class="ident">insert</span>(<span class="ident">tag_val</span>.<span class="ident">clone</span>(), <span class="ident">bitmap</span>);
-            }
-            <span class="ident">tag_vals_bitmap</span>
-                .<span class="ident">tag_vals_bitmap</span>
-                .<span class="ident">insert</span>(<span class="ident">tag_key</span>.<span class="ident">clone</span>(), <span class="ident">curr_tag_vals_bitmaps</span>);
-        }
-        <span class="comment">// load dict</span>
-        <span class="kw">let</span> <span class="ident">dict_offset</span> <span class="op">=</span> <span class="ident">segment_header</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">Dict</span>).<span class="ident">unwrap</span>())
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;No valid dict offset found&quot;</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dict</span> <span class="op">=</span> <span class="ident">Dict</span>::<span class="ident">new</span>();
-        <span class="ident">dict</span> <span class="op">=</span> <span class="ident">dict</span>.<span class="ident">load</span>(<span class="ident">buf</span>, <span class="ident">dict_offset</span>)<span class="question-mark">?</span>.<span class="ident">unwrap</span>();
-        <span class="comment">// load doc store</span>
-        <span class="kw">let</span> <span class="ident">docstore_header_offset</span> <span class="op">=</span> <span class="ident">segment_header</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">DocstoreHeader</span>).<span class="ident">unwrap</span>())
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(
-                <span class="string">&quot;No docstore header offset found&quot;</span>,
-            ))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">docstore</span> <span class="op">=</span> <span class="ident">DocStore</span>::<span class="ident">new</span>(<span class="number">0</span>);
-        <span class="ident">docstore</span> <span class="op">=</span> <span class="ident">docstore</span>.<span class="ident">load</span>(<span class="ident">buf</span>, <span class="ident">docstore_header_offset</span>)<span class="question-mark">?</span>.<span class="ident">unwrap</span>();
-        
-        <span class="doccomment">/// Load xxhashes into dedup map.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dedup</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> <span class="op">=</span>  <span class="ident">HashSet</span>::<span class="ident">new</span>();
-
-        <span class="kw">let</span> <span class="ident">doc_vec</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">docstore</span>.<span class="ident">data</span>;
-
-        <span class="kw">for</span> <span class="ident">t</span> <span class="kw">in</span> <span class="ident">doc_vec</span> {
-            <span class="ident">dedup</span>.<span class="ident">insert</span>(<span class="ident">t</span>.<span class="ident">timeseries_id</span>);
-        }
-        
-        <span class="kw">let</span> <span class="ident">ts_bitmaps_header_offset</span> <span class="op">=</span> <span class="ident">segment_header</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">ToPrimitive</span>::<span class="ident">to_u32</span>(<span class="kw-2">&amp;</span><span class="ident">MystSegmentHeaderKeys</span>::<span class="ident">EpochBitmapHeader</span>).<span class="ident">unwrap</span>())
-            .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(
-                <span class="string">&quot;No Timeseries Bitmap header offset found&quot;</span>,
-            ))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">timeseries_bitmap</span> <span class="op">=</span> <span class="ident">EpochBitmap</span>::<span class="ident">new</span>(<span class="number">0</span>);
-        <span class="ident">timeseries_bitmap</span> <span class="op">=</span> <span class="ident">timeseries_bitmap</span>
-            .<span class="ident">load</span>(<span class="ident">buf</span>, <span class="ident">ts_bitmaps_header_offset</span>)<span class="question-mark">?</span>
-            .<span class="ident">unwrap</span>();
-        <span class="doccomment">/// TODO: Doc store block entries should be segment specific ? (and not global ?)</span>
-        <span class="doccomment">/// NOTE: It is ok to have a new clusterer because,</span>
-        <span class="doccomment">/// the exists check is performed while draining the clusters.</span>
-        <span class="kw">let</span> <span class="ident">last_id</span> <span class="op">=</span> <span class="ident">full_segment_header</span>.<span class="ident">segment_timeseries_id</span>;
-        <span class="kw">let</span> <span class="ident">uid</span> <span class="op">=</span> <span class="ident">full_segment_header</span>.<span class="ident">uid</span>;
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Loading segment for shard: {} and epoch: {} with last segment id: {} uid: {}&quot;</span>, <span class="self">self</span>.<span class="ident">shard_id</span>, <span class="self">self</span>.<span class="ident">epoch</span>, <span class="ident">last_id</span>, <span class="ident">uid</span>);
-        <span class="kw">let</span> <span class="ident">myst_segment</span> <span class="op">=</span> <span class="ident">MystSegment</span> {
-            <span class="ident">fsts</span>: <span class="ident">fst_container</span>,
-            <span class="ident">dict</span>,
-            <span class="ident">tag_keys_bitmap</span>,
-            <span class="ident">tag_vals_bitmap</span>,
-            <span class="ident">metrics_bitmap</span>,
-            <span class="ident">epoch_bitmap</span>: <span class="ident">timeseries_bitmap</span>,
-            <span class="ident">data</span>: <span class="ident">docstore</span>,
-            <span class="ident">header</span>: <span class="ident">Default</span>::<span class="ident">default</span>(),
-            <span class="ident">shard_id</span>: <span class="self">self</span>.<span class="ident">shard_id</span>,
-            <span class="ident">epoch</span>: <span class="self">self</span>.<span class="ident">epoch</span>,
-            <span class="ident">uid</span>: <span class="ident">uid</span>,
-            <span class="ident">segment_timeseries_id</span>: <span class="ident">last_id</span>,
-            <span class="ident">metric_prefix</span>: <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">METRIC</span>)),
-            <span class="ident">tag_key_prefix</span>: <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">TAG_KEYS</span>)),
-            <span class="ident">dedup</span>: <span class="ident">dedup</span>,
-            <span class="ident">cluster</span>: <span class="prelude-val">Some</span>(<span class="ident">Clusterer</span>::<span class="ident">default</span>()),
-            <span class="ident">duration</span>: <span class="self">self</span>.<span class="ident">duration</span>
-        };
-        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">myst_segment</span>))
     }
 }
 
@@ -1036,7 +553,12 @@
         <span class="ident">epoch</span>: <span class="ident">u64</span>,
         <span class="ident">docstore_block_entries</span>: <span class="ident">usize</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">MystSegment</span>::<span class="ident">new_with_block_entries_duration</span>(<span class="ident">shard_id</span>, <span class="ident">epoch</span>, <span class="ident">docstore_block_entries</span>, <span class="number">7200</span> <span class="kw">as</span> <span class="ident">i32</span>)
+        <span class="ident">MystSegment</span>::<span class="ident">new_with_block_entries_duration</span>(
+            <span class="ident">shard_id</span>,
+            <span class="ident">epoch</span>,
+            <span class="ident">docstore_block_entries</span>,
+            <span class="number">7200</span> <span class="kw">as</span> <span class="ident">i32</span>,
+        )
     }
 
     <span class="doccomment">/// Creates a new MystSegment</span>
@@ -1049,7 +571,7 @@
         <span class="ident">shard_id</span>: <span class="ident">u32</span>,
         <span class="ident">epoch</span>: <span class="ident">u64</span>,
         <span class="ident">docstore_block_entries</span>: <span class="ident">usize</span>,
-        <span class="ident">duration</span>: <span class="ident">i32</span>
+        <span class="ident">duration</span>: <span class="ident">i32</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Creating new segment for shard id {}&quot;</span>, <span class="ident">shard_id</span>);
         <span class="self">Self</span> {
@@ -1221,7 +743,7 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">drain_clustered_data</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">drain_clustered_data</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">cluster</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cluster</span>.<span class="ident">take</span>().<span class="ident">unwrap</span>().<span class="ident">cluster</span>;
         <span class="kw">for</span> (<span class="ident">metric</span>, <span class="ident">tags</span>) <span class="kw">in</span> <span class="ident">cluster</span> {
             <span class="kw">for</span> <span class="ident">ts</span> <span class="kw">in</span> <span class="ident">tags</span> {
@@ -1264,7 +786,7 @@
 
 <span class="doccomment">/// Groups the timeseries so that all timeseries for a metric are close to each other.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Clusterer</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Clusterer</span> {
     <span class="ident">cluster</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TagsAndTimestamp</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Debug</span>)]</span>

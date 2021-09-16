@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/segment/segment_reader.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>segment_reader.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `myst/src/segment/segment_reader.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>segment_reader.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png">
 <link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../myst/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
                 <a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
@@ -584,6 +584,45 @@
 <span id="581">581</span>
 <span id="582">582</span>
 <span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -607,13 +646,13 @@
 <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">store</span>::<span class="ident">docstore</span>::<span class="ident">DocStore</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">query</span>::<span class="ident">cache</span>::<span class="ident">Cache</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">myst_segment</span>::{<span class="ident">MystSegmentHeader</span>, <span class="ident">MystSegmentHeaderKeys</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">docstore</span>::<span class="ident">DeserializedDocStore</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">TimeSegmented</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">dict</span>::<span class="ident">DictHolder</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">docstore</span>::<span class="ident">DeserializedDocStore</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">myst_fst</span>::<span class="ident">MystFST</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">myst_error</span>::{<span class="ident">MystError</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">TimeSegmented</span>;
 
-<span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">NativeEndian</span>, <span class="ident">ReadBytesExt</span>};
+<span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">NetworkEndian</span>, <span class="ident">ReadBytesExt</span>};
 <span class="kw">use</span> <span class="ident">croaring</span>::<span class="ident">Bitmap</span>;
 <span class="kw">use</span> <span class="ident">fst</span>::{<span class="ident">IntoStreamer</span>, <span class="ident">Map</span>, <span class="ident">Streamer</span>};
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">debug</span>;
@@ -621,6 +660,7 @@
 
 <span class="kw">use</span> <span class="ident">regex_automata</span>::<span class="ident">dense</span>;
 
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">store</span>::<span class="ident">epoch_bitmap</span>::<span class="ident">EpochBitmapHolder</span>;
 <span class="kw">use</span> <span class="ident">lz4</span>::<span class="ident">Decoder</span>;
 <span class="kw">use</span> <span class="ident">num</span>::<span class="ident">ToPrimitive</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
@@ -653,7 +693,7 @@
         <span class="kw-2">mut</span> <span class="ident">reader</span>: <span class="ident">R</span>,
         <span class="ident">cache</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Cache</span><span class="op">&gt;</span>,
         <span class="ident">file_path</span>: <span class="ident">String</span>,
-        <span class="ident">duration</span>: <span class="ident">i32</span>
+        <span class="ident">duration</span>: <span class="ident">i32</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">segment_header</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">read_segment_header</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">reader</span>)<span class="question-mark">?</span>.<span class="ident">header</span>;
         <span class="kw">let</span> <span class="ident">fst_header_offset</span> <span class="op">=</span> <span class="ident">segment_header</span>
@@ -695,14 +735,14 @@
     }
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_ts_bitmap_header</span>(<span class="ident">reader</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">u32</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">reader</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="kw-2">*</span><span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">num_elements</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">num_elements</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="comment">// let start_of_header = offset - (num_elements * (8 + 4));</span>
         <span class="comment">// reader.seek(SeekFrom::Start(start_of_header as u64))?;</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">header</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">with_capacity</span>(<span class="ident">num_elements</span> <span class="kw">as</span> <span class="ident">usize</span>);
         <span class="kw">for</span> <span class="ident">_i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_elements</span> {
             <span class="ident">header</span>.<span class="ident">insert</span>(
-                <span class="ident">reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
-                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+                <span class="ident">reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
             );
         }
         <span class="prelude-val">Ok</span>(<span class="ident">header</span>)
@@ -711,9 +751,12 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_segment_header</span>(<span class="ident">reader</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">MystSegmentHeader</span><span class="op">&gt;</span> {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Reading segment header&quot;</span>);
         <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">End</span>(<span class="number">0</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">bytes_header</span> <span class="op">=</span>  (<span class="number">4</span> <span class="op">*</span> <span class="number">2</span> <span class="op">*</span> <span class="number">10</span>) <span class="op">+</span> (<span class="number">4</span> <span class="op">*</span> <span class="number">2</span>);
+        <span class="kw">let</span> <span class="ident">bytes_header</span> <span class="op">=</span> (<span class="number">4</span> <span class="op">*</span> <span class="number">2</span> <span class="op">*</span> <span class="number">10</span>) <span class="op">+</span> (<span class="number">4</span> <span class="op">*</span> <span class="number">2</span>);
         <span class="kw">let</span> <span class="ident">header_start</span> <span class="op">=</span> <span class="ident">len</span> <span class="op">-</span> <span class="ident">bytes_header</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Seeking from start: {} {} {}&quot;</span>, <span class="ident">header_start</span>, <span class="ident">len</span>, <span class="ident">bytes_header</span>); 
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;Seeking from start: {} {} {}&quot;</span>,
+            <span class="ident">header_start</span>, <span class="ident">len</span>, <span class="ident">bytes_header</span>
+        );
         <span class="ident">reader</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="ident">header_start</span>))<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">header_buf</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0</span>; <span class="ident">bytes_header</span> <span class="kw">as</span> <span class="ident">usize</span>];
         <span class="ident">reader</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">header_buf</span>)<span class="question-mark">?</span>;
@@ -723,13 +766,13 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_fst_header</span>(<span class="ident">reader</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">u32</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">reader</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="kw-2">*</span><span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">header</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">with_capacity</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span>);
         <span class="kw">while</span> <span class="ident">len</span> <span class="op">&gt;</span> <span class="number">0</span> {
-            <span class="kw">let</span> <span class="ident">str_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">str_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">str_buf</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0</span>; <span class="ident">str_size</span> <span class="kw">as</span> <span class="ident">usize</span>];
             <span class="ident">reader</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">str_buf</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
             <span class="ident">header</span>.<span class="ident">insert</span>(<span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">str_buf</span>)<span class="question-mark">?</span>, <span class="ident">offset</span>);
             <span class="ident">len</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
         }
@@ -740,13 +783,13 @@
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Reading docstore header&quot;</span>);
 
         <span class="ident">reader</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="kw-2">*</span><span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">docstore_header_len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">docstore_header_len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">docstore_header</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">with_capacity</span>(<span class="ident">docstore_header_len</span> <span class="kw">as</span> <span class="ident">usize</span>);
         <span class="kw">for</span> <span class="ident">_i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">docstore_header_len</span> {
             <span class="ident">docstore_header</span>.<span class="ident">insert</span>(
-                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
-                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
+                <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>,
             );
         }
         <span class="prelude-val">Ok</span>(<span class="ident">docstore_header</span>)
@@ -762,7 +805,7 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_fst_from_reader</span>(<span class="ident">reader</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Map</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">fst_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">fst_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0</span>; <span class="ident">fst_size</span> <span class="kw">as</span> <span class="ident">usize</span>];
         <span class="ident">reader</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffer</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">fst</span> <span class="op">=</span> <span class="ident">Map</span>::<span class="ident">new</span>(<span class="ident">buffer</span>)<span class="question-mark">?</span>;
@@ -832,7 +875,7 @@
         <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">MystFST</span>::<span class="ident">get_offset</span>(<span class="ident">val</span>);
         <span class="ident">reader</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>))<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="ident">reader</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> <span class="number">4</span>))<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0</span>; <span class="ident">length</span> <span class="kw">as</span> <span class="ident">usize</span>];
         <span class="ident">reader</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data</span>)<span class="question-mark">?</span>;
@@ -920,55 +963,95 @@
         <span class="prelude-val">Ok</span>(<span class="ident">bitmaps</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_all_ts_bitmaps</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">Bitmap</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_all_ts_bitmaps</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">EpochBitmapHolder</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bitmaps</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
-        <span class="kw">for</span> (<span class="ident">epoch</span>, <span class="ident">offset</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">ts_bitmap_header</span> {
-            <span class="kw">let</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_ts_bitmap_from_reader</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">reader</span>, <span class="kw-2">*</span><span class="ident">offset</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">header</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">ts_bitmap_header</span>.<span class="ident">clone</span>();
+        <span class="kw">for</span> (<span class="ident">epoch</span>, <span class="ident">offset</span>) <span class="kw">in</span> <span class="ident">header</span> {
+            <span class="kw">let</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_ts_bitmap_cache</span>(<span class="kw-2">*</span><span class="ident">epoch</span>)<span class="question-mark">?</span>.<span class="ident">clone</span>();
             <span class="ident">bitmaps</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">epoch</span>, <span class="ident">bitmap</span>);
         }
         <span class="prelude-val">Ok</span>(<span class="ident">bitmaps</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_ts_bitmap</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Bitmap</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_ts_bitmap</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">EpochBitmapHolder</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ts_bitmap_offset</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">ts_bitmap_header</span>
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">epoch</span>)
             .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;TS Bitmap epoch not found&quot;</span>))<span class="question-mark">?</span>;
-        <span class="ident">SegmentReader</span>::<span class="ident">get_ts_bitmap_from_reader</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">reader</span>, <span class="kw-2">*</span><span class="ident">ts_bitmap_offset</span>)
+        <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
+        <span class="kw">let</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_ts_bitmap_from_reader</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">reader</span>, <span class="kw-2">*</span><span class="ident">ts_bitmap_offset</span>)<span class="question-mark">?</span>;
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}&quot;</span>,
+            <span class="ident">SystemTime</span>::<span class="ident">now</span>().<span class="ident">duration_since</span>(<span class="ident">curr_time</span>).<span class="ident">unwrap</span>(),
+            <span class="self">self</span>.<span class="ident">shard_id</span>,
+            <span class="self">self</span>.<span class="ident">created</span>,
+            <span class="ident">epoch</span>
+        );
+        <span class="prelude-val">Ok</span>(<span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">EpochBitmapHolder</span> {
+            <span class="ident">bitmap</span>,
+            <span class="ident">duration</span>: <span class="self">self</span>.<span class="ident">duration</span>,
+        }))
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_ts_bitmap_from_reader</span>(<span class="ident">reader</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">offset</span>: <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Bitmap</span><span class="op">&gt;</span> {
         <span class="ident">reader</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">epoch</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">bitmap_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">epoch</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">bitmap_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0</span>; <span class="ident">bitmap_size</span> <span class="kw">as</span> <span class="ident">usize</span>];
         <span class="ident">reader</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="ident">Bitmap</span>::<span class="ident">deserialize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">bitmap</span>)
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_ts_bitmap_cache</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">EpochBitmapHolder</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
+        <span class="kw">let</span> <span class="ident">sharded_cache</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cache</span>.<span class="ident">get_sharded_cache</span>(<span class="self">self</span>.<span class="ident">shard_id</span>);
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">epoch_bitmap_lock</span> <span class="op">=</span> <span class="ident">sharded_cache</span>.<span class="ident">epoch_bitmap_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">epoch_bitmap</span> <span class="op">=</span> <span class="ident">epoch_bitmap_lock</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="ident">created</span>, <span class="ident">epoch</span>));
+        <span class="kw">match</span> <span class="ident">epoch_bitmap</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">epoch_bitmap</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">dur</span> <span class="op">=</span> <span class="ident">epoch_bitmap</span>.<span class="ident">get_duration</span>().<span class="ident">unwrap_or</span>(<span class="number">0</span> <span class="kw">as</span> <span class="ident">i32</span>);
+                <span class="kw">if</span> <span class="ident">dur</span> <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">duration</span> {
+                    <span class="comment">//Refresh cache</span>
+                    <span class="macro">debug</span><span class="macro">!</span>(
+                        <span class="string">&quot;Docstore cache entry will be refreshed as it has old duration {}, new: {} {:?} for shard: {} segment: {} block: {}&quot;</span>,
+                        <span class="ident">dur</span>,
+                        <span class="self">self</span>.<span class="ident">duration</span>,
+                        <span class="ident">SystemTime</span>::<span class="ident">now</span>().<span class="ident">duration_since</span>(<span class="ident">curr_time</span>).<span class="ident">unwrap</span>(),
+                        <span class="self">self</span>.<span class="ident">shard_id</span>,
+                        <span class="self">self</span>.<span class="ident">created</span>,
+                        <span class="ident">epoch</span>
+                    );
+                    <span class="ident">drop</span>(<span class="ident">epoch_bitmap_lock</span>);
+                    <span class="kw">let</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_ts_bitmap</span>(<span class="ident">epoch</span>)<span class="question-mark">?</span>;
+
+                    <span class="ident">sharded_cache</span>.<span class="ident">put_epoch_bitmap</span>(<span class="self">self</span>.<span class="ident">created</span>, <span class="ident">epoch</span>, <span class="ident">bitmap</span>.<span class="ident">clone</span>());
+                    <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">bitmap</span>);
+                } <span class="kw">else</span> {
+                    <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="ident">epoch_bitmap</span>.<span class="ident">clone</span>();
+                    <span class="ident">drop</span>(<span class="ident">epoch_bitmap_lock</span>);
+                    <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">d</span>);
+                }
+            }
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">drop</span>(<span class="ident">epoch_bitmap_lock</span>);
+                <span class="kw">let</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_ts_bitmap</span>(<span class="ident">epoch</span>)<span class="question-mark">?</span>;
+
+                <span class="ident">sharded_cache</span>.<span class="ident">put_epoch_bitmap</span>(<span class="self">self</span>.<span class="ident">created</span>, <span class="ident">epoch</span>, <span class="ident">bitmap</span>.<span class="ident">clone</span>());
+                <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">bitmap</span>);
+            }
+        }
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_docstore_cache</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">id</span>: <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DeserializedDocStore</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
         <span class="kw">let</span> <span class="ident">sharded_cache</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cache</span>.<span class="ident">get_sharded_cache</span>(<span class="self">self</span>.<span class="ident">shard_id</span>);
-        
+
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">docstore_lock</span> <span class="op">=</span> <span class="ident">sharded_cache</span>.<span class="ident">docstore_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
-        <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">&quot;Time took to get lock {:?} for shard: {} segment: {} block: {}&quot;</span>,
-            <span class="ident">SystemTime</span>::<span class="ident">now</span>().<span class="ident">duration_since</span>(<span class="ident">curr_time</span>).<span class="ident">unwrap</span>(),
-            <span class="self">self</span>.<span class="ident">shard_id</span>,
-            <span class="self">self</span>.<span class="ident">created</span>,
-            <span class="ident">id</span>
-        );
         <span class="kw">let</span> <span class="ident">docstore</span> <span class="op">=</span> <span class="ident">docstore_lock</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="ident">created</span>, <span class="ident">id</span>));
         <span class="kw">match</span> <span class="ident">docstore</span> {
             <span class="prelude-val">Some</span>(<span class="ident">docstore</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">debug</span><span class="macro">!</span>(
-                    <span class="string">&quot;Time took to get doc store from cache {:?} for shard: {} segment: {} block: {}&quot;</span>,
-                    <span class="ident">SystemTime</span>::<span class="ident">now</span>().<span class="ident">duration_since</span>(<span class="ident">curr_time</span>).<span class="ident">unwrap</span>(),
-                    <span class="self">self</span>.<span class="ident">shard_id</span>,
-                    <span class="self">self</span>.<span class="ident">created</span>,
-                    <span class="ident">id</span>
-                );
                 <span class="kw">let</span> <span class="ident">dur</span> <span class="op">=</span> <span class="ident">docstore</span>.<span class="ident">get_duration</span>().<span class="ident">unwrap_or</span>(<span class="number">0</span> <span class="kw">as</span> <span class="ident">i32</span>);
                 <span class="kw">if</span> <span class="ident">dur</span> <span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">duration</span> {
                     <span class="comment">//Refresh cache</span>
@@ -983,32 +1066,20 @@
                     );
                     <span class="ident">drop</span>(<span class="ident">docstore_lock</span>);
                     <span class="kw">let</span> <span class="ident">new_d</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_docstore</span>(<span class="ident">id</span>)<span class="question-mark">?</span>;
-                    <span class="macro">debug</span><span class="macro">!</span>(
-                        <span class="string">&quot;Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}&quot;</span>,
-                        <span class="ident">SystemTime</span>::<span class="ident">now</span>().<span class="ident">duration_since</span>(<span class="ident">curr_time</span>).<span class="ident">unwrap</span>(),
-                        <span class="self">self</span>.<span class="ident">shard_id</span>,
-                        <span class="self">self</span>.<span class="ident">created</span>,
-                        <span class="ident">id</span>
-                    );
-                    <span class="ident">sharded_cache</span>.<span class="ident">put</span>(<span class="self">self</span>.<span class="ident">created</span>, <span class="ident">id</span>, <span class="ident">new_d</span>.<span class="ident">clone</span>());
+
+                    <span class="ident">sharded_cache</span>.<span class="ident">put_docstore</span>(<span class="self">self</span>.<span class="ident">created</span>, <span class="ident">id</span>, <span class="ident">new_d</span>.<span class="ident">clone</span>());
                     <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">new_d</span>);
                 } <span class="kw">else</span> {
                     <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="ident">docstore</span>.<span class="ident">clone</span>();
                     <span class="ident">drop</span>(<span class="ident">docstore_lock</span>);
                     <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">d</span>);
                 }
-            } <span class="comment">//Yikes: TODO</span>
+            }
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">drop</span>(<span class="ident">docstore_lock</span>);
                 <span class="kw">let</span> <span class="ident">docstore</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_docstore</span>(<span class="ident">id</span>)<span class="question-mark">?</span>;
-                <span class="macro">debug</span><span class="macro">!</span>(
-                    <span class="string">&quot;Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}&quot;</span>,
-                    <span class="ident">SystemTime</span>::<span class="ident">now</span>().<span class="ident">duration_since</span>(<span class="ident">curr_time</span>).<span class="ident">unwrap</span>(),
-                    <span class="self">self</span>.<span class="ident">shard_id</span>,
-                    <span class="self">self</span>.<span class="ident">created</span>,
-                    <span class="ident">id</span>
-                );
-                <span class="ident">sharded_cache</span>.<span class="ident">put</span>(<span class="self">self</span>.<span class="ident">created</span>, <span class="ident">id</span>, <span class="ident">docstore</span>.<span class="ident">clone</span>());
+
+                <span class="ident">sharded_cache</span>.<span class="ident">put_docstore</span>(<span class="self">self</span>.<span class="ident">created</span>, <span class="ident">id</span>, <span class="ident">docstore</span>.<span class="ident">clone</span>());
                 <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">docstore</span>);
             }
         }
@@ -1021,14 +1092,21 @@
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">id</span>)
             .<span class="ident">ok_or</span>(<span class="ident">MystError</span>::<span class="ident">new_query_error</span>(<span class="string">&quot;Docstore offset not found&quot;</span>))<span class="question-mark">?</span>;
         <span class="ident">buffered_reader</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
         <span class="kw">let</span> <span class="ident">docstore</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_docstore_from_reader</span>(
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buffered_reader</span>,
             <span class="self">self</span>.<span class="ident">shard_id</span>,
             <span class="self">self</span>.<span class="ident">created</span>,
             <span class="ident">id</span>,
-            <span class="self">self</span>.<span class="ident">duration</span>
+            <span class="self">self</span>.<span class="ident">duration</span>,
         );
-
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;Time took to get doc store from disk {:?} for shard: {} segment: {} block: {}&quot;</span>,
+            <span class="ident">SystemTime</span>::<span class="ident">now</span>().<span class="ident">duration_since</span>(<span class="ident">curr_time</span>).<span class="ident">unwrap</span>(),
+            <span class="self">self</span>.<span class="ident">shard_id</span>,
+            <span class="self">self</span>.<span class="ident">created</span>,
+            <span class="ident">id</span>
+        );
         <span class="ident">docstore</span>
     }
 
@@ -1040,9 +1118,9 @@
         <span class="ident">duration</span>: <span class="ident">i32</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DeserializedDocStore</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
-        <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">compressed_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">compressed_size</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">compressed_data</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0</span>; (<span class="ident">compressed_size</span>) <span class="kw">as</span> <span class="ident">usize</span>];
 
         <span class="ident">reader</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">compressed_data</span>)<span class="question-mark">?</span>;
@@ -1115,7 +1193,7 @@
                         <span class="self">self</span>.<span class="ident">created</span>,
                     );
                     <span class="ident">sharded_cache</span>.<span class="ident">put_dict</span>(<span class="self">self</span>.<span class="ident">created</span>, <span class="ident">new_dict</span>.<span class="ident">clone</span>());
-                    <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">new_dict</span>)
+                    <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">new_dict</span>);
                 } <span class="kw">else</span> {
                     <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="ident">dict</span>.<span class="ident">clone</span>();
                     <span class="ident">drop</span>(<span class="ident">lock</span>);
@@ -1155,11 +1233,11 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_dict_from_reader</span>(<span class="ident">reader</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">duration</span>: <span class="ident">i32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">DictHolder</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">dict_len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">dict_len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dict</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
         <span class="kw">for</span> <span class="ident">_i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">dict_len</span> {
-            <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NativeEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0</span>; <span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span>];
             <span class="ident">reader</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>)<span class="question-mark">?</span>;
             <span class="ident">dict</span>.<span class="ident">insert</span>(<span class="ident">id</span>, <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">buf</span>)<span class="question-mark">?</span>);

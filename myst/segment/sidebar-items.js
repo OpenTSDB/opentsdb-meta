@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["myst_segment",""],["persistence",""],["segment_reader",""],["store",""],["tests",""]]});
+initSidebarItems({"mod":[["builder",""],["compactor",""],["loader",""],["myst_segment",""],["persistence",""],["segment_reader",""],["store",""],["tests",""]]});

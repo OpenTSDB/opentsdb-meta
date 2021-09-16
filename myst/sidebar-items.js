@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["setup_logger",""]],"mod":[["client",""],["myst_grpc",""],["query",""],["s3",""],["segment",""],["utils",""]]});
+initSidebarItems({"fn":[["setup_logger",""]],"mod":[["myst_grpc",""],["query",""],["s3",""],["segment",""],["utils",""]]});

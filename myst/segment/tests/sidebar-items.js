@@ -1,1 +1,1 @@
-initSidebarItems({});
+initSidebarItems({"fn":[["write_data",""]]});
