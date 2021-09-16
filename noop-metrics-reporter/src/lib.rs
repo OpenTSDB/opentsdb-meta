@@ -1,16 +1,18 @@
 use metrics_reporter::MetricsReporter;
 #[no_mangle]
-pub extern "Rust" fn new() -> Box<dyn MetricsReporter> {
+pub fn new() -> Box<dyn MetricsReporter> {
     let metric_reporter_builder = NoopMetricReporterBuilder::new();
     Box::new(metric_reporter_builder.build())
 }
 
 #[no_mangle]
-pub extern "Rust" fn new_with_ssl(ssl_key: &str, ssl_cert: &str, ca_cert: &str) -> Box<dyn MetricsReporter> {
-    let mut metric_reporter_builder = NoopMetricReporterBuilder::new().ssl_key(ssl_key).ssl_cert(ssl_cert).ca_cert(ca_cert);
+pub fn new_with_ssl(ssl_key: &str, ssl_cert: &str, ca_cert: &str) -> Box<dyn MetricsReporter> {
+    let mut metric_reporter_builder = NoopMetricReporterBuilder::new()
+        .ssl_key(ssl_key)
+        .ssl_cert(ssl_cert)
+        .ca_cert(ca_cert);
     Box::new(metric_reporter_builder.build())
 }
-
 
 /// A Metric Reporter plugin that just prints the metric values when set.
 /// Created as an example, but can be used as default reporter
@@ -56,12 +58,17 @@ impl NoopMetricReporterBuilder {
 struct NoopMetricReporter;
 
 impl MetricsReporter for NoopMetricReporter {
-
     fn count(&self, metric: &str, tags: &[&str], value: u64) {
-        println!("Incrementing counter for metric {} for tags {:?} with value {}", metric, tags, value);
+        println!(
+            "Incrementing counter for metric {} for tags {:?} with value {}",
+            metric, tags, value
+        );
     }
 
     fn gauge(&self, metric: &str, tags: &[&str], value: u64) {
-        println!("Setting gauge for metric {} for tags {:?} with value {}", metric, tags, value);
+        println!(
+            "Setting gauge for metric {} for tags {:?} with value {}",
+            metric, tags, value
+        );
     }
 }
