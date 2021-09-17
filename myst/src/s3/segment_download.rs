@@ -351,7 +351,7 @@ pub async fn start_download() -> Result<()> {
     let arc_processed_bucket = Arc::new(processed_bucket.clone());
     let remote_store = Arc::new(RemoteStore::new(arc_s3_client, arc_processed_bucket));
     let data_path = add_dir(root_data_path.clone(), namespace.clone());
-    let total_num_shards = get_remote_shards(data_path, remote_store.clone()).await?;
+    let total_num_shards = get_remote_shards(&namespace, remote_store.clone()).await?;
     let num_containers = config.num_containers;
     let container_id = config.container_id;
     let mut shards_to_download = Vec::new();
@@ -398,8 +398,12 @@ pub async fn start_download() -> Result<()> {
     Ok(())
 }
 
-pub async fn get_remote_shards(data_path: String, remote_store: Arc<RemoteStore>) -> Result<usize> {
-    let files = remote_store.list_files(data_path.clone()).await?;
+pub async fn get_remote_shards(data_path: &String, remote_store: Arc<RemoteStore>) -> Result<usize> {
+    let mut path = data_path.clone();
+    if ! path.ends_with("/") {
+        path.push_str("/");
+    }
+    let files = remote_store.list_sub_folders(path).await?;
 
     if files.is_some() {
         return Ok(files.unwrap().len());
