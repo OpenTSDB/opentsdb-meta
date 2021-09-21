@@ -398,9 +398,12 @@ pub async fn start_download() -> Result<()> {
     Ok(())
 }
 
-pub async fn get_remote_shards(data_path: &String, remote_store: Arc<RemoteStore>) -> Result<usize> {
+pub async fn get_remote_shards(
+    data_path: &String,
+    remote_store: Arc<RemoteStore>,
+) -> Result<usize> {
     let mut path = data_path.clone();
-    if ! path.ends_with("/") {
+    if !path.ends_with("/") {
         path.push_str("/");
     }
     let files = remote_store.list_sub_folders(path).await?;

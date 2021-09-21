@@ -17,9 +17,12 @@
  *
  */
 
-use log::{info, error};
+use log::{error, info};
 use rusoto_core::RusotoError;
-use rusoto_s3::{GetObjectRequest, HeadObjectError, HeadObjectRequest, ListObjectsRequest, PutObjectRequest, S3Client, StreamingBody, S3, ListObjectsError, ListObjectsOutput};
+use rusoto_s3::{
+    GetObjectRequest, HeadObjectError, HeadObjectRequest, ListObjectsError, ListObjectsOutput,
+    ListObjectsRequest, PutObjectRequest, S3Client, StreamingBody, S3,
+};
 use std::{
     collections::HashMap,
     io,
@@ -151,7 +154,7 @@ impl RemoteStore {
     }
 
     pub async fn list_files(&self, file_prefix: String) -> Result<Option<Vec<String>>, Error> {
-       let result = self.list(&file_prefix, true).await?;
+        let result = self.list(&file_prefix, true).await?;
         let object_list = match result.contents {
             Some(obj) => obj,
             None => {
@@ -168,8 +171,11 @@ impl RemoteStore {
         Ok(Some(list_of_objects))
     }
 
-    pub async fn list_sub_folders(&self, file_prefix: String) -> Result<Option<Vec<String>>, Error> {
-     let result = self.list(&file_prefix, false).await?;
+    pub async fn list_sub_folders(
+        &self,
+        file_prefix: String,
+    ) -> Result<Option<Vec<String>>, Error> {
+        let result = self.list(&file_prefix, false).await?;
         let object_list = match result.common_prefixes {
             Some(obj) => obj,
             None => {
@@ -186,7 +192,11 @@ impl RemoteStore {
         Ok(Some(list_of_objects))
     }
 
-    async fn list(&self, file_prefix: &String, read_all_files: bool) ->  Result<ListObjectsOutput, Error> {
+    async fn list(
+        &self,
+        file_prefix: &String,
+        read_all_files: bool,
+    ) -> Result<ListObjectsOutput, Error> {
         let mut list_request = ListObjectsRequest::default();
 
         list_request.bucket = self.bucket.to_string().to_owned();
@@ -198,10 +208,13 @@ impl RemoteStore {
         let result = self.s3_client.list_objects(list_request).await;
 
         if result.is_err() {
-            error!("Error listing files for: {} {:?}", file_prefix, result.err());
+            error!(
+                "Error listing files for: {} {:?}",
+                file_prefix,
+                result.err()
+            );
             return Err(Error::new(ErrorKind::Other, "Error listing files"));
         }
         Ok(result.unwrap())
-
     }
 }
