@@ -397,6 +397,19 @@
 <span id="394">394</span>
 <span id="395">395</span>
 <span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -480,10 +493,11 @@
         <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">aws_key</span>.<span class="ident">as_str</span>();
         <span class="kw">let</span> <span class="ident">secret</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">aws_secret</span>.<span class="ident">as_str</span>();
         <span class="kw">let</span> <span class="ident">creds</span> <span class="op">=</span> <span class="ident">AwsCredentials</span>::<span class="ident">new</span>(<span class="ident">key</span>, <span class="ident">secret</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-
-        <span class="kw">let</span> <span class="ident">s3_client</span> <span class="op">=</span> <span class="ident">S3Client</span>::<span class="ident">new_with</span>(
+        <span class="kw">let</span> <span class="ident">creds_provider</span> <span class="op">=</span> <span class="ident">StaticProvider</span>::<span class="ident">from</span>(<span class="ident">creds</span>);
+        <span class="kw">let</span> <span class="ident">arc_creds_provider</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">creds_provider</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s3_client</span> <span class="op">=</span> <span class="ident">S3Client</span>::<span class="ident">new_with</span>(
             <span class="ident">HttpClient</span>::<span class="ident">new</span>().<span class="ident">expect</span>(<span class="string">&quot;Failed to create client&quot;</span>),
-            <span class="ident">StaticProvider</span>::<span class="ident">from</span>(<span class="ident">creds</span>),
+            <span class="ident">arc_creds_provider</span>.<span class="ident">clone</span>(),
             <span class="ident">region</span>.<span class="ident">clone</span>(),
         );
 
@@ -522,7 +536,6 @@
         <span class="comment">//Calculate if we need a new segement or we write into an older segment</span>
 
         <span class="kw">let</span> <span class="ident">arc_namespace</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">namespace</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="ident">arc_s3_client</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">s3_client</span>);
         <span class="kw">let</span> <span class="ident">arc_processed_bucket</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">processed_bucket</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> <span class="ident">num_shards</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">shards</span> <span class="kw">as</span> <span class="ident">usize</span>;
         <span class="kw">let</span> <span class="ident">segment_gen_data_path</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">segment_gen_data_path</span>.<span class="ident">clone</span>();
@@ -538,12 +551,14 @@
             <span class="kw">let</span> <span class="ident">signal</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>));
             <span class="kw">let</span> <span class="ident">clone_signal</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">signal</span>);
             <span class="ident">segment_signals</span>.<span class="ident">push</span>(<span class="ident">signal</span>);
-            <span class="kw">let</span> <span class="ident">clone_s3_client</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">arc_s3_client</span>);
             <span class="kw">let</span> <span class="ident">clone_bucket</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">arc_processed_bucket</span>);
             <span class="kw">let</span> <span class="ident">clone_namespace</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">arc_namespace</span>);
+            <span class="kw">let</span> <span class="ident">clone_region</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">clone</span>();
+            <span class="kw">let</span> <span class="ident">clone_creds_provider</span> <span class="op">=</span> <span class="ident">arc_creds_provider</span>.<span class="ident">clone</span>();
             <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
                 <span class="comment">//Load myst segment</span>
-
+                <span class="comment">//Create a new S3 client for each thread. See https://github.com/hyperium/hyper/issues/2112</span>
+                <span class="kw">let</span> <span class="ident">s3_client</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">create_new_s3_client</span>(<span class="ident">clone_creds_provider</span>, <span class="ident">clone_region</span>));
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">segmentwriter</span> <span class="op">=</span> <span class="ident">SegmentWriter</span>::<span class="ident">new</span>(
                     <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u32</span>,
                     <span class="ident">clone_signal</span>,
@@ -553,7 +568,7 @@
                     (<span class="ident">running_time</span> <span class="op">-</span> (<span class="ident">running_time</span> <span class="op">%</span> <span class="ident">segment_full_duration</span>)) <span class="kw">as</span> <span class="ident">u64</span>,
                     <span class="ident">path</span>,
                     <span class="ident">clone_namespace</span>,
-                    <span class="ident">RemoteStore</span>::<span class="ident">new</span>(<span class="ident">clone_s3_client</span>, <span class="ident">clone_bucket</span>),
+                    <span class="ident">RemoteStore</span>::<span class="ident">new</span>(<span class="ident">s3_client</span>, <span class="ident">clone_bucket</span>),
                 );
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">guard</span> <span class="op">=</span> <span class="ident">futures</span>::<span class="ident">executor</span>::<span class="ident">block_on</span>(<span class="ident">sender_ref_clone</span>.<span class="ident">write</span>());
                 <span class="ident">guard</span>.<span class="ident">insert</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u32</span>, <span class="ident">segmentwriter</span>.<span class="ident">sender</span>.<span class="ident">take</span>().<span class="ident">unwrap</span>());
@@ -572,11 +587,14 @@
         );
         <span class="comment">//Wait till all senders are created, I guess.</span>
         <span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">tokio</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">10</span>));
-        <span class="comment">// let processor = async {</span>
-        <span class="comment">//     process(arc_s3_client, bucket.as_str(), objects, senders).await;</span>
-        <span class="comment">// };</span>
+
+        <span class="comment">// Create a new S3 client. See https://github.com/hyperium/hyper/issues/2112</span>
+        <span class="kw">let</span> <span class="ident">s3_client</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">create_new_s3_client</span>(
+            <span class="ident">arc_creds_provider</span>.<span class="ident">clone</span>(),
+            <span class="ident">region</span>.<span class="ident">clone</span>(),
+        ));
         <span class="ident">process</span>(
-            <span class="ident">arc_s3_client</span>,
+            <span class="ident">s3_client</span>,
             <span class="ident">bucket</span>.<span class="ident">as_str</span>(),
             <span class="ident">objects</span>,
             <span class="ident">senders</span>,
@@ -793,6 +811,14 @@
         }
         <span class="prelude-val">Ok</span>(())
     }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_new_s3_client</span>(<span class="ident">arc_s3_creds</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">StaticProvider</span><span class="op">&gt;</span>, <span class="ident">region</span>: <span class="ident">Region</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">S3Client</span> {
+    <span class="ident">S3Client</span>::<span class="ident">new_with</span>(
+        <span class="ident">HttpClient</span>::<span class="ident">new</span>().<span class="ident">expect</span>(<span class="string">&quot;Failed to create client&quot;</span>),
+        <span class="ident">arc_s3_creds</span>.<span class="ident">clone</span>(),
+        <span class="ident">region</span>,
+    )
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="segment_gen"></div>
