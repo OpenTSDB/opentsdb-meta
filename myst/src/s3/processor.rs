@@ -80,10 +80,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let key = config.aws_key.as_str();
         let secret = config.aws_secret.as_str();
         let creds = AwsCredentials::new(key, secret, None, None);
-
-        let s3_client = S3Client::new_with(
+        let creds_provider = StaticProvider::from(creds);
+        let arc_creds_provider = Arc::new(creds_provider);
+        let mut s3_client = S3Client::new_with(
             HttpClient::new().expect("Failed to create client"),
-            StaticProvider::from(creds),
+            arc_creds_provider.clone(),
             region.clone(),
         );
 
@@ -122,7 +123,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         //Calculate if we need a new segement or we write into an older segment
 
         let arc_namespace = Arc::new(namespace.clone());
-        let arc_s3_client = Arc::new(s3_client);
         let arc_processed_bucket = Arc::new(processed_bucket.clone());
         let num_shards = config.shards as usize;
         let segment_gen_data_path = config.segment_gen_data_path.clone();
@@ -138,12 +138,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let signal = Arc::new(AtomicBool::new(false));
             let clone_signal = Arc::clone(&signal);
             segment_signals.push(signal);
-            let clone_s3_client = Arc::clone(&arc_s3_client);
             let clone_bucket = Arc::clone(&arc_processed_bucket);
             let clone_namespace = Arc::clone(&arc_namespace);
+            let clone_region = region.clone();
+            let clone_creds_provider = arc_creds_provider.clone();
             let handle = thread::spawn(move || {
                 //Load myst segment
-
+                //Create a new S3 client for each thread. See https://github.com/hyperium/hyper/issues/2112
+                let s3_client = Arc::new(create_new_s3_client(clone_creds_provider, clone_region));
                 let mut segmentwriter = SegmentWriter::new(
                     i as u32,
                     clone_signal,
@@ -153,7 +155,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     (running_time - (running_time % segment_full_duration)) as u64,
                     path,
                     clone_namespace,
-                    RemoteStore::new(clone_s3_client, clone_bucket),
+                    RemoteStore::new(s3_client, clone_bucket),
                 );
                 let mut guard = futures::executor::block_on(sender_ref_clone.write());
                 guard.insert(i as u32, segmentwriter.sender.take().unwrap());
@@ -172,11 +174,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         //Wait till all senders are created, I guess.
         thread::sleep(tokio::time::Duration::from_secs(10));
-        // let processor = async {
-        //     process(arc_s3_client, bucket.as_str(), objects, senders).await;
-        // };
+
+        // Create a new S3 client. See https://github.com/hyperium/hyper/issues/2112
+        let s3_client = Arc::new(create_new_s3_client(
+            arc_creds_provider.clone(),
+            region.clone(),
+        ));
         process(
-            arc_s3_client,
+            s3_client,
             bucket.as_str(),
             objects,
             senders,
@@ -393,4 +398,12 @@ impl Cluster {
         }
         Ok(())
     }
+}
+
+pub fn create_new_s3_client(arc_s3_creds: Arc<StaticProvider>, region: Region) -> S3Client {
+    S3Client::new_with(
+        HttpClient::new().expect("Failed to create client"),
+        arc_s3_creds.clone(),
+        region,
+    )
 }
