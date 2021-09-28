@@ -81,3 +81,7 @@ path= "src/server/server.rs"
 [[bin]]
 name="segment-gen"
 path= "src/s3/processor.rs"
+
+[[bin]]
+name="rollup"
+path= "src/s3/rollup.rs"

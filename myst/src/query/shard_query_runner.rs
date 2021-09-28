@@ -94,7 +94,7 @@ impl ShardQueryRunner {
                             res.err()
                         );
                     } else {
-                        // timeseries_response.streams = num_shards as i32;
+                        timeseries_response.streams = num_shards as i32;
                         let res = sender.try_send(Ok(timeseries_response));
                         if res.is_err() {
                             error!("Error sending query response {:?}", res);

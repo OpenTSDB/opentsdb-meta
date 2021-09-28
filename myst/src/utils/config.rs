@@ -54,12 +54,17 @@ pub struct Config {
     pub plugin_path: String,
     pub ssl_for_metrics: bool,
 
-    pub rollup_size: u32,
     pub num_containers: usize,
     pub container_id: usize,
 
     pub aws_region: String,
     pub aws_endpoint: String,
+
+    //Rollup
+    pub rollup_size: u32,
+    pub rollup_threads: u32,
+    pub rollup_bucket: String,
+    pub rollup_start_epoch: u64,
 }
 // TODO: Cleanup
 impl Config {
@@ -111,11 +116,16 @@ impl Config {
                 .get_str("plugin_path")
                 .unwrap_or(String::from("/usr/share/myst/plugins/metrics-reporter")),
             ssl_for_metrics: config.get_bool("ssl_for_metrics").unwrap(),
-            rollup_size: config.get_int("rollup_size").unwrap_or(7 * 24 * 60 * 60) as u32,
             num_containers: config.get_int("num_containers").unwrap_or(5) as usize,
             container_id: config.get_int("container_id").unwrap_or(1) as usize,
             aws_region: config.get_str("aws_region").unwrap().to_string(),
             aws_endpoint: config.get_str("aws_endpoint").unwrap_or("".to_string()),
+
+            //Rollup
+            rollup_size: config.get_int("rollup_size").unwrap_or(7) as u32,
+            rollup_threads: config.get_int("rollup_threads").unwrap_or(1) as u32,
+            rollup_bucket: config.get_str("rollup_bucket").unwrap().to_string(),
+            rollup_start_epoch: config.get_int("rollup_start_epoch").unwrap_or(1) as u64,
         }
     }
 }

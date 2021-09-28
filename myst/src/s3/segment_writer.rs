@@ -39,6 +39,7 @@ use std::{
 };
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
+use myst::s3::utils::get_upload_filename;
 
 pub(crate) struct SegmentWriter {
     pub segment: Option<MystSegment>,
@@ -107,7 +108,7 @@ impl SegmentWriter {
         let mut remote_store = Arc::new(self.remote_store.take().unwrap());
         let sleep_time = tokio::time::Duration::from_secs(2000);
         if self.epoch_start != self.epoch {
-            let mut remote_filename = SegmentWriter::get_upload_filename(
+            let mut remote_filename = get_upload_filename(
                 self.shard_id,
                 self.epoch_start,
                 self.upload_root.to_string(),
@@ -308,7 +309,7 @@ impl SegmentWriter {
         let mut upload_root = self.upload_root.clone().to_string();
 
         let data = vec_writer.get_mut().to_vec();
-        let upload_filename = SegmentWriter::get_upload_filename(shard_id, epoch, upload_root);
+        let upload_filename = get_upload_filename(shard_id, epoch, upload_root);
         //Check segment_gen_data_path for file locally.
         let file_path =
             Path::new(self.segment_gen_data_path.as_ref()).join(Path::new(&upload_filename));
@@ -357,7 +358,7 @@ impl SegmentWriter {
         let epoch = myst_segment.epoch;
         let mut upload_root = self.upload_root.clone().to_string();
 
-        let mut upload_filename = SegmentWriter::get_upload_filename(shard_id, epoch, upload_root);
+        let mut upload_filename = get_upload_filename(shard_id, epoch, upload_root);
 
         let mut vec_writer = Vec::new().writer();
         let dur_string = myst_segment.get_duration().unwrap().to_string();
@@ -383,10 +384,5 @@ impl SegmentWriter {
         );
     }
 
-    fn get_upload_filename(shard_id: u32, epoch: u64, mut upload_root: String) -> String {
-        if !upload_root.ends_with("/") {
-            upload_root.push_str("/");
-        }
-        MystSegment::get_segment_filename(&shard_id, &epoch, upload_root)
-    }
+
 }
