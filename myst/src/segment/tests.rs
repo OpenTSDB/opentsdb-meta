@@ -183,9 +183,10 @@ pub fn test_compaction() {
     let mut cursor = Cursor::new(buf_two.as_slice());
     loaded_segment_two = loaded_segment_two.load(&mut cursor, &0).unwrap().unwrap();
 
-    loaded_segment_one.compact(loaded_segment_two);
-
+    loaded_segment_one = loaded_segment_one.compact(loaded_segment_two).unwrap();
+    loaded_segment_one.drain_clustered_data();
     println!("Fst Container {:?}", loaded_segment_one.fsts.fsts);
+    println!("bitmap {:?}", loaded_segment_one.metrics_bitmap.metrics_bitmap);
     assert_eq!(loaded_segment_one.metrics_bitmap.metrics_bitmap.len(), 15);
     assert_eq!(
         loaded_segment_one
