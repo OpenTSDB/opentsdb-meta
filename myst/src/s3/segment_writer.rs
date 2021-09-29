@@ -32,7 +32,7 @@ use std::thread;
 
 use bytes::BufMut;
 use myst::s3::utils::get_upload_filename;
-use std::io::Cursor;
+use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -112,6 +112,7 @@ impl SegmentWriter {
         let mut remote_store = Arc::new(self.remote_store.take().unwrap());
         let sleep_time = tokio::time::Duration::from_secs(2000);
         let mut use_file = false;
+        let mut remote_duration = 0;
         let mut remote_filename = get_upload_filename(
             self.shard_id,
             self.epoch_start,
@@ -122,19 +123,17 @@ impl SegmentWriter {
         if self.epoch_start != self.epoch {
             create_dir_all(file_path.clone().parent().unwrap());
             use_file = false;
-            if !file_path.exists() {
                 let mut f = File::create(&file_path).unwrap();
                 let result =
                     self.download_file(Arc::clone(&remote_store), &remote_filename, &mut f);
                 if result.is_ok() {
                     let opt = result.unwrap();
-                    if opt.unwrap_or(-1) == 1 {
+                    if opt.unwrap() != 0 {
                         use_file = true;
+                        remote_duration = opt.unwrap();
                     }
                 }
-            } else {
-                use_file = true;
-            }
+
         }
         info!("Done with segment init, will begin receiving data for shard: {} epoch: {} epochStart: {} segment duration: {}",
                                                                         self.shard_id,
@@ -170,12 +169,12 @@ impl SegmentWriter {
                         self.shard_id,
                         self.epoch_start,
                         200,
-                        duration,
+                        remote_duration,
                     )
                     .load(&mut f, &offset)
                     .unwrap()
                     .unwrap();
-                    info!("Compacting current segment with {:?}. Size before compaction {:?} for shard {}", loaded_segment.epoch, size, loaded_segment.shard_id);
+                    info!("Compacting current segment with {:?}. Size before compaction {:?} for shard {}, current segment duration {}, prev segment duration {}", loaded_segment.epoch, size, loaded_segment.shard_id, duration, remote_duration);
                     let segments_to_compact = vec![loaded_segment, self.segment.take().unwrap()];
                     loaded_segment = MystSegment::compact(segments_to_compact)?;
                     self.create_and_upload_segment(Arc::clone(&remote_store), loaded_segment);
@@ -227,7 +226,7 @@ impl SegmentWriter {
         downloader: Arc<RemoteStore>,
         remote_filename: &String,
         mut buf: &mut io::Write,
-    ) -> Result<Option<i32>, Error> {
+    ) -> Result<Option<i32>, Error> { //returns the duration from remote
         let sleep_time = tokio::time::Duration::from_millis(2000);
         let mut retries = 0;
         let map_option: Option<HashMap<String, String>>;
@@ -276,7 +275,8 @@ impl SegmentWriter {
                 );
                 return Err(Error::new(ErrorKind::Other, "Error downloding from s3"));
             }
-            return Ok(Some(1 as i32));
+            let duration = map_option.unwrap().get("duration").unwrap().parse().unwrap();
+            return Ok(Some(duration));
         } else {
             return Ok(Some(0 as i32));
         }
