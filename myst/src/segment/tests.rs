@@ -19,6 +19,7 @@
 
 use crate::query::cache::Cache;
 use crate::segment::myst_segment::MystSegment;
+use crate::segment::myst_segment::MystSegmentHeaderKeys::EpochBitmap;
 use crate::segment::persistence::{Builder, Compactor, Loader};
 use crate::segment::segment_reader::SegmentReader;
 use crate::segment::store::docstore::DocStore;
@@ -173,7 +174,11 @@ pub fn test_compaction() {
     let mut loaded_segment_one = MystSegment::new_with_block_entries(0, 0, 200);
     let mut cursor = Cursor::new(buf_one.as_slice());
     loaded_segment_one = loaded_segment_one.load(&mut cursor, &0).unwrap().unwrap();
-
+    println!(
+        "Metric bitmap before compaction {:?}",
+        loaded_segment_one.metrics_bitmap
+    );
+    println!("Data before compaction {:?}", loaded_segment_one.data.data);
     let mut loaded_segment_two = MystSegment::new_with_block_entries(0, 0, 200);
     let mut cursor = Cursor::new(buf_two.as_slice());
     loaded_segment_two = loaded_segment_two.load(&mut cursor, &0).unwrap().unwrap();
@@ -205,6 +210,53 @@ pub fn test_compaction() {
     );
     assert_eq!(loaded_segment_one.dict.dict.len(), 17); //15 metrics and 2 tags
     assert_eq!(loaded_segment_one.data.data.len(), 15);
-    //println!("Timeseries Bitmaps {:?}", loaded_segment_one.epoch_bitmap);
+    println!("Metric Bitmaps {:?}", loaded_segment_one.metrics_bitmap);
+    println!("Data {:?}", loaded_segment_one.data.data);
 }
 
+#[test]
+pub fn test_multiple_timestamps() {
+    let mut epoch = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let mut segment = MystSegment::new(0, epoch);
+    write_data(0, 10, epoch, &mut segment);
+    epoch += 7 * 60 * 60;
+    write_data(0, 10, epoch, &mut segment);
+    segment.drain_clustered_data();
+    println!("Epoch bitmaps = {:?}", segment.epoch_bitmap);
+    assert_eq!(
+        true,
+        segment
+            .epoch_bitmap
+            .epoch_bitmap
+            .contains_key(&segment.epoch)
+    );
+    assert_eq!(
+        10,
+        segment
+            .epoch_bitmap
+            .epoch_bitmap
+            .get(&segment.epoch)
+            .unwrap()
+            .cardinality()
+    );
+    segment.epoch += 6 * 60 * 60; //hard coding. we'll maintain epoch bitmaps at 6hr intervals.
+    assert_eq!(
+        true,
+        segment
+            .epoch_bitmap
+            .epoch_bitmap
+            .contains_key(&segment.epoch)
+    );
+    assert_eq!(
+        10,
+        segment
+            .epoch_bitmap
+            .epoch_bitmap
+            .get(&segment.epoch)
+            .unwrap()
+            .cardinality()
+    );
+}

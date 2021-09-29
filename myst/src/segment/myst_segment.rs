@@ -188,7 +188,7 @@ impl MystSegment {
         }
     }
 
-    fn add_tagval(&mut self, key: Rc<String>, val: Rc<String>, doc_id: u32) -> u32 {
+    fn add_tagval(&mut self, key: Rc<String>, val: Rc<String>) -> u32 {
         let fst = self
             .fsts
             .fsts
@@ -206,7 +206,7 @@ impl MystSegment {
         tagval_id
     }
 
-    fn add_tagkey(&mut self, key: Rc<String>, doc_id: u32) -> u32 {
+    fn add_tagkey(&mut self, key: Rc<String>) -> u32 {
         let tagkey_prefix = self.tag_key_prefix.clone();
         let fst = self
             .fsts
@@ -224,7 +224,7 @@ impl MystSegment {
         id
     }
 
-    fn add_metric(&mut self, metric: Rc<String>, doc_id: u32) -> u32 {
+    fn add_metric(&mut self, metric: Rc<String>) -> u32 {
         let metric_prefix = self.metric_prefix.clone();
         let fst = self
             .fsts
@@ -311,14 +311,14 @@ impl MystSegment {
         timestamp: u64,
     ) {
         if !self.dedup.contains(&xxhash) {
-            let _metric_id = self.add_metric(metric.clone(), self.segment_timeseries_id);
+            let _metric_id = self.add_metric(metric.clone());
             let mut tags_ids = HashMap::new();
             for (k, v) in tags {
-                let tagkey_id = self.add_tagkey(k.clone(), self.segment_timeseries_id);
-                let tagval_id = self.add_tagval(k.clone(), v.clone(), self.segment_timeseries_id);
+                let tagkey_id = self.add_tagkey(k.clone());
+                let tagval_id = self.add_tagval(k.clone(), v.clone());
                 tags_ids.insert(tagkey_id, tagval_id);
-                self.add_tagkey(k.clone(), self.segment_timeseries_id);
-                self.add_tagval(k.clone(), v.clone(), self.segment_timeseries_id);
+                self.add_tagkey(k.clone());
+                self.add_tagval(k.clone(), v.clone());
             }
             // self.segment_timeseries_id += 1;
             let tags_ids_arc = Arc::new(tags_ids);
@@ -330,13 +330,19 @@ impl MystSegment {
             );
 
             self.dedup.insert(xxhash);
+        } else {
+            let _metric_id = self.add_metric(metric.clone());
+            self.cluster
+                .as_mut()
+                .unwrap()
+                .add_timestamp(&_metric_id, &xxhash, timestamp);
         }
     }
 
-    pub(crate) fn drain_clustered_data(&mut self) -> Result<()> {
+    pub fn drain_clustered_data(&mut self) -> Result<()> {
         let cluster = self.cluster.take().unwrap().cluster;
         for (metric, tags) in cluster {
-            for ts in tags {
+            for (metric_id, ts) in tags {
                 let xxhash = ts.xxHash;
                 let tags = ts.tags.clone();
                 self.add_to_bitmap(&metric, tags.clone(), self.segment_timeseries_id);
@@ -346,6 +352,7 @@ impl MystSegment {
                 self.data.data.push(
                     // doc_id,
                     Timeseries {
+                        metric: Arc::new(metric),
                         timeseries_id: xxhash,
                         tags: tags,
                     },
@@ -377,12 +384,12 @@ impl MystSegment {
 /// Groups the timeseries so that all timeseries for a metric are close to each other.
 #[derive(Default, Debug)]
 pub struct Clusterer {
-    cluster: HashMap<u32, Vec<TagsAndTimestamp>>,
+    cluster: HashMap<u32, HashMap<u64, TagsAndTimestamp>>,
 }
 #[derive(Default, Debug)]
 struct TagsAndTimestamp {
     tags: Arc<HashMap<u32, u32>>,
-    timestamp: u64,
+    timestamp: HashSet<u64>,
     xxHash: u64,
 }
 
@@ -394,13 +401,25 @@ impl Clusterer {
         xxHash: u64,
         timestamp: u64,
     ) {
-        self.cluster
-            .entry(metric)
-            .or_insert(Vec::new())
-            .push(TagsAndTimestamp {
+        let mut epoch_set = HashSet::new();
+        epoch_set.insert(timestamp);
+        self.cluster.entry(metric).or_insert(HashMap::new()).insert(
+            xxHash,
+            TagsAndTimestamp {
                 tags,
-                timestamp,
+                timestamp: epoch_set,
                 xxHash,
-            });
+            },
+        );
+    }
+
+    pub fn add_timestamp(&mut self, metric: &u32, xxhash: &u64, timestamp: u64) {
+        let mut tags_timestamp = self
+            .cluster
+            .get_mut(metric)
+            .unwrap()
+            .get_mut(xxhash)
+            .unwrap();
+        tags_timestamp.timestamp.insert(timestamp);
     }
 }

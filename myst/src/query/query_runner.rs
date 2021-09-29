@@ -438,6 +438,8 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                             let val = timeseries.tags.get(&id).unwrap();
                             let group_str = dict.get(val).unwrap().to_owned();
                             group_strs_vec.push(group_str.clone());
+                        } else {
+                            group_strs_vec.push("__no_data__".to_string());
                         }
                     }
 

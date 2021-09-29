@@ -1,8 +1,8 @@
 use crate::segment::myst_segment::MystSegment;
-use std::sync::Arc;
 use rusoto_core::credential::StaticProvider;
-use rusoto_core::{Region, HttpClient};
+use rusoto_core::{HttpClient, Region};
 use rusoto_s3::S3Client;
+use std::sync::Arc;
 
 pub fn get_upload_filename(shard_id: u32, epoch: u64, mut upload_root: String) -> String {
     if !upload_root.ends_with("/") {

@@ -177,7 +177,7 @@ impl ShardQueryRunner {
                 if query.start <= created && query.end >= created
                     || (duration > 0
                         && query.start >= created
-                        && query.end <= (created + duration as u64))
+                        && query.start <= (created + duration as u64))
                 {
                     let file_path = MystSegment::get_segment_filename(
                         &shard_id,

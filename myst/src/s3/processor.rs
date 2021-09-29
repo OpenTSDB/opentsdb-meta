@@ -39,6 +39,7 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::io::{Error, ErrorKind};
 
+use myst::s3::utils::create_new_s3_client;
 use myst::utils::config::Config;
 use std::panic;
 use std::str::FromStr;
@@ -369,41 +370,4 @@ async fn fetch_and_process(
             )));
         }
     }
-}
-#[derive(Default, Debug)]
-struct Cluster {
-    map: HashMap<String, Vec<Record>>,
-}
-
-impl Cluster {
-    pub fn cluster_by_metric(&mut self, record: Record) {
-        self.map
-            .entry(record.metric.clone())
-            .or_insert(Vec::new())
-            .push(record);
-    }
-
-    pub async fn drain(
-        &mut self,
-        senders: Arc<RwLock<HashMap<u32, mpsc::Sender<Record>>>>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let senders_unlocked = senders.read().await;
-        let num_shards = senders_unlocked.len();
-        for (k, records) in self.map.drain() {
-            for record in records {
-                let sender_index = (record.xx_hash % (num_shards as i64)).abs() as usize;
-                let sender = senders_unlocked.get(&(sender_index as u32)).unwrap();
-                sender.send(record).await?;
-            }
-        }
-        Ok(())
-    }
-}
-
-pub fn create_new_s3_client(arc_s3_creds: Arc<StaticProvider>, region: Region) -> S3Client {
-    S3Client::new_with(
-        HttpClient::new().expect("Failed to create client"),
-        arc_s3_creds.clone(),
-        region,
-    )
 }
