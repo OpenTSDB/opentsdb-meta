@@ -37,7 +37,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime};
 use tokio_stream::Stream;
-use tonic::transport::Server;
+use tonic::transport::{Server, Identity, ServerTlsConfig};
 
 pub struct TimeseriesService {
     pub thread_pool: rayon::ThreadPool,
@@ -133,15 +133,22 @@ async fn start_grpc_server(
     config: Config,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut hostname = local_ipaddress::get().unwrap();
-    hostname.push_str(":9999");
+    hostname.push_str(":443");
     let addr = hostname.parse()?;
+    let cert = tokio::fs::read(&config.ssl_cert).await?;
+    let key = tokio::fs::read(&config.ssl_key).await?;
 
+    let identity = Identity::from_pem(cert, key);
     let myst_service = TimeseriesService::new(metrics_reporter, config);
 
     let svc = MystServiceServer::new(myst_service);
 
     info!("Starting server on {:?}", hostname);
 
-    Server::builder().add_service(svc).serve(addr).await?;
+    Server::builder()
+        .tls_config(ServerTlsConfig::new().identity(identity))?
+        .add_service(svc)
+        .serve(addr)
+        .await?;
     Ok(())
 }

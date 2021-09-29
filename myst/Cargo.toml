@@ -38,7 +38,7 @@ serde_json = "1.0.61"
 strum = "0.20"
 strum_macros = "0.20"
 
-tonic = "0.4.0"
+tonic = {version = "0.4.0", features = ["tls"]}
 prost = "0.7"
 local_ipaddress = "0.1.3"
 
