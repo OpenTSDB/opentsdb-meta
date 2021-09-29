@@ -219,9 +219,9 @@ pub fn merge(
     mut to_merge: BTreeMap<String, u64>,
     remote_store: &RemoteStore,
 ) -> Result<RolledupSegment> {
-    let mut myst_segment = None;
     let mut duration = 0;
     let mut merged_segments = Vec::new();
+    let mut segments_to_merge = Vec::new();
     for file in to_merge {
         let mut buffer = Vec::new();
         futures::executor::block_on(remote_store.download(file.0.clone(), &mut buffer));
@@ -234,23 +234,16 @@ pub fn merge(
         let mut cursor = Cursor::new(buffer);
         segment_to_merged = segment_to_merged.load(&mut cursor, &0)?.unwrap();
         info!("Loaded segment {:?}", segment_to_merged.epoch);
-        if myst_segment.is_none() {
-            myst_segment = Some(segment_to_merged);
-            duration = file.1;
-        } else {
-            let mut myst_segment_unwrap = myst_segment.unwrap();
-            info!(
-                "Compacting {:?} and {:?} ",
-                myst_segment_unwrap.epoch, segment_to_merged.epoch
-            );
-            myst_segment_unwrap = myst_segment_unwrap.compact(segment_to_merged).unwrap();
-            myst_segment = Some(myst_segment_unwrap);
-            duration += duration + file.1
-        }
+        segments_to_merge.push(segment_to_merged);
+        duration += file.1;
+
         merged_segments.push(epoch.to_string());
     }
+
+    let merged_segment = MystSegment::compact(segments_to_merge)?;
+
     let rolledup_segment = RolledupSegment {
-        myst_segment: myst_segment.unwrap(),
+        myst_segment: merged_segment,
         duration,
         merged_segments,
     };

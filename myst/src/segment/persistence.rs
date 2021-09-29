@@ -45,7 +45,7 @@ pub trait Compactor {
     /// Compacts two segments
     /// # Arguments
     /// * `segment` - The segment that is to be current with the current.
-    fn compact(&mut self, segment: Self) -> Result<Self, MystError>
+    fn compact(segments: Vec<Self>) -> Result<Self, MystError>
     where
         Self: Sized;
 }

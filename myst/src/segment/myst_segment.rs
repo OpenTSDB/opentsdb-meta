@@ -60,10 +60,12 @@ pub struct MystSegment {
     pub epoch_bitmap: EpochBitmap,
     pub data: DocStore,
 
+
     pub(crate) header: MystSegmentHeader,
 
     pub shard_id: u32,
     pub epoch: u64,
+    pub docstore_block_size: u32,
 
     pub(crate) uid: u32,
     pub(crate) segment_timeseries_id: u32,
@@ -167,7 +169,7 @@ impl MystSegment {
         Self {
             shard_id,
             epoch,
-
+            docstore_block_size: docstore_block_entries as u32,
             fsts: MystFSTContainer::new(),
             dict: Dict::new(),
             tag_keys_bitmap: TagKeysBitmap::new(),

@@ -17,7 +17,7 @@
  *
  */
 use crate::segment::myst_segment::{MystSegment, MystSegmentHeaderKeys};
-use crate::segment::persistence::Compactor;
+use crate::segment::persistence::{Compactor, TimeSegmented};
 use crate::segment::segment_reader::SegmentReader;
 use crate::segment::store::dict::Dict;
 use crate::segment::store::docstore::{DocStore, Timeseries};
@@ -49,46 +49,38 @@ impl Compactor for MystSegment {
     /// add the new segment's timeseries with the new tags map to current segment.
     /// # Arguments
     /// * `segment` - The segment that is to be current with the current.
-    fn compact(&mut self, segment: MystSegment) -> Result<MystSegment> {
+    fn compact(segments: Vec<MystSegment>) -> Result<MystSegment> {
+        if segments.len() == 0 {
+            return Err(MystError::new_write_error("No ssegments found for compaction"));
+        }
         // TODO: Do in-place compaction. Mostly easy, just need to handle timeseries that repeat with multiple timestamps. Note - Do an additional dedup in draining clustered data.
+        let first = segments.get(0).unwrap();
         let mut compacted_segment = MystSegment::new_with_block_entries_duration(
-            self.shard_id,
-            self.epoch,
-            200,
-            self.duration,
+            first.shard_id,
+            first.epoch,
+            first.docstore_block_size as usize,
+            0, // will be set after merging.
         );
-        let mut i = 0;
-
-        for ts in &self.data.data {
-            let (metric, tags) = form_timeseries(ts, &self);
-            for (epoch, bitmap) in &self.epoch_bitmap.epoch_bitmap {
-                if bitmap.contains(i) {
-                    compacted_segment.add_timeseries(
-                        metric.clone(),
-                        tags.clone(),
-                        ts.timeseries_id,
-                        epoch.clone(),
-                    );
+        let mut duration = 0;
+        for segment in segments {
+            let mut i = 0;
+            duration += segment.duration;
+            for ts in &segment.data.data {
+                let (metric, tags) = form_timeseries(ts, &segment);
+                for (epoch, bitmap) in &segment.epoch_bitmap.epoch_bitmap {
+                    if bitmap.contains(i) {
+                        compacted_segment.add_timeseries(
+                            metric.clone(),
+                            tags.clone(),
+                            ts.timeseries_id,
+                            epoch.clone(),
+                        );
+                    }
                 }
+                i += 1;
             }
-            i += 1;
         }
-
-        i = 0;
-        for ts in &segment.data.data {
-            let (metric, tags) = form_timeseries(ts, &segment);
-            for (epoch, bitmap) in &segment.epoch_bitmap.epoch_bitmap {
-                if bitmap.contains(i) {
-                    compacted_segment.add_timeseries(
-                        metric.clone(),
-                        tags.clone(),
-                        ts.timeseries_id,
-                        epoch.clone(),
-                    );
-                }
-            }
-            i += 1;
-        }
+        compacted_segment.set_duration(duration);
         Ok(compacted_segment)
     }
 }

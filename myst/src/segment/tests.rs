@@ -182,8 +182,8 @@ pub fn test_compaction() {
     let mut loaded_segment_two = MystSegment::new_with_block_entries(0, 0, 200);
     let mut cursor = Cursor::new(buf_two.as_slice());
     loaded_segment_two = loaded_segment_two.load(&mut cursor, &0).unwrap().unwrap();
-
-    loaded_segment_one = loaded_segment_one.compact(loaded_segment_two).unwrap();
+    let mut segments_to_compact = vec![loaded_segment_one, loaded_segment_two];
+    loaded_segment_one = MystSegment::compact(segments_to_compact).unwrap();
     loaded_segment_one.drain_clustered_data();
     println!("Fst Container {:?}", loaded_segment_one.fsts.fsts);
     println!("bitmap {:?}", loaded_segment_one.metrics_bitmap.metrics_bitmap);

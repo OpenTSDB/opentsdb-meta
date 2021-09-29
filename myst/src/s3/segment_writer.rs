@@ -43,6 +43,7 @@ use std::{
 };
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
+use myst::utils::myst_error::MystError;
 
 pub(crate) struct SegmentWriter {
     pub segment: Option<MystSegment>,
@@ -78,7 +79,7 @@ impl SegmentWriter {
                 shard_id,
                 epoch_start,
                 200,
-                myst_duration as i32,
+                duration as i32,
             )),
             shard_id,
             epoch,
@@ -99,7 +100,7 @@ impl SegmentWriter {
         segment_writer
     }
 
-    pub(crate) fn write_to_segment(&mut self) -> Result<(), std::sync::mpsc::RecvError> {
+    pub(crate) fn write_to_segment(&mut self) -> Result<(), MystError> {
         let mut count = 0;
         info!("Beginning segment writer for shard: {} epoch: {} epochStart: {} segment duration: {} duration: {}",
                                                                         self.shard_id,
@@ -175,9 +176,8 @@ impl SegmentWriter {
                     .unwrap()
                     .unwrap();
                     info!("Compacting current segment with {:?}. Size before compaction {:?} for shard {}", loaded_segment.epoch, size, loaded_segment.shard_id);
-                    loaded_segment = loaded_segment
-                        .compact(self.segment.take().unwrap())
-                        .unwrap();
+                    let segments_to_compact = vec![loaded_segment, self.segment.take().unwrap()];
+                    loaded_segment = MystSegment::compact(segments_to_compact)?;
                     self.create_and_upload_segment(Arc::clone(&remote_store), loaded_segment);
                 } else {
                     let s = self.segment.take().unwrap();

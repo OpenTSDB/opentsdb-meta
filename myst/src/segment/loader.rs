@@ -136,6 +136,7 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
             header: Default::default(),
             shard_id: self.shard_id,
             epoch: self.epoch,
+            docstore_block_size: self.docstore_block_size,
             uid: uid,
             segment_timeseries_id: last_id,
             metric_prefix: Rc::new(String::from(crate::utils::config::METRIC)),
