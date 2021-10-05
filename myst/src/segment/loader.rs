@@ -35,7 +35,7 @@ use std::rc::Rc;
 impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
     /// Loads and deserializes the buffer `buf` and returns a MystSegment.
     ///
-    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<MystSegment>> {
+    fn load(self, buf: &mut R, _offset: &u32) -> Result<Option<MystSegment>> {
         //        let mut buffered_reader = BufReader::new(buf);
         // Read header first -- seek from end
 
@@ -71,7 +71,7 @@ impl<R: Read + Seek> Loader<R, MystSegment> for MystSegment {
         // load tag val bitmap
         let mut tag_vals_bitmap = TagValuesBitmap::new();
         let tag_key_fst = fst_container.fsts.get(&self.tag_key_prefix).unwrap();
-        for (tag_key, offset_id) in &tag_key_fst.buf {
+        for (tag_key, _offset_id) in &tag_key_fst.buf {
             let tag_val_fst = fst_container.fsts.get(tag_key).unwrap();
             let mut curr_tag_vals_bitmaps = HashMap::new();
             for (tag_val, offset_id) in &tag_val_fst.buf {

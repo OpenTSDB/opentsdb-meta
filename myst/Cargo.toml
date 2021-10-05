@@ -37,6 +37,7 @@ fasthash = "0.4.0"
 serde_json = "1.0.61"
 strum = "0.20"
 strum_macros = "0.20"
+once_cell = "1.8.0"
 
 tonic = {version = "0.4.0", features = ["tls"]}
 prost = "0.7"
@@ -69,6 +70,7 @@ metrics-reporter = { path = "../metrics-reporter", version = "*" }
 
 [build-dependencies]
 tonic-build = { version = "0.4.0", features = ["prost"] }
+
 
 #[[bin]]
 #name="client"

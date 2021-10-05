@@ -32,10 +32,10 @@ use crate::segment::persistence::Builder;
 use crate::segment::persistence::Loader;
 use crate::segment::persistence::TimeSegmented;
 use crate::segment::segment_reader::SegmentReader;
-use crate::utils::myst_error::{MystError, Result};
+use crate::utils::myst_error::Result;
 use lz4::EncoderBuilder;
 use std::collections::BTreeMap;
-use std::io::{BufReader, Seek, SeekFrom};
+use std::io::{Seek, SeekFrom};
 
 /// Stores the docstore of the segment.
 /// Docstore when built could contain multiple docstore blocks.
@@ -123,7 +123,7 @@ impl<W: Write> Builder<W> for DocStore {
                 "lz4" => {
                     let mut encoder = EncoderBuilder::new().level(1).build(Vec::new())?;
                     std::io::copy(&mut datum.as_slice(), &mut encoder)?;
-                    let (w, _Result) = encoder.finish();
+                    let (w, _result) = encoder.finish();
 
                     *offset += 4;
                     buf.write_u32::<NetworkEndian>(w.len() as u32)?;
@@ -166,7 +166,7 @@ impl<W: Write> Builder<W> for DocStore {
 }
 
 impl<R: Read + Seek> Loader<R, DocStore> for DocStore {
-    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<DocStore>> {
+    fn load(self, buf: &mut R, offset: &u32) -> Result<Option<DocStore>> {
         let docstore_header = SegmentReader::get_docstore_header(buf, offset)?;
         let mut docstore_timeseries = Vec::new();
         let mut block_entries = 0;
@@ -373,7 +373,7 @@ mod test {
 
         let snappy_file_read_time = AtomicU64::new(0);
         let snappy_file_decompress_time = AtomicU64::new(0);
-        (0..iterations).into_par_iter().for_each(|i| {
+        (0..iterations).into_par_iter().for_each(|_i| {
             //no compression
             let file = String::from("./docstore-none");
             let mut reader = BufReader::new(File::open(file).unwrap());
@@ -396,10 +396,10 @@ mod test {
         );
 
         thread::sleep(core::time::Duration::from_secs_f32(5 as f32));
-        (0..iterations).into_par_iter().for_each(|i| {
+        (0..iterations).into_par_iter().for_each(|_i| {
             //zstd
-            let mut filename = String::from("./docstore-zstd");
-            let mut file = File::open(filename).unwrap();
+            let filename = String::from("./docstore-zstd");
+            let file = File::open(filename).unwrap();
             let mut reader = BufReader::new(file);
 
             let mut curr_time = SystemTime::now();
@@ -442,7 +442,7 @@ mod test {
         );
 
         thread::sleep(core::time::Duration::from_secs_f32(5 as f32));
-        (0..iterations).into_par_iter().for_each(|i| {
+        (0..iterations).into_par_iter().for_each(|_i| {
             //snappy
             let file = String::from("./docstore-snappy");
             let mut reader = BufReader::new(File::open(file).unwrap());
@@ -486,7 +486,7 @@ mod test {
         );
 
         thread::sleep(core::time::Duration::from_secs_f32(5 as f32));
-        (0..iterations).into_par_iter().for_each(|i| {
+        (0..iterations).into_par_iter().for_each(|_i| {
             //lz4
             let file = String::from("./docstore-lz4");
             let mut reader = BufReader::new(File::open(file).unwrap());

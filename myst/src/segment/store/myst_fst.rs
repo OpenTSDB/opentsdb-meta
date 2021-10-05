@@ -26,7 +26,7 @@ use fst::{MapBuilder, Streamer};
 
 use std::collections::{BTreeMap, HashMap};
 
-use std::io::{BufReader, Read, SeekFrom};
+use std::io::{Read, SeekFrom};
 use std::io::{Seek, Write};
 use std::rc::Rc;
 use std::sync::atomic::AtomicBool;

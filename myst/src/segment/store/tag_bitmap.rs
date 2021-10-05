@@ -69,11 +69,11 @@ impl<W: Write> Builder<W> for TagKeysBitmap {
             serialized.write_u32::<NetworkEndian>(length)?;
 
             tmp_offset += length;
-            serialized.write_all(&mut v.serialize());
+            serialized.write_all(&mut v.serialize())?;
         }
 
         *offset += serialized.len() as u32;
-        buf.write_all(&serialized);
+        buf.write_all(&serialized)?;
         return Ok(Some(self));
     }
 }
@@ -113,7 +113,7 @@ impl<W: Write> Builder<W> for TagValuesBitmap {
 }
 
 impl<R: Read + Seek> Loader<R, TagValuesBitmap> for TagValuesBitmap {
-    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<TagValuesBitmap>> {
+    fn load(self, _buf: &mut R, _offset: &u32) -> Result<Option<TagValuesBitmap>> {
         Ok(None)
     }
 }

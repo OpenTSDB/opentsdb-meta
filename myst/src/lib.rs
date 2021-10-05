@@ -23,9 +23,9 @@ extern crate fasthash;
 extern crate tokio_stream;
 extern crate tonic;
 
-use std::time::Duration;
-
 use crate::utils::config::Config;
+use metrics_reporter::MetricsReporter;
+use once_cell::sync::OnceCell;
 
 pub mod myst_grpc;
 pub mod query;
@@ -34,6 +34,8 @@ pub mod s3;
 pub mod segment;
 pub mod utils;
 //pub mod rollup;
+
+static METRICS_REPORTER: OnceCell<Box<dyn MetricsReporter>> = OnceCell::new();
 
 pub fn setup_logger(filename: String) -> Result<(), fern::InitError> {
     fern::Dispatch::new()
@@ -51,4 +53,46 @@ pub fn setup_logger(filename: String) -> Result<(), fern::InitError> {
         // .chain(std::io::stdout())
         .apply()?;
     Ok(())
+}
+
+pub fn load_metrics_reporter(lib: &libloading::Library) {
+    let config = Config::new();
+    println!("Creating metrics reporter");
+    let metrics_reporter: Box<dyn MetricsReporter> = match config.ssl_for_metrics {
+        true => {
+            let new_metrics_reporter: libloading::Symbol<
+                fn(&str, &str, &str) -> Box<dyn MetricsReporter>,
+            > = unsafe { lib.get(b"new_with_ssl") }.expect("load symbol");
+            let metrics_reporter =
+                new_metrics_reporter(&config.ssl_key, &config.ssl_cert, &config.ca_cert);
+            metrics_reporter
+        }
+        false => {
+            let new_metrics_reporter: libloading::Symbol<fn() -> Box<dyn MetricsReporter>> =
+                unsafe { lib.get(b"new") }.expect("load symbol");
+            let metrics_reporter = new_metrics_reporter();
+            metrics_reporter
+        }
+    };
+    METRICS_REPORTER.set(metrics_reporter);
+}
+
+pub fn metrics_count(tags: &[&str], metric: &str, val: u64) {
+    if METRICS_REPORTER.get().is_some() {
+        METRICS_REPORTER
+            .get()
+            .as_deref()
+            .unwrap()
+            .count(metric, tags, val);
+    }
+}
+
+pub fn metrics_gauge(tags: &[&str], metric: &str, val: u64) {
+    if METRICS_REPORTER.get().is_some() {
+        METRICS_REPORTER
+            .get()
+            .as_deref()
+            .unwrap()
+            .gauge(metric, tags, val);
+    }
 }

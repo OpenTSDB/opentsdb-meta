@@ -340,7 +340,7 @@ impl<R: Read + Seek> SegmentReader<R> {
     pub fn get_all_ts_bitmaps(&mut self) -> Result<HashMap<u64, Arc<EpochBitmapHolder>>> {
         let mut bitmaps = HashMap::new();
         let header = &self.ts_bitmap_header.clone();
-        for (epoch, offset) in header {
+        for (epoch, _offset) in header {
             let bitmap = self.get_ts_bitmap_cache(*epoch)?.clone();
             bitmaps.insert(*epoch, bitmap);
         }
@@ -369,7 +369,7 @@ impl<R: Read + Seek> SegmentReader<R> {
 
     pub fn get_ts_bitmap_from_reader(reader: &mut R, offset: u32) -> Result<Bitmap> {
         reader.seek(SeekFrom::Start(offset as u64))?;
-        let epoch = reader.read_u64::<NetworkEndian>()?;
+        let _epoch = reader.read_u64::<NetworkEndian>()?;
         let bitmap_size = reader.read_u32::<NetworkEndian>()?;
         let mut buf = vec![0; bitmap_size as usize];
         reader.read_exact(&mut buf)?;

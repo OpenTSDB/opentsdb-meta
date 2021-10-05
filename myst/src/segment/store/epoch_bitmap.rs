@@ -17,8 +17,8 @@
  *
  */
 
-use log::{info, warn, LevelFilter};
-use std::{collections::HashMap, io::Read, io::Write, time::UNIX_EPOCH};
+use log::info;
+use std::{collections::HashMap, io::Read, io::Write};
 
 use byteorder::{NetworkEndian, WriteBytesExt};
 use croaring::Bitmap;
@@ -45,7 +45,7 @@ pub struct EpochBitmapHeader {
     header: HashMap<u64, u32>,
 }
 impl<W: Write> Builder<W> for EpochBitmapHeader {
-    fn build(mut self, buf: &mut W, offset: &mut u32) -> Result<Option<Self>> {
+    fn build(self, buf: &mut W, offset: &mut u32) -> Result<Option<Self>> {
         buf.write_u32::<NetworkEndian>(self.header.len() as u32)?;
         *offset += 4;
         for (k, v) in &self.header {
@@ -90,7 +90,7 @@ impl<W: Write> Builder<W> for EpochBitmap {
 }
 
 impl<R: Read + Seek> Loader<R, EpochBitmap> for EpochBitmap {
-    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<EpochBitmap>> {
+    fn load(self, buf: &mut R, offset: &u32) -> Result<Option<EpochBitmap>> {
         let mut bitmaps = BTreeMap::new();
         let ts_bitmap_header = SegmentReader::get_ts_bitmap_header(buf, offset)?;
         info!("Ts bitmap header {:?}", ts_bitmap_header);

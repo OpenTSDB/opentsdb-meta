@@ -52,7 +52,7 @@ impl ShardQueryRunner {
         shard_pool: &rayon::ThreadPool,
         cache: Arc<Cache>,
         config: &Config,
-        metrics_reporter: Option<&Box<MetricsReporter>>,
+        metrics_reporter: Option<&Box<dyn MetricsReporter>>,
     ) -> Result<Receiver<std::result::Result<crate::myst_grpc::TimeseriesResponse, tonic::Status>>>
     {
         let shards = ShardQueryRunner::get_num_shards(config)?;
@@ -129,13 +129,13 @@ impl ShardQueryRunner {
         segment_pool: &rayon::ThreadPool,
         cache: Arc<Cache>,
         config: &Config,
-        metrics_reporter: Option<&Box<MetricsReporter>>,
+        metrics_reporter: Option<&Box<dyn MetricsReporter>>,
         timeseries_response: &mut crate::myst_grpc::TimeseriesResponse,
     ) -> Result<()> {
         let curr_time = SystemTime::now();
         let s_time = SystemTime::now();
-        let mut path = String::from(&config.data_read_path);
-        let mut path = add_dir(path, shard_id.to_string());
+        let path = String::from(&config.data_read_path);
+        let path = add_dir(path, shard_id.to_string());
         let dirs = fs::read_dir(path)?;
         let mut segment_readers = Vec::new();
 

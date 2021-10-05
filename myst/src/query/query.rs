@@ -131,7 +131,7 @@ impl Query {
         shard_pool: &rayon::ThreadPool,
         cache: Arc<Cache>,
         config: &Config,
-        metrics_reporter: Option<&Box<MetricsReporter>>,
+        metrics_reporter: Option<&Box<dyn MetricsReporter>>,
     ) -> Result<
         tokio::sync::mpsc::Receiver<
             std::result::Result<crate::myst_grpc::TimeseriesResponse, tonic::Status>,

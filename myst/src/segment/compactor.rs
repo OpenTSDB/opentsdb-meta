@@ -16,24 +16,16 @@
  *  * limitations under the License.
  *
  */
-use crate::segment::myst_segment::{MystSegment, MystSegmentHeaderKeys};
+use crate::segment::myst_segment::MystSegment;
 use crate::segment::persistence::{Compactor, TimeSegmented};
-use crate::segment::segment_reader::SegmentReader;
-use crate::segment::store::dict::Dict;
-use crate::segment::store::docstore::{DocStore, Timeseries};
-use crate::segment::store::epoch_bitmap::EpochBitmap;
-use crate::segment::store::metric_bitmap::MetricBitmap;
-use crate::segment::store::myst_fst::{MystFST, MystFSTContainer};
-use crate::segment::store::tag_bitmap::{TagKeysBitmap, TagValuesBitmap};
+
+use crate::segment::store::docstore::Timeseries;
+
 use crate::utils::myst_error::{MystError, Result};
-use log::info;
-use num_traits::ToPrimitive;
-use std::collections::{HashMap, HashSet};
-use std::io::{Read, Seek};
+
+use std::collections::HashMap;
+
 use std::rc::Rc;
-use std::sync::Arc;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
 
 impl Compactor for MystSegment {
     /// Compacts two segment:
@@ -51,7 +43,9 @@ impl Compactor for MystSegment {
     /// * `segment` - The segment that is to be current with the current.
     fn compact(segments: Vec<MystSegment>) -> Result<MystSegment> {
         if segments.len() == 0 {
-            return Err(MystError::new_write_error("No ssegments found for compaction"));
+            return Err(MystError::new_write_error(
+                "No segments found for compaction",
+            ));
         }
         // TODO: Do in-place compaction. Mostly easy, just need to handle timeseries that repeat with multiple timestamps. Note - Do an additional dedup in draining clustered data.
         let first = segments.get(0).unwrap();

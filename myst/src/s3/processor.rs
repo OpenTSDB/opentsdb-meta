@@ -29,7 +29,7 @@ use crate::timeseries_record::Record;
 use flate2::read::GzDecoder;
 use futures::TryStreamExt;
 use log::info;
-use myst::setup_logger;
+use myst::{load_metrics_reporter, setup_logger};
 use rusoto_core::credential::AwsCredentials;
 use rusoto_core::credential::StaticProvider;
 use rusoto_core::request::HttpClient;
@@ -41,7 +41,7 @@ use std::io::{Error, ErrorKind};
 
 use myst::s3::utils::create_new_s3_client;
 use myst::utils::config::Config;
-use std::panic;
+
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -49,12 +49,15 @@ use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::Sender;
+
 use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut config = Config::new();
+    let config = Config::new();
+    let lib = libloading::Library::new(&config.plugin_path).expect("load library");
+    /// must be loaded in main directly.
+    let _metrics_reporter = load_metrics_reporter(&lib);
 
     let mut log_path = config.log_file;
     log_path.push_str("-segment-gen.log");
@@ -77,13 +80,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             endpoint: config.aws_endpoint,
         },
     };
+
     loop {
         let key = config.aws_key.as_str();
         let secret = config.aws_secret.as_str();
         let creds = AwsCredentials::new(key, secret, None, None);
         let creds_provider = StaticProvider::from(creds);
         let arc_creds_provider = Arc::new(creds_provider);
-        let mut s3_client = S3Client::new_with(
+        let s3_client = S3Client::new_with(
             HttpClient::new().expect("Failed to create client"),
             arc_creds_provider.clone(),
             region.clone(),
@@ -144,8 +148,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let clone_region = region.clone();
             let clone_creds_provider = arc_creds_provider.clone();
             let handle = thread::spawn(move || {
-                //Load myst segment
-                //Create a new S3 client for each thread. See https://github.com/hyperium/hyper/issues/2112
                 let s3_client = Arc::new(create_new_s3_client(clone_creds_provider, clone_region));
                 let mut segmentwriter = SegmentWriter::new(
                     i as u32,

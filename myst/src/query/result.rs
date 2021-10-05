@@ -18,9 +18,9 @@
  */
 
 use croaring::Bitmap;
-use std::borrow::BorrowMut;
+
 use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
+use std::hash::Hasher;
 
 #[derive(Debug)]
 pub enum MetaResult {
@@ -47,7 +47,7 @@ pub struct Timeseries {
 impl StringGroupedTimeseries {
     fn add(&mut self, xxhash: i64, timeseries: Timeseries) {
         if self.timeseries.contains_key(&xxhash) {
-            let mut curr_timeseries = self.timeseries.get_mut(&xxhash).unwrap();
+            let curr_timeseries = self.timeseries.get_mut(&xxhash).unwrap();
             curr_timeseries.bitmap.add_many(&timeseries.bitmap.to_vec());
         } else {
             self.timeseries.insert(xxhash, timeseries);

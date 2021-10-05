@@ -70,7 +70,7 @@ impl<W: Write> Builder<W> for MetricBitmap {
 }
 
 impl<R: Read + Seek> Loader<R, MetricBitmap> for MetricBitmap {
-    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<MetricBitmap>> {
+    fn load(self, _buf: &mut R, _offset: &u32) -> Result<Option<MetricBitmap>> {
         Ok(None)
     }
 }

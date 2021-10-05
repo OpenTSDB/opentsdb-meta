@@ -31,7 +31,7 @@ use croaring::Bitmap;
 use rayon::prelude::*;
 
 use crate::segment::segment_reader::SegmentReader;
-use crate::segment::store::dict::DictHolder;
+
 use crate::utils::myst_error::{MystError, Result};
 
 use super::{filter::FilterType, query::Query, query::QueryType, query_filter::QueryFilter};
@@ -43,12 +43,12 @@ use fasthash::xx::Hash64;
 use fasthash::FastHash;
 
 use crate::query::result::StringGroupedTimeseries;
-use crate::segment::myst_segment::MystSegmentHeaderKeys::EpochBitmap;
+
 use crate::segment::store::epoch_bitmap;
 use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
 use crate::utils::config::Config;
 use metrics_reporter::MetricsReporter;
-use std::fs::File;
+
 use std::io::{Read, Seek};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -62,7 +62,7 @@ pub struct QueryRunner<'a, R: Read + Seek + Send + Sync> {
     pub segment_readers: Vec<SegmentReader<R>>,
     pub query: &'a Query,
     pub config: &'a Config,
-    pub metrics_reporter: Option<&'a Box<MetricsReporter>>,
+    pub metrics_reporter: Option<&'a Box<dyn MetricsReporter>>,
 }
 
 impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
@@ -70,7 +70,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         segment_readers: Vec<SegmentReader<R>>,
         query: &'a Query,
         config: &'a Config,
-        metrics_reporter: Option<&'a Box<MetricsReporter>>,
+        metrics_reporter: Option<&'a Box<dyn MetricsReporter>>,
     ) -> Self {
         Self {
             segment_readers,
@@ -172,7 +172,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
             "Waiting for all segment threads with thread {:?}",
             thread::current()
         );
-        let curr_time = SystemTime::now();
+        let _curr_time = SystemTime::now();
         let segment_results: Vec<HashMap<u64, crate::query::result::StringGroupedTimeseries>> =
             rx.iter().collect();
 
@@ -295,7 +295,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         );
 
         let epoch_bitmap = segment_reader.get_all_ts_bitmaps()?;
-        let mut all_groups: Vec<Result<HashMap<u64, StringGroupedTimeseries>>> = docstore_blocks
+        let all_groups: Vec<Result<HashMap<u64, StringGroupedTimeseries>>> = docstore_blocks
                 .par_iter()
                 .map(|(_id, chunk)| {
                     let curr_time = SystemTime::now();
@@ -527,7 +527,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
     pub fn search(&mut self, _segment_pool: &rayon::ThreadPool) -> Result<()> {
         // let mut results = HashMap::new();
         // for query in self.batch_query.queries.iter() {
-        let curr_time = SystemTime::now();
+        let _curr_time = SystemTime::now();
         let _result = match self.query.query_type {
             QueryType::METRICS => QueryRunner::search_in_segment(
                 &METRIC_PREFIX,
@@ -616,7 +616,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         end: &u64,
         segment_reader: &mut SegmentReader<R>,
     ) -> Result<Bitmap> {
-        let mut bitmap = match query_filter {
+        let bitmap = match query_filter {
             QueryFilter::Chain {
                 filters: _filters,
                 op: _op,

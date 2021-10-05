@@ -17,15 +17,16 @@
  *
  */
 
-use crate::query::cache::Cache;
 use crate::segment::myst_segment::MystSegment;
-use crate::segment::myst_segment::MystSegmentHeaderKeys::EpochBitmap;
+
+use std::collections::HashMap;
+
+use crate::query::cache::Cache;
 use crate::segment::persistence::{Builder, Compactor, Loader};
 use crate::segment::segment_reader::SegmentReader;
 use crate::segment::store::docstore::DocStore;
-use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Cursor, Read};
+use std::io::Cursor;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -182,11 +183,14 @@ pub fn test_compaction() {
     let mut loaded_segment_two = MystSegment::new_with_block_entries(0, 0, 200);
     let mut cursor = Cursor::new(buf_two.as_slice());
     loaded_segment_two = loaded_segment_two.load(&mut cursor, &0).unwrap().unwrap();
-    let mut segments_to_compact = vec![loaded_segment_one, loaded_segment_two];
+    let segments_to_compact = vec![loaded_segment_one, loaded_segment_two];
     loaded_segment_one = MystSegment::compact(segments_to_compact).unwrap();
     loaded_segment_one.drain_clustered_data();
     println!("Fst Container {:?}", loaded_segment_one.fsts.fsts);
-    println!("bitmap {:?}", loaded_segment_one.metrics_bitmap.metrics_bitmap);
+    println!(
+        "bitmap {:?}",
+        loaded_segment_one.metrics_bitmap.metrics_bitmap
+    );
     assert_eq!(loaded_segment_one.metrics_bitmap.metrics_bitmap.len(), 15);
     assert_eq!(
         loaded_segment_one
