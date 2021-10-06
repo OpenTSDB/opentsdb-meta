@@ -24,7 +24,7 @@ use crate::utils::myst_error::MystError;
 use lru::LruCache;
 
 use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
-use croaring::Bitmap;
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::sync::{Arc, Mutex, RwLock};

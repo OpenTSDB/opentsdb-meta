@@ -20,8 +20,8 @@
 use log::{error, info};
 use rusoto_core::RusotoError;
 use rusoto_s3::{
-    GetObjectRequest, HeadObjectError, HeadObjectRequest, ListObjectsError, ListObjectsOutput,
-    ListObjectsRequest, PutObjectRequest, S3Client, StreamingBody, S3,
+    GetObjectRequest, HeadObjectError, HeadObjectRequest, ListObjectsOutput, ListObjectsRequest,
+    PutObjectRequest, S3Client, StreamingBody, S3,
 };
 use std::{
     collections::HashMap,

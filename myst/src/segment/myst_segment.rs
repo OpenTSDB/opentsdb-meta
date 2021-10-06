@@ -17,9 +17,8 @@
  *
  */
 
-use crate::segment::persistence::Loader;
 use crate::segment::persistence::TimeSegmented;
-use crate::segment::persistence::{Builder, Compactor};
+
 use crate::segment::store::dict::Dict;
 use crate::segment::store::docstore::{DocStore, Timeseries};
 use crate::segment::store::metric_bitmap::MetricBitmap;
@@ -27,8 +26,8 @@ use crate::segment::store::myst_fst::{MystFST, MystFSTContainer};
 use crate::segment::store::tag_bitmap::{TagKeysBitmap, TagValuesBitmap};
 use crate::utils::config::add_dir;
 
-use crate::utils::myst_error::{MystError, Result};
-use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
+use crate::utils::myst_error::Result;
+use byteorder::{NetworkEndian, ReadBytesExt};
 use croaring::Bitmap;
 use log::{debug, info};
 use std::collections::{HashMap, HashSet};
@@ -41,12 +40,10 @@ use std::sync::Arc;
 
 use std::fs;
 
-use crate::segment::segment_reader::SegmentReader;
 use crate::segment::store::epoch_bitmap::EpochBitmap;
 use num::ToPrimitive;
 use num_derive::FromPrimitive;
 use num_derive::ToPrimitive;
-use std::io::{Seek, SeekFrom};
 
 /// Segment for an epoch and shard.
 /// When built, it writes all datastructures into a Writer `W`
@@ -64,6 +61,7 @@ pub struct MystSegment {
 
     pub shard_id: u32,
     pub epoch: u64,
+    pub docstore_block_size: u32,
 
     pub(crate) uid: u32,
     pub(crate) segment_timeseries_id: u32,
@@ -167,7 +165,7 @@ impl MystSegment {
         Self {
             shard_id,
             epoch,
-
+            docstore_block_size: docstore_block_entries as u32,
             fsts: MystFSTContainer::new(),
             dict: Dict::new(),
             tag_keys_bitmap: TagKeysBitmap::new(),
@@ -188,7 +186,7 @@ impl MystSegment {
         }
     }
 
-    fn add_tagval(&mut self, key: Rc<String>, val: Rc<String>, doc_id: u32) -> u32 {
+    fn add_tagval(&mut self, key: Rc<String>, val: Rc<String>) -> u32 {
         let fst = self
             .fsts
             .fsts
@@ -206,7 +204,7 @@ impl MystSegment {
         tagval_id
     }
 
-    fn add_tagkey(&mut self, key: Rc<String>, doc_id: u32) -> u32 {
+    fn add_tagkey(&mut self, key: Rc<String>) -> u32 {
         let tagkey_prefix = self.tag_key_prefix.clone();
         let fst = self
             .fsts
@@ -224,7 +222,7 @@ impl MystSegment {
         id
     }
 
-    fn add_metric(&mut self, metric: Rc<String>, doc_id: u32) -> u32 {
+    fn add_metric(&mut self, metric: Rc<String>) -> u32 {
         let metric_prefix = self.metric_prefix.clone();
         let fst = self
             .fsts
@@ -311,14 +309,14 @@ impl MystSegment {
         timestamp: u64,
     ) {
         if !self.dedup.contains(&xxhash) {
-            let _metric_id = self.add_metric(metric.clone(), self.segment_timeseries_id);
+            let _metric_id = self.add_metric(metric.clone());
             let mut tags_ids = HashMap::new();
             for (k, v) in tags {
-                let tagkey_id = self.add_tagkey(k.clone(), self.segment_timeseries_id);
-                let tagval_id = self.add_tagval(k.clone(), v.clone(), self.segment_timeseries_id);
+                let tagkey_id = self.add_tagkey(k.clone());
+                let tagval_id = self.add_tagval(k.clone(), v.clone());
                 tags_ids.insert(tagkey_id, tagval_id);
-                self.add_tagkey(k.clone(), self.segment_timeseries_id);
-                self.add_tagval(k.clone(), v.clone(), self.segment_timeseries_id);
+                self.add_tagkey(k.clone());
+                self.add_tagval(k.clone(), v.clone());
             }
             // self.segment_timeseries_id += 1;
             let tags_ids_arc = Arc::new(tags_ids);
@@ -330,14 +328,20 @@ impl MystSegment {
             );
 
             self.dedup.insert(xxhash);
+        } else {
+            let _metric_id = self.add_metric(metric.clone());
+            self.cluster
+                .as_mut()
+                .unwrap()
+                .add_timestamp(&_metric_id, &xxhash, timestamp);
         }
     }
 
-    pub(crate) fn drain_clustered_data(&mut self) -> Result<()> {
+    pub fn drain_clustered_data(&mut self) -> Result<u32> {
         let cluster = self.cluster.take().unwrap().cluster;
         for (metric, tags) in cluster {
-            for ts in tags {
-                let xxhash = ts.xxHash;
+            for (_metric_id, ts) in tags {
+                let xx_hash = ts.xx_hash;
                 let tags = ts.tags.clone();
                 self.add_to_bitmap(&metric, tags.clone(), self.segment_timeseries_id);
                 self.epoch_bitmap
@@ -346,25 +350,26 @@ impl MystSegment {
                 self.data.data.push(
                     // doc_id,
                     Timeseries {
-                        timeseries_id: xxhash,
+                        metric: Arc::new(metric),
+                        timeseries_id: xx_hash,
                         tags: tags,
                     },
                 );
                 self.segment_timeseries_id += 1;
             }
         }
-        Ok(())
+        Ok(self.segment_timeseries_id)
     }
 
     pub fn get_segment_filename(shard_id: &u32, created: &u64, data_root_path: String) -> String {
-        let mut filename = MystSegment::get_path_prefix(shard_id, created, data_root_path);
+        let filename = MystSegment::get_path_prefix(shard_id, created, data_root_path);
         let mut filename = add_dir(filename, "segment".to_string());
         let ext = String::from(".myst");
         filename.push_str(&ext);
         filename
     }
 
-    pub fn get_path_prefix(shard_id: &u32, created: &u64, mut data_path: String) -> String {
+    pub fn get_path_prefix(shard_id: &u32, created: &u64, data_path: String) -> String {
         let data_path = add_dir(data_path, shard_id.to_string());
         let data_path = add_dir(data_path, created.to_string());
         if !Path::new(&data_path).exists() {
@@ -377,13 +382,13 @@ impl MystSegment {
 /// Groups the timeseries so that all timeseries for a metric are close to each other.
 #[derive(Default, Debug)]
 pub struct Clusterer {
-    cluster: HashMap<u32, Vec<TagsAndTimestamp>>,
+    cluster: HashMap<u32, HashMap<u64, TagsAndTimestamp>>,
 }
 #[derive(Default, Debug)]
 struct TagsAndTimestamp {
     tags: Arc<HashMap<u32, u32>>,
-    timestamp: u64,
-    xxHash: u64,
+    timestamp: HashSet<u64>,
+    xx_hash: u64,
 }
 
 impl Clusterer {
@@ -391,16 +396,28 @@ impl Clusterer {
         &mut self,
         metric: u32,
         tags: Arc<HashMap<u32, u32>>,
-        xxHash: u64,
+        xx_hash: u64,
         timestamp: u64,
     ) {
-        self.cluster
-            .entry(metric)
-            .or_insert(Vec::new())
-            .push(TagsAndTimestamp {
+        let mut epoch_set = HashSet::new();
+        epoch_set.insert(timestamp);
+        self.cluster.entry(metric).or_insert(HashMap::new()).insert(
+            xx_hash,
+            TagsAndTimestamp {
                 tags,
-                timestamp,
-                xxHash,
-            });
+                timestamp: epoch_set,
+                xx_hash,
+            },
+        );
+    }
+
+    pub fn add_timestamp(&mut self, metric: &u32, xxhash: &u64, timestamp: u64) {
+        let tags_timestamp = self
+            .cluster
+            .get_mut(metric)
+            .unwrap()
+            .get_mut(xxhash)
+            .unwrap();
+        tags_timestamp.timestamp.insert(timestamp);
     }
 }

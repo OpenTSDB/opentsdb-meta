@@ -7,7 +7,7 @@ pub fn new() -> Box<dyn MetricsReporter> {
 
 #[no_mangle]
 pub fn new_with_ssl(ssl_key: &str, ssl_cert: &str, ca_cert: &str) -> Box<dyn MetricsReporter> {
-    let mut metric_reporter_builder = NoopMetricReporterBuilder::new()
+    let metric_reporter_builder = NoopMetricReporterBuilder::new()
         .ssl_key(ssl_key)
         .ssl_cert(ssl_cert)
         .ca_cert(ca_cert);
@@ -49,7 +49,7 @@ impl NoopMetricReporterBuilder {
         self
     }
 
-    fn build(mut self) -> NoopMetricReporter {
+    fn build(self) -> NoopMetricReporter {
         NoopMetricReporter::default()
     }
 }

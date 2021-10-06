@@ -20,16 +20,21 @@
 use crate::remote_store::RemoteStore;
 use crate::timeseries_record::Record;
 use myst::segment::myst_segment::{MystSegment, Write};
-use myst::segment::persistence::{Builder, Loader, TimeSegmented};
+use myst::segment::persistence::{Builder, Compactor, Loader, TimeSegmented};
 
+use log::debug;
 use log::error;
 use log::info;
+
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File};
 use std::thread;
 
 use bytes::BufMut;
-use std::path::{Path, PathBuf};
+use myst::s3::utils::get_upload_filename;
+use myst::utils::myst_error::MystError;
+use std::io::Read;
+use std::path::Path;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -95,7 +100,7 @@ impl SegmentWriter {
         segment_writer
     }
 
-    pub(crate) fn write_to_segment(&mut self) -> Result<(), std::sync::mpsc::RecvError> {
+    pub(crate) fn write_to_segment(&mut self) -> Result<(), MystError> {
         let mut count = 0;
         info!("Beginning segment writer for shard: {} epoch: {} epochStart: {} segment duration: {} duration: {}",
                                                                         self.shard_id,
@@ -104,52 +109,27 @@ impl SegmentWriter {
                                                                         (self.epoch - self.epoch_start + self.duration),
                                                                         self.duration);
 
-        let mut remote_store = Arc::new(self.remote_store.take().unwrap());
-        let sleep_time = tokio::time::Duration::from_secs(2000);
+        let remote_store = Arc::new(self.remote_store.take().unwrap());
+        let _sleep_time = tokio::time::Duration::from_secs(2000);
+        let mut use_file = false;
+        let mut remote_duration = 0;
+        let remote_filename = get_upload_filename(
+            self.shard_id,
+            self.epoch_start,
+            self.upload_root.to_string(),
+        );
+        let file_path =
+            Path::new(self.segment_gen_data_path.as_ref()).join(Path::new(&remote_filename));
         if self.epoch_start != self.epoch {
-            let mut remote_filename = SegmentWriter::get_upload_filename(
-                self.shard_id,
-                self.epoch_start,
-                self.upload_root.to_string(),
-            );
-            //Check segment_gen_data_path for file locally.
-            let file_path =
-                Path::new(self.segment_gen_data_path.as_ref()).join(Path::new(&remote_filename));
             create_dir_all(file_path.clone().parent().unwrap());
-            let mut use_file = false;
-            if !file_path.exists() {
-                let mut f = File::create(&file_path).unwrap();
-                let result =
-                    self.download_file(Arc::clone(&remote_store), &remote_filename, &mut f);
-                if result.is_ok() {
-                    let opt = result.unwrap();
-                    if opt.unwrap_or(-1) == 1 {
-                        use_file = true;
-                    }
-                }
-            } else {
-                use_file = true;
-            }
-            if use_file {
-                info!("Loading segment for {} into mem", remote_filename);
-                let mut f = File::open(&file_path).unwrap();
-                let offset: u32 = 0;
-                let result = self.segment.take().unwrap().load(&mut f, &offset);
-
-                match result {
-                    Ok(o) => {
-                        info!(
-                            "Loaded segment suecessfully for {} into mem",
-                            remote_filename
-                        );
-                        self.segment = o;
-                    }
-                    Err(e) => {
-                        error!(
-                            "Error loading segment for {} into mem {:?}",
-                            remote_filename, e
-                        );
-                    }
+            use_file = false;
+            let mut f = File::create(&file_path).unwrap();
+            let result = self.download_file(Arc::clone(&remote_store), &remote_filename, &mut f);
+            if result.is_ok() {
+                let opt = result.unwrap();
+                if opt.unwrap() != 0 {
+                    use_file = true;
+                    remote_duration = opt.unwrap();
                 }
             }
         }
@@ -173,11 +153,34 @@ impl SegmentWriter {
                     break;
                 }
                 info!(
-                    "Creating segment for shard: {} for epoch: {}",
-                    self.shard_id, self.epoch
+                    "Creating segment for shard: {} for epoch: {} use compaction {} and number of timeseries {}",
+                    self.shard_id, self.epoch, use_file, count
                 );
-                let s = self.segment.take().unwrap();
-                self.create_and_upload_segment(Arc::clone(&remote_store), s);
+
+                if use_file {
+                    let duration = self.segment.as_mut().unwrap().get_duration().unwrap();
+                    self.segment.as_mut().unwrap().drain_clustered_data();
+                    let mut f = File::open(&file_path).unwrap();
+                    let size = f.metadata().unwrap().len();
+                    let offset: u32 = 0;
+                    let mut loaded_segment = MystSegment::new_with_block_entries_duration(
+                        self.shard_id,
+                        self.epoch_start,
+                        200,
+                        remote_duration,
+                    )
+                    .load(&mut f, &offset)
+                    .unwrap()
+                    .unwrap();
+                    info!("Compacting current segment with {:?}. Size before compaction {:?} for shard {}, current segment duration {}, prev segment duration {}", loaded_segment.epoch, size, loaded_segment.shard_id, duration, remote_duration);
+                    let segments_to_compact = vec![loaded_segment, self.segment.take().unwrap()];
+                    loaded_segment = MystSegment::compact(segments_to_compact)?;
+                    loaded_segment.set_duration(duration); //reset the duration, since we are appending.
+                    self.create_and_upload_segment(Arc::clone(&remote_store), loaded_segment);
+                } else {
+                    let s = self.segment.take().unwrap();
+                    self.create_and_upload_segment(Arc::clone(&remote_store), s);
+                }
                 info!(
                     "Stopping shard: {} thread for epoch: {}",
                     self.shard_id, self.epoch
@@ -193,25 +196,22 @@ impl SegmentWriter {
                     //for record in records {
                     /* Have to do this because Rc cannot be shared between threads
                     The other option is to have MystSegment impl Arc, but that maybe too costly - not sure.*/
-                    let mut hashMap = HashMap::new();
+                    let mut hash_map = HashMap::new();
                     let tags = record.tags.clone();
                     for (k, v) in tags {
-                        hashMap.insert(Rc::new(k), Rc::new(v));
+                        hash_map.insert(Rc::new(k), Rc::new(v));
                     }
 
                     self.segment.as_mut().unwrap().add_timeseries(
                         Rc::new(record.metric.clone()),
-                        hashMap.clone(), //Whats the difference between making a clone and doing a mut hashMap ?
+                        hash_map.clone(), //Whats the difference between making a clone and doing a mut hashMap ?
                         record.xx_hash as u64,
                         self.epoch,
                     );
                     // }
                 }
                 None => {
-                    info!(
-                        "################ Error in segment writer {:?}",
-                        self.shard_id
-                    );
+                    debug!("Error in segment writer {:?}", self.shard_id);
                 }
             }
         }
@@ -224,8 +224,9 @@ impl SegmentWriter {
         &mut self,
         downloader: Arc<RemoteStore>,
         remote_filename: &String,
-        mut buf: &mut io::Write,
+        mut buf: &mut dyn io::Write,
     ) -> Result<Option<i32>, Error> {
+        //returns the duration from remote
         let sleep_time = tokio::time::Duration::from_millis(2000);
         let mut retries = 0;
         let map_option: Option<HashMap<String, String>>;
@@ -274,26 +275,16 @@ impl SegmentWriter {
                 );
                 return Err(Error::new(ErrorKind::Other, "Error downloding from s3"));
             }
-            return Ok(Some(1 as i32));
+            let duration = map_option
+                .unwrap()
+                .get("duration")
+                .unwrap()
+                .parse()
+                .unwrap();
+            return Ok(Some(duration));
         } else {
             return Ok(Some(0 as i32));
         }
-    }
-    /// This method cannot be called as is. Will need to be worked into the code flow.
-    fn create_segment(&mut self, myst_segment: MystSegment) {
-        let shard_id = self.shard_id;
-        let epoch = myst_segment.epoch;
-        let data_path = self.segment_gen_data_path.clone();
-        let filename = MystSegment::get_segment_filename(&shard_id, &epoch, data_path.to_string());
-        info!("Creating segment file: {:?}", &filename);
-        let mut file = File::create(&filename).unwrap();
-        myst_segment.build(&mut file, &mut (0 as u32)).unwrap();
-        file.flush().unwrap();
-        let mut lock_file_name =
-            MystSegment::get_path_prefix(&shard_id, &epoch, data_path.to_string());
-        lock_file_name.push_str("/.lock");
-        File::create(lock_file_name).unwrap();
-        info!("Created segment file: {}", &filename);
     }
 
     fn create_and_upload_segment(&mut self, uploader: Arc<RemoteStore>, myst_segment: MystSegment) {
@@ -305,10 +296,16 @@ impl SegmentWriter {
         myst_segment
             .build(&mut vec_writer, &mut (0 as u32))
             .unwrap();
-        let mut upload_root = self.upload_root.clone().to_string();
+
+        let upload_root = self.upload_root.clone().to_string();
 
         let data = vec_writer.get_mut().to_vec();
-        let upload_filename = SegmentWriter::get_upload_filename(shard_id, epoch, upload_root);
+        info!(
+            "Segment size after building is {:?} for shard {:?}",
+            data.len(),
+            shard_id
+        );
+        let upload_filename = get_upload_filename(shard_id, epoch, upload_root);
         //Check segment_gen_data_path for file locally.
         let file_path =
             Path::new(self.segment_gen_data_path.as_ref()).join(Path::new(&upload_filename));
@@ -355,9 +352,9 @@ impl SegmentWriter {
     fn upload_segment(&mut self, uploader: Arc<RemoteStore>, myst_segment: MystSegment) {
         let shard_id = self.shard_id;
         let epoch = myst_segment.epoch;
-        let mut upload_root = self.upload_root.clone().to_string();
+        let upload_root = self.upload_root.clone().to_string();
 
-        let mut upload_filename = SegmentWriter::get_upload_filename(shard_id, epoch, upload_root);
+        let upload_filename = get_upload_filename(shard_id, epoch, upload_root);
 
         let mut vec_writer = Vec::new().writer();
         let dur_string = myst_segment.get_duration().unwrap().to_string();
@@ -381,12 +378,5 @@ impl SegmentWriter {
             "Uploaded (upload segment) for filename: {} {:?}",
             &upload_filename, result
         );
-    }
-
-    fn get_upload_filename(shard_id: u32, epoch: u64, mut upload_root: String) -> String {
-        if !upload_root.ends_with("/") {
-            upload_root.push_str("/");
-        }
-        MystSegment::get_segment_filename(&shard_id, &epoch, upload_root)
     }
 }

@@ -27,7 +27,7 @@ use crate::segment::persistence::TimeSegmented;
 use crate::segment::segment_reader::SegmentReader;
 use crate::utils::myst_error::MystError;
 use crate::utils::myst_error::Result;
-use std::io::{BufReader, Seek, SeekFrom};
+use std::io::{Seek, SeekFrom};
 use std::sync::Arc;
 
 /// Stores the dictionary data structure of the segment.
@@ -85,7 +85,7 @@ impl DictHolder {
 }
 
 impl<R: Read + Seek> Loader<R, Dict> for Dict {
-    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<Dict>> {
+    fn load(self, buf: &mut R, offset: &u32) -> Result<Option<Dict>> {
         buf.seek(SeekFrom::Start(*offset as u64))?;
         let dict_holder = SegmentReader::get_dict_from_reader(buf, 0)?;
         match Arc::try_unwrap(dict_holder) {

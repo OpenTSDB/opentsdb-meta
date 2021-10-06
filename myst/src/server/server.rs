@@ -34,20 +34,20 @@ use metrics_reporter::MetricsReporter;
 use myst::query::query::Query;
 use myst::setup_logger;
 use std::sync::Arc;
-use std::thread;
-use std::time::{Duration, SystemTime};
+
+use std::time::SystemTime;
 use tokio_stream::Stream;
-use tonic::transport::Server;
+use tonic::transport::{Identity, Server, ServerTlsConfig};
 
 pub struct TimeseriesService {
     pub thread_pool: rayon::ThreadPool,
     pub cache: Arc<Cache>,
     pub config: Config,
-    pub metrics_reporter: Box<MetricsReporter>,
+    pub metrics_reporter: Box<dyn MetricsReporter>,
 }
 
 impl TimeseriesService {
-    pub fn new(metrics_reporter: Box<MetricsReporter>, config: Config) -> Self {
+    pub fn new(metrics_reporter: Box<dyn MetricsReporter>, config: Config) -> Self {
         Self {
             thread_pool: rayon::ThreadPoolBuilder::new()
                 .num_threads(num_cpus::get())
@@ -72,7 +72,7 @@ impl MystService for TimeseriesService {
     ) -> Result<Response<Self::GetTimeseriesStream>, tonic::Status> {
         let r = request.into_inner();
         let query = r.query;
-        let curr_time = SystemTime::now();
+        let _curr_time = SystemTime::now();
         info!("Running query {:?}", query);
         let batch_query = Query::from_json(&query);
         if batch_query.is_err() {
@@ -104,19 +104,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::new();
     let lib = libloading::Library::new(&config.plugin_path).expect("load library");
 
-    let mut metrics_reporter = match config.ssl_for_metrics {
+    let metrics_reporter = match config.ssl_for_metrics {
         true => {
             let new_metrics_reporter: libloading::Symbol<
                 fn(&str, &str, &str) -> Box<dyn MetricsReporter>,
             > = unsafe { lib.get(b"new_with_ssl") }.expect("load symbol");
-            let mut metrics_reporter =
+            let metrics_reporter =
                 new_metrics_reporter(&config.ssl_key, &config.ssl_cert, &config.ca_cert);
             metrics_reporter
         }
         false => {
             let new_metrics_reporter: libloading::Symbol<fn() -> Box<dyn MetricsReporter>> =
                 unsafe { lib.get(b"new") }.expect("load symbol");
-            let mut metrics_reporter = new_metrics_reporter();
+            let metrics_reporter = new_metrics_reporter();
             metrics_reporter
         }
     };
@@ -129,19 +129,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn start_grpc_server(
-    metrics_reporter: Box<MetricsReporter>,
+    metrics_reporter: Box<dyn MetricsReporter>,
     config: Config,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut hostname = local_ipaddress::get().unwrap();
-    hostname.push_str(":9999");
+    hostname.push_str(":443");
     let addr = hostname.parse()?;
+    let cert = tokio::fs::read(&config.ssl_cert).await?;
+    let key = tokio::fs::read(&config.ssl_key).await?;
 
+    let identity = Identity::from_pem(cert, key);
     let myst_service = TimeseriesService::new(metrics_reporter, config);
 
     let svc = MystServiceServer::new(myst_service);
 
     info!("Starting server on {:?}", hostname);
 
-    Server::builder().add_service(svc).serve(addr).await?;
+    Server::builder()
+        .tls_config(ServerTlsConfig::new().identity(identity))?
+        .add_service(svc)
+        .serve(addr)
+        .await?;
     Ok(())
 }

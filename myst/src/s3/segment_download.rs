@@ -25,7 +25,6 @@ use std::fs::{create_dir_all, read_dir, rename, File};
 use std::path::Path;
 use std::{
     collections::HashSet,
-    io::Error,
     io::{Read, Write},
     sync::Arc,
     thread,
@@ -140,7 +139,7 @@ impl SegmentDownload {
                     let file_path = fpath.as_path().to_str().unwrap_or("none").to_string();
                     let contains_file = read_lock.contains(&file_path);
                     drop(read_lock);
-		    info!("Is file {} present: {}", &file_path, contains_file);	
+		            info!("Is file {} present: {}", &file_path, contains_file);
                     let metadata = store_clone
                         .get_metadata(file_name_clone.to_string().to_owned())
                         .await;
@@ -207,7 +206,7 @@ impl SegmentDownload {
                             .download(file_name_clone.to_string().to_owned(), &mut f)
                             .await;
                         match downloaded {
-                            Ok(bytes) => {
+                            Ok(_bytes) => {
                                 f.flush().unwrap();
                                 //Final move
                                 info!(
@@ -234,7 +233,7 @@ impl SegmentDownload {
                                     }
                                     let result = dt_file_res.flush();
                                     match result {
-                                        Ok(o) => {},
+                                        Ok(_o) => {},
                                          Err(e) => error!("Error flushing duration file: {:?} {:?}", duration_tmp_path, e),
                                     }
                                 } // File should be closed here.
@@ -243,13 +242,13 @@ impl SegmentDownload {
                                 // Wait until lock is acquired. But what is the point of a blocking method, if it doesnt block by itself ?
                                 // I guess this is a side effect of async
                                 let file_name_str = fpath.to_str().unwrap().to_string();
-				info!("Writing file {} into cache", file_name_str);
-				let mut lock =
-                                    futures::executor::block_on(downloaded_set_clone.write());
+				                info!("Writing file {} into cache", file_name_str);
+				                let mut lock =
+                                futures::executor::block_on(downloaded_set_clone.write());
                                 lock.insert(file_name_str);
                                 drop(lock);
                             }
-                            Err(e) => {
+                            Err(_e) => {
                                 info!("Error fetching file {}", file_name);
                             }
                         }
@@ -290,7 +289,7 @@ impl SegmentDownload {
             for h in handles {
                 let result = h.await;
                 match result {
-                    Ok(v) => count += 1,
+                    Ok(_v) => count += 1,
                     Err(e) => info!("Error while downloading from s3 {:?}", e),
                 }
             }
@@ -350,7 +349,7 @@ pub async fn start_download() -> Result<()> {
     let arc_s3_client = Arc::new(s3_client);
     let arc_processed_bucket = Arc::new(processed_bucket.clone());
     let remote_store = Arc::new(RemoteStore::new(arc_s3_client, arc_processed_bucket));
-    let data_path = add_dir(root_data_path.clone(), namespace.clone());
+    let _data_path = add_dir(root_data_path.clone(), namespace.clone());
     let total_num_shards = get_remote_shards(&namespace, remote_store.clone()).await?;
     let num_containers = config.num_containers;
     let container_id = config.container_id;
@@ -388,13 +387,6 @@ pub async fn start_download() -> Result<()> {
         });
         handles.push(handle);
     }
-
-    /*let result = futures::executor::block_on(futures::future::try_join_all(handles));
-
-    match result {
-        Ok(v) => info!("Threads submitted successfully - should never happen!"),
-        Err(e) => info!("Error while submitting jobs for download from remote store {:?}", e),
-    }*/
     Ok(())
 }
 

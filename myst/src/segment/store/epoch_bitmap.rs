@@ -17,8 +17,8 @@
  *
  */
 
-use log::{info, warn, LevelFilter};
-use std::{collections::HashMap, io::Read, io::Write, time::UNIX_EPOCH};
+use log::info;
+use std::{collections::HashMap, io::Read, io::Write};
 
 use byteorder::{NetworkEndian, WriteBytesExt};
 use croaring::Bitmap;
@@ -27,7 +27,7 @@ use crate::segment::persistence::Loader;
 use crate::segment::persistence::{Builder, TimeSegmented};
 use crate::segment::segment_reader::SegmentReader;
 use crate::utils::myst_error::{MystError, Result};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::io::Seek;
 
 /// Duration for each Bitmap. All timeseries that falls from start of epoch to this duration will be in a Bitmap
@@ -45,7 +45,7 @@ pub struct EpochBitmapHeader {
     header: HashMap<u64, u32>,
 }
 impl<W: Write> Builder<W> for EpochBitmapHeader {
-    fn build(mut self, buf: &mut W, offset: &mut u32) -> Result<Option<Self>> {
+    fn build(self, buf: &mut W, offset: &mut u32) -> Result<Option<Self>> {
         buf.write_u32::<NetworkEndian>(self.header.len() as u32)?;
         *offset += 4;
         for (k, v) in &self.header {
@@ -90,7 +90,7 @@ impl<W: Write> Builder<W> for EpochBitmap {
 }
 
 impl<R: Read + Seek> Loader<R, EpochBitmap> for EpochBitmap {
-    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<EpochBitmap>> {
+    fn load(self, buf: &mut R, offset: &u32) -> Result<Option<EpochBitmap>> {
         let mut bitmaps = BTreeMap::new();
         let ts_bitmap_header = SegmentReader::get_ts_bitmap_header(buf, offset)?;
         info!("Ts bitmap header {:?}", ts_bitmap_header);
@@ -127,26 +127,25 @@ impl EpochBitmap {
     /// # Arguments
     /// * `timeseries_id` - The segment timeseries id for the timeseries.
     /// * `timestamp` - The timestamp for the timeseries
-    pub fn add_timeseries(&mut self, timeseries_id: u32, timestamp: u64) -> Result<()> {
-        if timestamp < self.start_epoch {
-            return Err(MystError::new_write_error(
-                "Timestamp cannot be before epoch of segment",
-            ));
-        }
-        let mut last_epoch = self.start_epoch;
-        for (epoch, bitmap) in &mut self.epoch_bitmap {
-            last_epoch = *epoch;
-            if (timestamp >= last_epoch) && (timestamp < last_epoch + EPOCH_DURATION) {
-                bitmap.add(timeseries_id);
-                return Ok(());
+    pub fn add_timeseries(&mut self, timeseries_id: u32, timestamp: HashSet<u64>) -> Result<()> {
+        for ts in timestamp {
+            if ts < self.start_epoch {
+                return Err(MystError::new_write_error(
+                    "Timestamp cannot be before epoch of segment",
+                ));
+            }
+            let mut last_epoch = self.start_epoch;
+
+            while last_epoch <= ts {
+                if (ts >= last_epoch) && (ts < last_epoch + EPOCH_DURATION) {
+                    self.epoch_bitmap
+                        .entry(last_epoch)
+                        .or_insert(Bitmap::create())
+                        .add(timeseries_id);
+                }
+                last_epoch += EPOCH_DURATION;
             }
         }
-        let next_epoch = last_epoch + EPOCH_DURATION;
-        self.epoch_bitmap.insert(next_epoch, Bitmap::create());
-        self.epoch_bitmap
-            .get_mut(&next_epoch)
-            .unwrap()
-            .add(timeseries_id);
         Ok(())
     }
 }
@@ -179,6 +178,7 @@ impl EpochBitmapHolder {
 mod test {
     use crate::segment::persistence::{Builder, Loader};
     use crate::segment::store::epoch_bitmap::EpochBitmap;
+    use std::collections::HashSet;
     use std::io::Cursor;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -198,11 +198,15 @@ mod test {
             + 1 * 60 * 60;
         offset = curr_time % 1800;
         epoch = curr_time - offset;
-        for i in 0..100 {
-            ts_bitmaps.add_timeseries(i, epoch).unwrap();
-            if i % 10 == 0 {
-                epoch = epoch + 2 * 60 * 60;
-            }
+        let mut epochs = HashSet::new();
+        epochs.insert(epoch);
+        epochs.insert(epoch + 72000);
+        for i in 0..1 {
+            ts_bitmaps.add_timeseries(i, epochs.clone()).unwrap();
+            println!("Epoch bitmaps in test {:?}", ts_bitmaps);
+            // if i % 10 == 0 {
+            //     epoch = epoch + 2 * 60 * 60;
+            // }
         }
 
         let mut buf = Vec::new();

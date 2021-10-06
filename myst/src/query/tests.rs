@@ -35,7 +35,7 @@ use crate::query::query_runner::QueryRunner;
 use bloomfilter::Bloom;
 use croaring::Bitmap;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::BufReader;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -75,7 +75,7 @@ pub fn write_data(segment: &mut MystSegment, epoch: &u64, metrics_start: u32, me
         segment.add_timeseries(Rc::new(metric), tags.clone(), i as u64, *epoch);
     }
 }
-pub fn close_segment(mut segment: MystSegment) {
+pub fn close_segment(segment: MystSegment) {
     println!("Closing");
     let data_path = String::from("./data/");
     let shard_id = segment.shard_id;
@@ -234,7 +234,7 @@ pub fn test_query() {
 }
 #[test]
 pub fn search_timeseries() {
-    let mut segment_readers = write_and_get_segment_readers();
+    let segment_readers = write_and_get_segment_readers();
     let filter = build_regex_tag_value_filter();
     let mut query = build_timeseries_query(filter);
     query.start = segment_readers.get(0).unwrap().created;
@@ -242,7 +242,7 @@ pub fn search_timeseries() {
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
-    let mut curr_time = SystemTime::now();
+    let curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(num_cpus::get())
         .build()
@@ -290,7 +290,7 @@ pub fn search_timeseries_multiple_segments() {
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
-    let mut curr_time = SystemTime::now();
+    let curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(num_cpus::get())
         .build()
@@ -336,7 +336,7 @@ pub fn search_timeseries_large_segment() {
     config.docstore_block_size = 200;
     println!("Segment Readers {:?}", segment_readers.len());
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
-    let mut curr_time = SystemTime::now();
+    let curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(num_cpus::get())
         .build()
@@ -369,7 +369,7 @@ pub fn search_timeseries_with_not_filter() {
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
-    let mut curr_time = SystemTime::now();
+    let curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(1)
         .build()
@@ -402,7 +402,7 @@ pub fn search_timeseries_with_explicit_filter() {
     config.docstore_block_size = 200;
     println!("{:?}", query);
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
-    let mut curr_time = SystemTime::now();
+    let curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(1)
         .build()
@@ -435,7 +435,7 @@ pub fn test_groupby_ordering() {
     let mut config = crate::utils::config::Config::default();
     config.docstore_block_size = 200;
     let mut query_runner = QueryRunner::new(segment_readers, &query, &config, None);
-    let mut curr_time = SystemTime::now();
+    let curr_time = SystemTime::now();
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(1)
         .build()
@@ -470,7 +470,7 @@ pub fn test_bloom() {
     // out of 100 items that are not inserted, expect 1 to return true for contain
     let false_positive_rate = 0.01;
 
-    let mut filter = Bloom::<u32>::compute_bitmap_size(expected_num_items, false_positive_rate);
+    let filter = Bloom::<u32>::compute_bitmap_size(expected_num_items, false_positive_rate);
     println!("{}", filter);
     let mut bitmap = Bitmap::create_with_capacity(expected_num_items as u32);
     for i in 0..expected_num_items {

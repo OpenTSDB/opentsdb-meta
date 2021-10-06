@@ -52,7 +52,7 @@ impl ShardQueryRunner {
         shard_pool: &rayon::ThreadPool,
         cache: Arc<Cache>,
         config: &Config,
-        metrics_reporter: Option<&Box<MetricsReporter>>,
+        metrics_reporter: Option<&Box<dyn MetricsReporter>>,
     ) -> Result<Receiver<std::result::Result<crate::myst_grpc::TimeseriesResponse, tonic::Status>>>
     {
         let shards = ShardQueryRunner::get_num_shards(config)?;
@@ -94,7 +94,7 @@ impl ShardQueryRunner {
                             res.err()
                         );
                     } else {
-                        // timeseries_response.streams = num_shards as i32;
+                        timeseries_response.streams = num_shards as i32;
                         let res = sender.try_send(Ok(timeseries_response));
                         if res.is_err() {
                             error!("Error sending query response {:?}", res);
@@ -129,13 +129,13 @@ impl ShardQueryRunner {
         segment_pool: &rayon::ThreadPool,
         cache: Arc<Cache>,
         config: &Config,
-        metrics_reporter: Option<&Box<MetricsReporter>>,
+        metrics_reporter: Option<&Box<dyn MetricsReporter>>,
         timeseries_response: &mut crate::myst_grpc::TimeseriesResponse,
     ) -> Result<()> {
         let curr_time = SystemTime::now();
         let s_time = SystemTime::now();
-        let mut path = String::from(&config.data_read_path);
-        let mut path = add_dir(path, shard_id.to_string());
+        let path = String::from(&config.data_read_path);
+        let path = add_dir(path, shard_id.to_string());
         let dirs = fs::read_dir(path)?;
         let mut segment_readers = Vec::new();
 
@@ -177,7 +177,7 @@ impl ShardQueryRunner {
                 if query.start <= created && query.end >= created
                     || (duration > 0
                         && query.start >= created
-                        && query.end <= (created + duration as u64))
+                        && query.start <= (created + duration as u64))
                 {
                     let file_path = MystSegment::get_segment_filename(
                         &shard_id,

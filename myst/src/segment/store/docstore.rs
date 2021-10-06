@@ -32,9 +32,10 @@ use crate::segment::persistence::Builder;
 use crate::segment::persistence::Loader;
 use crate::segment::persistence::TimeSegmented;
 use crate::segment::segment_reader::SegmentReader;
-use crate::utils::myst_error::{MystError, Result};
+use crate::utils::myst_error::Result;
 use lz4::EncoderBuilder;
-use std::io::{BufReader, Seek, SeekFrom};
+use std::collections::BTreeMap;
+use std::io::{Seek, SeekFrom};
 
 /// Stores the docstore of the segment.
 /// Docstore when built could contain multiple docstore blocks.
@@ -55,6 +56,7 @@ pub struct DocStore {
 #[derive(Debug, Default)]
 pub struct Timeseries {
     pub tags: Arc<HashMap<u32, u32>>, //tags
+    pub metric: Arc<u32>,             //metric
     pub timeseries_id: u64,           //xxhash
 }
 
@@ -121,7 +123,7 @@ impl<W: Write> Builder<W> for DocStore {
                 "lz4" => {
                     let mut encoder = EncoderBuilder::new().level(1).build(Vec::new())?;
                     std::io::copy(&mut datum.as_slice(), &mut encoder)?;
-                    let (w, _Result) = encoder.finish();
+                    let (w, _result) = encoder.finish();
 
                     *offset += 4;
                     buf.write_u32::<NetworkEndian>(w.len() as u32)?;
@@ -164,11 +166,13 @@ impl<W: Write> Builder<W> for DocStore {
 }
 
 impl<R: Read + Seek> Loader<R, DocStore> for DocStore {
-    fn load(mut self, buf: &mut R, offset: &u32) -> Result<Option<DocStore>> {
+    fn load(self, buf: &mut R, offset: &u32) -> Result<Option<DocStore>> {
         let docstore_header = SegmentReader::get_docstore_header(buf, offset)?;
         let mut docstore_timeseries = Vec::new();
         let mut block_entries = 0;
-        for (id, offset) in docstore_header {
+        let mut docstore_header_sorted = BTreeMap::new();
+        docstore_header_sorted.extend(docstore_header);
+        for (id, offset) in docstore_header_sorted {
             buf.seek(SeekFrom::Start(offset as u64))?;
             let docstore_deserialized =
                 SegmentReader::get_docstore_from_reader(buf, 0, 0, id, 0 as i32)?;
@@ -233,10 +237,12 @@ impl DocStore {
         // let map_len = datum.tags.len();
         // serialized.write_u32::<NetworkEndian>((4 + (map_len*8)) as u32 )?;
         serialized.write_u64::<NetworkEndian>(datum.timeseries_id)?;
+        serialized.write_u32::<NetworkEndian>(*datum.metric);
         for (k, v) in datum.tags.iter() {
             serialized.write_u32::<NetworkEndian>(*k)?;
             serialized.write_u32::<NetworkEndian>(*v)?;
         }
+
         Ok(serialized)
     }
 
@@ -285,6 +291,8 @@ impl DocStore {
         let mut reader = Cursor::new(data);
         let timeseries_id = reader.read_u64::<NetworkEndian>()?;
         len = len - 8;
+        let metric = reader.read_u32::<NetworkEndian>()?;
+        len = len - 4;
         let mut timeseries = HashMap::with_capacity((len / 8) as usize);
         while len > 0 {
             timeseries.insert(
@@ -294,6 +302,7 @@ impl DocStore {
             len = len - 8;
         }
         Ok(Timeseries {
+            metric: Arc::new(metric),
             tags: Arc::new(timeseries),
             timeseries_id: timeseries_id,
         })
@@ -316,6 +325,7 @@ mod test {
     use std::thread;
 
     pub fn write_data(compression: String) {
+        let metric_arc = Arc::new(0);
         let mut tags = HashMap::new();
         tags.insert(1, 1);
         tags.insert(2, 2);
@@ -330,6 +340,7 @@ mod test {
         docstore.compression = Some(compression.clone());
         for i in 0..50000 {
             let timeseries = Timeseries {
+                metric: metric_arc.clone(),
                 tags: tags_arc.clone(),
                 timeseries_id: i,
             };
@@ -362,7 +373,7 @@ mod test {
 
         let snappy_file_read_time = AtomicU64::new(0);
         let snappy_file_decompress_time = AtomicU64::new(0);
-        (0..iterations).into_par_iter().for_each(|i| {
+        (0..iterations).into_par_iter().for_each(|_i| {
             //no compression
             let file = String::from("./docstore-none");
             let mut reader = BufReader::new(File::open(file).unwrap());
@@ -385,10 +396,10 @@ mod test {
         );
 
         thread::sleep(core::time::Duration::from_secs_f32(5 as f32));
-        (0..iterations).into_par_iter().for_each(|i| {
+        (0..iterations).into_par_iter().for_each(|_i| {
             //zstd
-            let mut filename = String::from("./docstore-zstd");
-            let mut file = File::open(filename).unwrap();
+            let filename = String::from("./docstore-zstd");
+            let file = File::open(filename).unwrap();
             let mut reader = BufReader::new(file);
 
             let mut curr_time = SystemTime::now();
@@ -431,7 +442,7 @@ mod test {
         );
 
         thread::sleep(core::time::Duration::from_secs_f32(5 as f32));
-        (0..iterations).into_par_iter().for_each(|i| {
+        (0..iterations).into_par_iter().for_each(|_i| {
             //snappy
             let file = String::from("./docstore-snappy");
             let mut reader = BufReader::new(File::open(file).unwrap());
@@ -475,7 +486,7 @@ mod test {
         );
 
         thread::sleep(core::time::Duration::from_secs_f32(5 as f32));
-        (0..iterations).into_par_iter().for_each(|i| {
+        (0..iterations).into_par_iter().for_each(|_i| {
             //lz4
             let file = String::from("./docstore-lz4");
             let mut reader = BufReader::new(File::open(file).unwrap());
