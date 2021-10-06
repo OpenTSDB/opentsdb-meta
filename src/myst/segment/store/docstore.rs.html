@@ -528,6 +528,17 @@
 <span id="525">525</span>
 <span id="526">526</span>
 <span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -563,9 +574,10 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">Loader</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">persistence</span>::<span class="ident">TimeSegmented</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">segment_reader</span>::<span class="ident">SegmentReader</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">myst_error</span>::{<span class="ident">MystError</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">myst_error</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">lz4</span>::<span class="ident">EncoderBuilder</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">BufReader</span>, <span class="ident">Seek</span>, <span class="ident">SeekFrom</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeMap</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">Seek</span>, <span class="ident">SeekFrom</span>};
 
 <span class="doccomment">/// Stores the docstore of the segment.</span>
 <span class="doccomment">/// Docstore when built could contain multiple docstore blocks.</span>
@@ -586,6 +598,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Timeseries</span> {
     <span class="kw">pub</span> <span class="ident">tags</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">u32</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="comment">//tags</span>
+    <span class="kw">pub</span> <span class="ident">metric</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,             <span class="comment">//metric</span>
     <span class="kw">pub</span> <span class="ident">timeseries_id</span>: <span class="ident">u64</span>,           <span class="comment">//xxhash</span>
 }
 
@@ -652,7 +665,7 @@
                 <span class="string">&quot;lz4&quot;</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">encoder</span> <span class="op">=</span> <span class="ident">EncoderBuilder</span>::<span class="ident">new</span>().<span class="ident">level</span>(<span class="number">1</span>).<span class="ident">build</span>(<span class="ident">Vec</span>::<span class="ident">new</span>())<span class="question-mark">?</span>;
                     <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">copy</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">datum</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">encoder</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let</span> (<span class="ident">w</span>, <span class="ident">_Result</span>) <span class="op">=</span> <span class="ident">encoder</span>.<span class="ident">finish</span>();
+                    <span class="kw">let</span> (<span class="ident">w</span>, <span class="ident">_result</span>) <span class="op">=</span> <span class="ident">encoder</span>.<span class="ident">finish</span>();
 
                     <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="number">4</span>;
                     <span class="ident">buf</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">w</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)<span class="question-mark">?</span>;
@@ -695,11 +708,13 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Read</span> <span class="op">+</span> <span class="ident">Seek</span><span class="op">&gt;</span> <span class="ident">Loader</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">DocStore</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DocStore</span> {
-    <span class="kw">fn</span> <span class="ident">load</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DocStore</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">load</span>(<span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DocStore</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">docstore_header</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_docstore_header</span>(<span class="ident">buf</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">docstore_timeseries</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">block_entries</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">for</span> (<span class="ident">id</span>, <span class="ident">offset</span>) <span class="kw">in</span> <span class="ident">docstore_header</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">docstore_header_sorted</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
+        <span class="ident">docstore_header_sorted</span>.<span class="ident">extend</span>(<span class="ident">docstore_header</span>);
+        <span class="kw">for</span> (<span class="ident">id</span>, <span class="ident">offset</span>) <span class="kw">in</span> <span class="ident">docstore_header_sorted</span> {
             <span class="ident">buf</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>))<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">docstore_deserialized</span> <span class="op">=</span>
                 <span class="ident">SegmentReader</span>::<span class="ident">get_docstore_from_reader</span>(<span class="ident">buf</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="ident">id</span>, <span class="number">0</span> <span class="kw">as</span> <span class="ident">i32</span>)<span class="question-mark">?</span>;
@@ -764,10 +779,12 @@
         <span class="comment">// let map_len = datum.tags.len();</span>
         <span class="comment">// serialized.write_u32::&lt;NetworkEndian&gt;((4 + (map_len*8)) as u32 )?;</span>
         <span class="ident">serialized</span>.<span class="ident">write_u64</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">datum</span>.<span class="ident">timeseries_id</span>)<span class="question-mark">?</span>;
+        <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">datum</span>.<span class="ident">metric</span>);
         <span class="kw">for</span> (<span class="ident">k</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">datum</span>.<span class="ident">tags</span>.<span class="ident">iter</span>() {
             <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">k</span>)<span class="question-mark">?</span>;
             <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">v</span>)<span class="question-mark">?</span>;
         }
+
         <span class="prelude-val">Ok</span>(<span class="ident">serialized</span>)
     }
 
@@ -816,6 +833,8 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="ident">data</span>);
         <span class="kw">let</span> <span class="ident">timeseries_id</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="ident">len</span> <span class="op">=</span> <span class="ident">len</span> <span class="op">-</span> <span class="number">8</span>;
+        <span class="kw">let</span> <span class="ident">metric</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="ident">len</span> <span class="op">=</span> <span class="ident">len</span> <span class="op">-</span> <span class="number">4</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">timeseries</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">with_capacity</span>((<span class="ident">len</span> <span class="op">/</span> <span class="number">8</span>) <span class="kw">as</span> <span class="ident">usize</span>);
         <span class="kw">while</span> <span class="ident">len</span> <span class="op">&gt;</span> <span class="number">0</span> {
             <span class="ident">timeseries</span>.<span class="ident">insert</span>(
@@ -825,6 +844,7 @@
             <span class="ident">len</span> <span class="op">=</span> <span class="ident">len</span> <span class="op">-</span> <span class="number">8</span>;
         }
         <span class="prelude-val">Ok</span>(<span class="ident">Timeseries</span> {
+            <span class="ident">metric</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">metric</span>),
             <span class="ident">tags</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">timeseries</span>),
             <span class="ident">timeseries_id</span>: <span class="ident">timeseries_id</span>,
         })
@@ -847,6 +867,7 @@
     <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>;
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write_data</span>(<span class="ident">compression</span>: <span class="ident">String</span>) {
+        <span class="kw">let</span> <span class="ident">metric_arc</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="number">0</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tags</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
         <span class="ident">tags</span>.<span class="ident">insert</span>(<span class="number">1</span>, <span class="number">1</span>);
         <span class="ident">tags</span>.<span class="ident">insert</span>(<span class="number">2</span>, <span class="number">2</span>);
@@ -861,6 +882,7 @@
         <span class="ident">docstore</span>.<span class="ident">compression</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">compression</span>.<span class="ident">clone</span>());
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">50000</span> {
             <span class="kw">let</span> <span class="ident">timeseries</span> <span class="op">=</span> <span class="ident">Timeseries</span> {
+                <span class="ident">metric</span>: <span class="ident">metric_arc</span>.<span class="ident">clone</span>(),
                 <span class="ident">tags</span>: <span class="ident">tags_arc</span>.<span class="ident">clone</span>(),
                 <span class="ident">timeseries_id</span>: <span class="ident">i</span>,
             };
@@ -893,7 +915,7 @@
 
         <span class="kw">let</span> <span class="ident">snappy_file_read_time</span> <span class="op">=</span> <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">snappy_file_decompress_time</span> <span class="op">=</span> <span class="ident">AtomicU64</span>::<span class="ident">new</span>(<span class="number">0</span>);
-        (<span class="number">0</span>..<span class="ident">iterations</span>).<span class="ident">into_par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
+        (<span class="number">0</span>..<span class="ident">iterations</span>).<span class="ident">into_par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">_i</span><span class="op">|</span> {
             <span class="comment">//no compression</span>
             <span class="kw">let</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;./docstore-none&quot;</span>);
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">BufReader</span>::<span class="ident">new</span>(<span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">file</span>).<span class="ident">unwrap</span>());
@@ -916,10 +938,10 @@
         );
 
         <span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">core</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_secs_f32</span>(<span class="number">5</span> <span class="kw">as</span> <span class="ident">f32</span>));
-        (<span class="number">0</span>..<span class="ident">iterations</span>).<span class="ident">into_par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
+        (<span class="number">0</span>..<span class="ident">iterations</span>).<span class="ident">into_par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">_i</span><span class="op">|</span> {
             <span class="comment">//zstd</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filename</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;./docstore-zstd&quot;</span>);
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">filename</span>).<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">filename</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;./docstore-zstd&quot;</span>);
+            <span class="kw">let</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">filename</span>).<span class="ident">unwrap</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">BufReader</span>::<span class="ident">new</span>(<span class="ident">file</span>);
 
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
@@ -962,7 +984,7 @@
         );
 
         <span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">core</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_secs_f32</span>(<span class="number">5</span> <span class="kw">as</span> <span class="ident">f32</span>));
-        (<span class="number">0</span>..<span class="ident">iterations</span>).<span class="ident">into_par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
+        (<span class="number">0</span>..<span class="ident">iterations</span>).<span class="ident">into_par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">_i</span><span class="op">|</span> {
             <span class="comment">//snappy</span>
             <span class="kw">let</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;./docstore-snappy&quot;</span>);
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">BufReader</span>::<span class="ident">new</span>(<span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">file</span>).<span class="ident">unwrap</span>());
@@ -1006,7 +1028,7 @@
         );
 
         <span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">core</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_secs_f32</span>(<span class="number">5</span> <span class="kw">as</span> <span class="ident">f32</span>));
-        (<span class="number">0</span>..<span class="ident">iterations</span>).<span class="ident">into_par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
+        (<span class="number">0</span>..<span class="ident">iterations</span>).<span class="ident">into_par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">_i</span><span class="op">|</span> {
             <span class="comment">//lz4</span>
             <span class="kw">let</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;./docstore-lz4&quot;</span>);
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reader</span> <span class="op">=</span> <span class="ident">BufReader</span>::<span class="ident">new</span>(<span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">file</span>).<span class="ident">unwrap</span>());

@@ -410,14 +410,6 @@
 <span id="407">407</span>
 <span id="408">408</span>
 <span id="409">409</span>
-<span id="410">410</span>
-<span id="411">411</span>
-<span id="412">412</span>
-<span id="413">413</span>
-<span id="414">414</span>
-<span id="415">415</span>
-<span id="416">416</span>
-<span id="417">417</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -446,7 +438,6 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">Path</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashSet</span>,
-    <span class="ident">io</span>::<span class="ident">Error</span>,
     <span class="ident">io</span>::{<span class="ident">Read</span>, <span class="ident">Write</span>},
     <span class="ident">sync</span>::<span class="ident">Arc</span>,
     <span class="ident">thread</span>,
@@ -561,7 +552,7 @@
                     <span class="kw">let</span> <span class="ident">file_path</span> <span class="op">=</span> <span class="ident">fpath</span>.<span class="ident">as_path</span>().<span class="ident">to_str</span>().<span class="ident">unwrap_or</span>(<span class="string">&quot;none&quot;</span>).<span class="ident">to_string</span>();
                     <span class="kw">let</span> <span class="ident">contains_file</span> <span class="op">=</span> <span class="ident">read_lock</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">file_path</span>);
                     <span class="ident">drop</span>(<span class="ident">read_lock</span>);
-		    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Is file {} present: {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">file_path</span>, <span class="ident">contains_file</span>);	
+		            <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Is file {} present: {}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">file_path</span>, <span class="ident">contains_file</span>);
                     <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">store_clone</span>
                         .<span class="ident">get_metadata</span>(<span class="ident">file_name_clone</span>.<span class="ident">to_string</span>().<span class="ident">to_owned</span>())
                         .<span class="kw">await</span>;
@@ -628,7 +619,7 @@
                             .<span class="ident">download</span>(<span class="ident">file_name_clone</span>.<span class="ident">to_string</span>().<span class="ident">to_owned</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">f</span>)
                             .<span class="kw">await</span>;
                         <span class="kw">match</span> <span class="ident">downloaded</span> {
-                            <span class="prelude-val">Ok</span>(<span class="ident">bytes</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">Ok</span>(<span class="ident">_bytes</span>) <span class="op">=</span><span class="op">&gt;</span> {
                                 <span class="ident">f</span>.<span class="ident">flush</span>().<span class="ident">unwrap</span>();
                                 <span class="comment">//Final move</span>
                                 <span class="macro">info</span><span class="macro">!</span>(
@@ -655,7 +646,7 @@
                                     }
                                     <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">dt_file_res</span>.<span class="ident">flush</span>();
                                     <span class="kw">match</span> <span class="ident">result</span> {
-                                        <span class="prelude-val">Ok</span>(<span class="ident">o</span>) <span class="op">=</span><span class="op">&gt;</span> {},
+                                        <span class="prelude-val">Ok</span>(<span class="ident">_o</span>) <span class="op">=</span><span class="op">&gt;</span> {},
                                          <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error flushing duration file: {:?} {:?}&quot;</span>, <span class="ident">duration_tmp_path</span>, <span class="ident">e</span>),
                                     }
                                 } <span class="comment">// File should be closed here.</span>
@@ -664,13 +655,13 @@
                                 <span class="comment">// Wait until lock is acquired. But what is the point of a blocking method, if it doesnt block by itself ?</span>
                                 <span class="comment">// I guess this is a side effect of async</span>
                                 <span class="kw">let</span> <span class="ident">file_name_str</span> <span class="op">=</span> <span class="ident">fpath</span>.<span class="ident">to_str</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>();
-				<span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Writing file {} into cache&quot;</span>, <span class="ident">file_name_str</span>);
-				<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lock</span> <span class="op">=</span>
-                                    <span class="ident">futures</span>::<span class="ident">executor</span>::<span class="ident">block_on</span>(<span class="ident">downloaded_set_clone</span>.<span class="ident">write</span>());
+				                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Writing file {} into cache&quot;</span>, <span class="ident">file_name_str</span>);
+				                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lock</span> <span class="op">=</span>
+                                <span class="ident">futures</span>::<span class="ident">executor</span>::<span class="ident">block_on</span>(<span class="ident">downloaded_set_clone</span>.<span class="ident">write</span>());
                                 <span class="ident">lock</span>.<span class="ident">insert</span>(<span class="ident">file_name_str</span>);
                                 <span class="ident">drop</span>(<span class="ident">lock</span>);
                             }
-                            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">Err</span>(<span class="ident">_e</span>) <span class="op">=</span><span class="op">&gt;</span> {
                                 <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Error fetching file {}&quot;</span>, <span class="ident">file_name</span>);
                             }
                         }
@@ -711,7 +702,7 @@
             <span class="kw">for</span> <span class="ident">h</span> <span class="kw">in</span> <span class="ident">handles</span> {
                 <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">h</span>.<span class="kw">await</span>;
                 <span class="kw">match</span> <span class="ident">result</span> {
-                    <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>,
+                    <span class="prelude-val">Ok</span>(<span class="ident">_v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>,
                     <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Error while downloading from s3 {:?}&quot;</span>, <span class="ident">e</span>),
                 }
             }
@@ -771,7 +762,7 @@
     <span class="kw">let</span> <span class="ident">arc_s3_client</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">s3_client</span>);
     <span class="kw">let</span> <span class="ident">arc_processed_bucket</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">processed_bucket</span>.<span class="ident">clone</span>());
     <span class="kw">let</span> <span class="ident">remote_store</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RemoteStore</span>::<span class="ident">new</span>(<span class="ident">arc_s3_client</span>, <span class="ident">arc_processed_bucket</span>));
-    <span class="kw">let</span> <span class="ident">data_path</span> <span class="op">=</span> <span class="ident">add_dir</span>(<span class="ident">root_data_path</span>.<span class="ident">clone</span>(), <span class="ident">namespace</span>.<span class="ident">clone</span>());
+    <span class="kw">let</span> <span class="ident">_data_path</span> <span class="op">=</span> <span class="ident">add_dir</span>(<span class="ident">root_data_path</span>.<span class="ident">clone</span>(), <span class="ident">namespace</span>.<span class="ident">clone</span>());
     <span class="kw">let</span> <span class="ident">total_num_shards</span> <span class="op">=</span> <span class="ident">get_remote_shards</span>(<span class="kw-2">&amp;</span><span class="ident">namespace</span>, <span class="ident">remote_store</span>.<span class="ident">clone</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">num_containers</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">num_containers</span>;
     <span class="kw">let</span> <span class="ident">container_id</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">container_id</span>;
@@ -809,13 +800,6 @@
         });
         <span class="ident">handles</span>.<span class="ident">push</span>(<span class="ident">handle</span>);
     }
-
-    <span class="comment">/*let result = futures::executor::block_on(futures::future::try_join_all(handles));
-
-    match result {
-        Ok(v) =&gt; info!(&quot;Threads submitted successfully - should never happen!&quot;),
-        Err(e) =&gt; info!(&quot;Error while submitting jobs for download from remote store {:?}&quot;, e),
-    }*/</span>
     <span class="prelude-val">Ok</span>(())
 }
 

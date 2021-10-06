@@ -141,6 +141,16 @@
 <span id="138">138</span>
 <span id="139">139</span>
 <span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -198,12 +208,17 @@
     <span class="kw">pub</span> <span class="ident">plugin_path</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">ssl_for_metrics</span>: <span class="ident">bool</span>,
 
-    <span class="kw">pub</span> <span class="ident">rollup_size</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">num_containers</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span> <span class="ident">container_id</span>: <span class="ident">usize</span>,
 
     <span class="kw">pub</span> <span class="ident">aws_region</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">aws_endpoint</span>: <span class="ident">String</span>,
+
+    <span class="comment">//Rollup</span>
+    <span class="kw">pub</span> <span class="ident">rollup_size</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span> <span class="ident">rollup_threads</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span> <span class="ident">rollup_bucket</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">rollup_start_epoch</span>: <span class="ident">u64</span>,
 }
 <span class="comment">// TODO: Cleanup</span>
 <span class="kw">impl</span> <span class="ident">Config</span> {
@@ -255,11 +270,16 @@
                 .<span class="ident">get_str</span>(<span class="string">&quot;plugin_path&quot;</span>)
                 .<span class="ident">unwrap_or</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;/usr/share/myst/plugins/metrics-reporter&quot;</span>)),
             <span class="ident">ssl_for_metrics</span>: <span class="ident">config</span>.<span class="ident">get_bool</span>(<span class="string">&quot;ssl_for_metrics&quot;</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">rollup_size</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;rollup_size&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">7</span> <span class="op">*</span> <span class="number">24</span> <span class="op">*</span> <span class="number">60</span> <span class="op">*</span> <span class="number">60</span>) <span class="kw">as</span> <span class="ident">u32</span>,
             <span class="ident">num_containers</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;num_containers&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">5</span>) <span class="kw">as</span> <span class="ident">usize</span>,
             <span class="ident">container_id</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;container_id&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">1</span>) <span class="kw">as</span> <span class="ident">usize</span>,
             <span class="ident">aws_region</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;aws_region&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
             <span class="ident">aws_endpoint</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;aws_endpoint&quot;</span>).<span class="ident">unwrap_or</span>(<span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>()),
+
+            <span class="comment">//Rollup</span>
+            <span class="ident">rollup_size</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;rollup_size&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">7</span>) <span class="kw">as</span> <span class="ident">u32</span>,
+            <span class="ident">rollup_threads</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;rollup_threads&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">1</span>) <span class="kw">as</span> <span class="ident">u32</span>,
+            <span class="ident">rollup_bucket</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;rollup_bucket&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
+            <span class="ident">rollup_start_epoch</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;rollup_start_epoch&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">1</span>) <span class="kw">as</span> <span class="ident">u64</span>,
         }
     }
 }

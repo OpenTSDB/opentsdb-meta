@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/usr/local/cargo/registry/src/github.com-1ecc6299db9ec823/bloomfilter-1.0.5/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/usr/local/cargo/registry/src/github.com-1ecc6299db9ec823/bloomfilter-1.0.9/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
 <link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../bloomfilter/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
                 <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
@@ -248,8 +248,56 @@
 <span id="245">245</span>
 <span id="246">246</span>
 <span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="comment">// (C)opyleft 2013-2019 Frank Denis</span>
+<span class="comment">// (C)opyleft 2013-2021 Frank Denis</span>
 
 <span class="doccomment">//! Bloom filter for Rust</span>
 <span class="doccomment">//!</span>
@@ -261,7 +309,8 @@
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">unreadable_literal</span>, <span class="ident">clippy</span>::<span class="ident">bool_comparison</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">bit_vec</span>::<span class="ident">BitVec</span>;
-<span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;random&quot;</span>)]</span>
+<span class="kw">use</span> <span class="ident">getrandom</span>::<span class="ident">getrandom</span>;
 <span class="kw">use</span> <span class="ident">siphasher</span>::<span class="ident">sip</span>::<span class="ident">SipHasher13</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">cmp</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">f64</span>;
@@ -271,15 +320,21 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">siphasher</span>::<span class="ident">reexports</span>::<span class="ident">serde</span>;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">Rng</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">reexports</span> {
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;random&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">use</span> ::<span class="ident">getrandom</span>;
+    <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">bit_vec</span>;
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">siphasher</span>::<span class="ident">reexports</span>::<span class="ident">serde</span>;
+    <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">siphasher</span>;
+}
 
 <span class="doccomment">/// Bloom filter structure</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">derive</span>(<span class="ident">serde</span>::<span class="ident">Serialize</span>, <span class="ident">serde</span>::<span class="ident">Deserialize</span>))]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>, <span class="ident">serde</span>(<span class="kw">crate</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>))]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Bloom</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span><span class="op">&gt;</span> {
-    <span class="ident">bitmap</span>: <span class="ident">BitVec</span>,
+    <span class="ident">bit_vec</span>: <span class="ident">BitVec</span>,
     <span class="ident">bitmap_bits</span>: <span class="ident">u64</span>,
     <span class="ident">k_num</span>: <span class="ident">u32</span>,
     <span class="ident">sips</span>: [<span class="ident">SipHasher13</span>; <span class="number">2</span>],
@@ -291,14 +346,19 @@
     <span class="doccomment">/// Create a new bloom filter structure.</span>
     <span class="doccomment">/// bitmap_size is the size in bytes (not bits) that will be allocated in memory</span>
     <span class="doccomment">/// items_count is an estimation of the maximum number of items to store.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">bitmap_size</span>: <span class="ident">usize</span>, <span class="ident">items_count</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="doccomment">/// seed is a random value used to generate the hash functions.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_seed</span>(<span class="ident">bitmap_size</span>: <span class="ident">usize</span>, <span class="ident">items_count</span>: <span class="ident">usize</span>, <span class="ident">seed</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="number">32</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bitmap_size</span> <span class="op">&gt;</span> <span class="number">0</span> <span class="op">&amp;&amp;</span> <span class="ident">items_count</span> <span class="op">&gt;</span> <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">bitmap_bits</span> <span class="op">=</span> (<span class="ident">bitmap_size</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">*</span> <span class="number">8u64</span>;
         <span class="kw">let</span> <span class="ident">k_num</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">optimal_k_num</span>(<span class="ident">bitmap_bits</span>, <span class="ident">items_count</span>);
         <span class="kw">let</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="ident">BitVec</span>::<span class="ident">from_elem</span>(<span class="ident">bitmap_bits</span> <span class="kw">as</span> <span class="ident">usize</span>, <span class="bool-val">false</span>);
-        <span class="kw">let</span> <span class="ident">sips</span> <span class="op">=</span> [<span class="self">Self</span>::<span class="ident">sip_new</span>(), <span class="self">Self</span>::<span class="ident">sip_new</span>()];
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">k1</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">16</span>];
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">k2</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">16</span>];
+        <span class="ident">k1</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">seed</span>[<span class="number">0</span>..<span class="number">16</span>]);
+        <span class="ident">k2</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">seed</span>[<span class="number">16</span>..<span class="number">32</span>]);
+        <span class="kw">let</span> <span class="ident">sips</span> <span class="op">=</span> [<span class="self">Self</span>::<span class="ident">sip_new</span>(<span class="kw-2">&amp;</span><span class="ident">k1</span>), <span class="self">Self</span>::<span class="ident">sip_new</span>(<span class="kw-2">&amp;</span><span class="ident">k2</span>)];
         <span class="self">Self</span> {
-            <span class="ident">bitmap</span>,
+            <span class="ident">bit_vec</span>: <span class="ident">bitmap</span>,
             <span class="ident">bitmap_bits</span>,
             <span class="ident">k_num</span>,
             <span class="ident">sips</span>,
@@ -307,17 +367,36 @@
     }
 
     <span class="doccomment">/// Create a new bloom filter structure.</span>
+    <span class="doccomment">/// bitmap_size is the size in bytes (not bits) that will be allocated in memory</span>
+    <span class="doccomment">/// items_count is an estimation of the maximum number of items to store.</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;random&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">bitmap_size</span>: <span class="ident">usize</span>, <span class="ident">items_count</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">seed</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">32</span>];
+        <span class="ident">getrandom</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">seed</span>).<span class="ident">unwrap</span>();
+        <span class="self">Self</span>::<span class="ident">new_with_seed</span>(<span class="ident">bitmap_size</span>, <span class="ident">items_count</span>, <span class="kw-2">&amp;</span><span class="ident">seed</span>)
+    }
+
+    <span class="doccomment">/// Create a new bloom filter structure.</span>
     <span class="doccomment">/// items_count is an estimation of the maximum number of items to store.</span>
     <span class="doccomment">/// fp_p is the wanted rate of false positives, in ]0.0, 1.0[</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;random&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_for_fp_rate</span>(<span class="ident">items_count</span>: <span class="ident">usize</span>, <span class="ident">fp_p</span>: <span class="ident">f64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">bitmap_size</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">compute_bitmap_size</span>(<span class="ident">items_count</span>, <span class="ident">fp_p</span>);
         <span class="ident">Bloom</span>::<span class="ident">new</span>(<span class="ident">bitmap_size</span>, <span class="ident">items_count</span>)
     }
 
-    <span class="doccomment">/// Create a bloom filter structure with an existing state.</span>
+    <span class="doccomment">/// Create a new bloom filter structure.</span>
+    <span class="doccomment">/// items_count is an estimation of the maximum number of items to store.</span>
+    <span class="doccomment">/// fp_p is the wanted rate of false positives, in ]0.0, 1.0[</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_for_fp_rate_with_seed</span>(<span class="ident">items_count</span>: <span class="ident">usize</span>, <span class="ident">fp_p</span>: <span class="ident">f64</span>, <span class="ident">seed</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="number">32</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">bitmap_size</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">compute_bitmap_size</span>(<span class="ident">items_count</span>, <span class="ident">fp_p</span>);
+        <span class="ident">Bloom</span>::<span class="ident">new_with_seed</span>(<span class="ident">bitmap_size</span>, <span class="ident">items_count</span>, <span class="ident">seed</span>)
+    }
+
+    <span class="doccomment">/// Create a bloom filter structure from a previous state given as a `ByteVec` structure.</span>
     <span class="doccomment">/// The state is assumed to be retrieved from an existing bloom filter.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_existing</span>(
-        <span class="ident">bitmap</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_bit_vec</span>(
+        <span class="ident">bit_vec</span>: <span class="ident">BitVec</span>,
         <span class="ident">bitmap_bits</span>: <span class="ident">u64</span>,
         <span class="ident">k_num</span>: <span class="ident">u32</span>,
         <span class="ident">sip_keys</span>: [(<span class="ident">u64</span>, <span class="ident">u64</span>); <span class="number">2</span>],
@@ -327,12 +406,23 @@
             <span class="ident">SipHasher13</span>::<span class="ident">new_with_keys</span>(<span class="ident">sip_keys</span>[<span class="number">1</span>].<span class="number">0</span>, <span class="ident">sip_keys</span>[<span class="number">1</span>].<span class="number">1</span>),
         ];
         <span class="self">Self</span> {
-            <span class="ident">bitmap</span>: <span class="ident">BitVec</span>::<span class="ident">from_bytes</span>(<span class="ident">bitmap</span>),
+            <span class="ident">bit_vec</span>,
             <span class="ident">bitmap_bits</span>,
             <span class="ident">k_num</span>,
             <span class="ident">sips</span>,
             <span class="ident">_phantom</span>: <span class="ident">PhantomData</span>,
         }
+    }
+
+    <span class="doccomment">/// Create a bloom filter structure with an existing state given as a byte array.</span>
+    <span class="doccomment">/// The state is assumed to be retrieved from an existing bloom filter.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_existing</span>(
+        <span class="ident">bytes</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+        <span class="ident">bitmap_bits</span>: <span class="ident">u64</span>,
+        <span class="ident">k_num</span>: <span class="ident">u32</span>,
+        <span class="ident">sip_keys</span>: [(<span class="ident">u64</span>, <span class="ident">u64</span>); <span class="number">2</span>],
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>::<span class="ident">from_bit_vec</span>(<span class="ident">BitVec</span>::<span class="ident">from_bytes</span>(<span class="ident">bytes</span>), <span class="ident">bitmap_bits</span>, <span class="ident">k_num</span>, <span class="ident">sip_keys</span>)
     }
 
     <span class="doccomment">/// Compute a recommended bitmap size for items_count items</span>
@@ -353,8 +443,8 @@
     {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hashes</span> <span class="op">=</span> [<span class="number">0u64</span>, <span class="number">0u64</span>];
         <span class="kw">for</span> <span class="ident">k_i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="self">self</span>.<span class="ident">k_num</span> {
-            <span class="kw">let</span> <span class="ident">bit_offset</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">bloom_hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">hashes</span>, <span class="kw-2">&amp;</span><span class="ident">item</span>, <span class="ident">k_i</span>) <span class="op">%</span> <span class="self">self</span>.<span class="ident">bitmap_bits</span>) <span class="kw">as</span> <span class="ident">usize</span>;
-            <span class="self">self</span>.<span class="ident">bitmap</span>.<span class="ident">set</span>(<span class="ident">bit_offset</span>, <span class="bool-val">true</span>);
+            <span class="kw">let</span> <span class="ident">bit_offset</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">bloom_hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">hashes</span>, <span class="ident">item</span>, <span class="ident">k_i</span>) <span class="op">%</span> <span class="self">self</span>.<span class="ident">bitmap_bits</span>) <span class="kw">as</span> <span class="ident">usize</span>;
+            <span class="self">self</span>.<span class="ident">bit_vec</span>.<span class="ident">set</span>(<span class="ident">bit_offset</span>, <span class="bool-val">true</span>);
         }
     }
 
@@ -366,8 +456,8 @@
     {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hashes</span> <span class="op">=</span> [<span class="number">0u64</span>, <span class="number">0u64</span>];
         <span class="kw">for</span> <span class="ident">k_i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="self">self</span>.<span class="ident">k_num</span> {
-            <span class="kw">let</span> <span class="ident">bit_offset</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">bloom_hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">hashes</span>, <span class="kw-2">&amp;</span><span class="ident">item</span>, <span class="ident">k_i</span>) <span class="op">%</span> <span class="self">self</span>.<span class="ident">bitmap_bits</span>) <span class="kw">as</span> <span class="ident">usize</span>;
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">bitmap</span>.<span class="ident">get</span>(<span class="ident">bit_offset</span>).<span class="ident">unwrap</span>() <span class="op">=</span><span class="op">=</span> <span class="bool-val">false</span> {
+            <span class="kw">let</span> <span class="ident">bit_offset</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">bloom_hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">hashes</span>, <span class="ident">item</span>, <span class="ident">k_i</span>) <span class="op">%</span> <span class="self">self</span>.<span class="ident">bitmap_bits</span>) <span class="kw">as</span> <span class="ident">usize</span>;
+            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">bit_vec</span>.<span class="ident">get</span>(<span class="ident">bit_offset</span>).<span class="ident">unwrap</span>() <span class="op">=</span><span class="op">=</span> <span class="bool-val">false</span> {
                 <span class="kw">return</span> <span class="bool-val">false</span>;
             }
         }
@@ -383,10 +473,10 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hashes</span> <span class="op">=</span> [<span class="number">0u64</span>, <span class="number">0u64</span>];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">found</span> <span class="op">=</span> <span class="bool-val">true</span>;
         <span class="kw">for</span> <span class="ident">k_i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="self">self</span>.<span class="ident">k_num</span> {
-            <span class="kw">let</span> <span class="ident">bit_offset</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">bloom_hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">hashes</span>, <span class="kw-2">&amp;</span><span class="ident">item</span>, <span class="ident">k_i</span>) <span class="op">%</span> <span class="self">self</span>.<span class="ident">bitmap_bits</span>) <span class="kw">as</span> <span class="ident">usize</span>;
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">bitmap</span>.<span class="ident">get</span>(<span class="ident">bit_offset</span>).<span class="ident">unwrap</span>() <span class="op">=</span><span class="op">=</span> <span class="bool-val">false</span> {
+            <span class="kw">let</span> <span class="ident">bit_offset</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">bloom_hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">hashes</span>, <span class="ident">item</span>, <span class="ident">k_i</span>) <span class="op">%</span> <span class="self">self</span>.<span class="ident">bitmap_bits</span>) <span class="kw">as</span> <span class="ident">usize</span>;
+            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">bit_vec</span>.<span class="ident">get</span>(<span class="ident">bit_offset</span>).<span class="ident">unwrap</span>() <span class="op">=</span><span class="op">=</span> <span class="bool-val">false</span> {
                 <span class="ident">found</span> <span class="op">=</span> <span class="bool-val">false</span>;
-                <span class="self">self</span>.<span class="ident">bitmap</span>.<span class="ident">set</span>(<span class="ident">bit_offset</span>, <span class="bool-val">true</span>);
+                <span class="self">self</span>.<span class="ident">bit_vec</span>.<span class="ident">set</span>(<span class="ident">bit_offset</span>, <span class="bool-val">true</span>);
             }
         }
         <span class="ident">found</span>
@@ -394,7 +484,12 @@
 
     <span class="doccomment">/// Return the bitmap as a vector of bytes</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">bitmap</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">bitmap</span>.<span class="ident">to_bytes</span>()
+        <span class="self">self</span>.<span class="ident">bit_vec</span>.<span class="ident">to_bytes</span>()
+    }
+
+    <span class="doccomment">/// Return the bitmap as a &quot;BitVec&quot; structure</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">bit_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">BitVec</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">bit_vec</span>
     }
 
     <span class="doccomment">/// Return the number of bits in the filter</span>
@@ -412,6 +507,7 @@
         [<span class="self">self</span>.<span class="ident">sips</span>[<span class="number">0</span>].<span class="ident">keys</span>(), <span class="self">self</span>.<span class="ident">sips</span>[<span class="number">1</span>].<span class="ident">keys</span>()]
     }
 
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="kw">fn</span> <span class="ident">optimal_k_num</span>(<span class="ident">bitmap_bits</span>: <span class="ident">u64</span>, <span class="ident">items_count</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span> {
         <span class="kw">let</span> <span class="ident">m</span> <span class="op">=</span> <span class="ident">bitmap_bits</span> <span class="kw">as</span> <span class="ident">f64</span>;
         <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">items_count</span> <span class="kw">as</span> <span class="ident">f64</span>;
@@ -437,56 +533,56 @@
 
     <span class="doccomment">/// Clear all of the bits in the filter, removing all keys from the set</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clear</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">bitmap</span>.<span class="ident">clear</span>()
+        <span class="self">self</span>.<span class="ident">bit_vec</span>.<span class="ident">clear</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">sip_new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SipHasher13</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">thread_rng</span>();
-        <span class="ident">SipHasher13</span>::<span class="ident">new_with_keys</span>(<span class="ident">rng</span>.<span class="ident">gen</span>(), <span class="ident">rng</span>.<span class="ident">gen</span>())
+    <span class="attribute">#[<span class="ident">inline</span>]</span>
+    <span class="kw">fn</span> <span class="ident">sip_new</span>(<span class="ident">key</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="number">16</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SipHasher13</span> {
+        <span class="ident">SipHasher13</span>::<span class="ident">new_with_key</span>(<span class="ident">key</span>)
     }
 }
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;random&quot;</span>)]</span>
 <span class="kw">fn</span> <span class="ident">bloom_test_set</span>() {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">thread_rng</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bloom</span> <span class="op">=</span> <span class="ident">Bloom</span>::<span class="ident">new</span>(<span class="number">10</span>, <span class="number">80</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">key</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>, <span class="number">16</span>];
-    <span class="ident">rng</span>.<span class="ident">fill_bytes</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">key</span>);
-    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">false</span>);
-    <span class="ident">bloom</span>.<span class="ident">set</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>);
-    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">true</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">k</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>, <span class="number">16</span>];
+    <span class="ident">getrandom</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">k</span>).<span class="ident">unwrap</span>();
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">false</span>);
+    <span class="ident">bloom</span>.<span class="ident">set</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>);
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">true</span>);
 }
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;random&quot;</span>)]</span>
 <span class="kw">fn</span> <span class="ident">bloom_test_check_and_set</span>() {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">thread_rng</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bloom</span> <span class="op">=</span> <span class="ident">Bloom</span>::<span class="ident">new</span>(<span class="number">10</span>, <span class="number">80</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">key</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>, <span class="number">16</span>];
-    <span class="ident">rng</span>.<span class="ident">fill_bytes</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">key</span>);
-    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check_and_set</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">false</span>);
-    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check_and_set</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">true</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">k</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>, <span class="number">16</span>];
+    <span class="ident">getrandom</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">k</span>).<span class="ident">unwrap</span>();
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check_and_set</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">false</span>);
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check_and_set</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">true</span>);
 }
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;random&quot;</span>)]</span>
 <span class="kw">fn</span> <span class="ident">bloom_test_clear</span>() {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">thread_rng</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bloom</span> <span class="op">=</span> <span class="ident">Bloom</span>::<span class="ident">new</span>(<span class="number">10</span>, <span class="number">80</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">key</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>, <span class="number">16</span>];
-    <span class="ident">rng</span>.<span class="ident">fill_bytes</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">key</span>);
-    <span class="ident">bloom</span>.<span class="ident">set</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>);
-    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">true</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">k</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>, <span class="number">16</span>];
+    <span class="ident">getrandom</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">k</span>).<span class="ident">unwrap</span>();
+    <span class="ident">bloom</span>.<span class="ident">set</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>);
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">true</span>);
     <span class="ident">bloom</span>.<span class="ident">clear</span>();
-    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">false</span>);
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">bloom</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">false</span>);
 }
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;random&quot;</span>)]</span>
 <span class="kw">fn</span> <span class="ident">bloom_test_load</span>() {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">thread_rng</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">original</span> <span class="op">=</span> <span class="ident">Bloom</span>::<span class="ident">new</span>(<span class="number">10</span>, <span class="number">80</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">key</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>, <span class="number">16</span>];
-    <span class="ident">rng</span>.<span class="ident">fill_bytes</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">key</span>);
-    <span class="ident">original</span>.<span class="ident">set</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>);
-    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">original</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">true</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">k</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0u8</span>, <span class="number">16</span>];
+    <span class="ident">getrandom</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">k</span>).<span class="ident">unwrap</span>();
+    <span class="ident">original</span>.<span class="ident">set</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>);
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">original</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">true</span>);
 
     <span class="kw">let</span> <span class="ident">cloned</span> <span class="op">=</span> <span class="ident">Bloom</span>::<span class="ident">from_existing</span>(
         <span class="kw-2">&amp;</span><span class="ident">original</span>.<span class="ident">bitmap</span>(),
@@ -494,7 +590,7 @@
         <span class="ident">original</span>.<span class="ident">number_of_hash_functions</span>(),
         <span class="ident">original</span>.<span class="ident">sip_keys</span>(),
     );
-    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">cloned</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">key</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">true</span>);
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">cloned</span>.<span class="ident">check</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>) <span class="op">=</span><span class="op">=</span> <span class="bool-val">true</span>);
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bloomfilter"></div>

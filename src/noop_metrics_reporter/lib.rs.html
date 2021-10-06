@@ -85,7 +85,7 @@
 
 <span class="attribute">#[<span class="ident">no_mangle</span>]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_ssl</span>(<span class="ident">ssl_key</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">ssl_cert</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">ca_cert</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">MetricsReporter</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">metric_reporter_builder</span> <span class="op">=</span> <span class="ident">NoopMetricReporterBuilder</span>::<span class="ident">new</span>()
+    <span class="kw">let</span> <span class="ident">metric_reporter_builder</span> <span class="op">=</span> <span class="ident">NoopMetricReporterBuilder</span>::<span class="ident">new</span>()
         .<span class="ident">ssl_key</span>(<span class="ident">ssl_key</span>)
         .<span class="ident">ssl_cert</span>(<span class="ident">ssl_cert</span>)
         .<span class="ident">ca_cert</span>(<span class="ident">ca_cert</span>);
@@ -127,7 +127,7 @@
         <span class="self">self</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">build</span>(<span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NoopMetricReporter</span> {
+    <span class="kw">fn</span> <span class="ident">build</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NoopMetricReporter</span> {
         <span class="ident">NoopMetricReporter</span>::<span class="ident">default</span>()
     }
 }

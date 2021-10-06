@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["create_new_s3_client",""],["fetch_and_process",""],["main",""],["process",""]],"mod":[["remote_store",""],["segment_writer",""],["timeseries_record",""]],"struct":[["Cluster",""]]});
+initSidebarItems({"fn":[["fetch_and_process",""],["main",""],["process",""]],"mod":[["remote_store",""],["segment_writer",""],["timeseries_record",""]]});

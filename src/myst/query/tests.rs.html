@@ -521,7 +521,7 @@
 <span class="kw">use</span> <span class="ident">bloomfilter</span>::<span class="ident">Bloom</span>;
 <span class="kw">use</span> <span class="ident">croaring</span>::<span class="ident">Bitmap</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">File</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">BufRead</span>, <span class="ident">BufReader</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">BufReader</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>};
 
@@ -561,7 +561,7 @@
         <span class="ident">segment</span>.<span class="ident">add_timeseries</span>(<span class="ident">Rc</span>::<span class="ident">new</span>(<span class="ident">metric</span>), <span class="ident">tags</span>.<span class="ident">clone</span>(), <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="kw-2">*</span><span class="ident">epoch</span>);
     }
 }
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">close_segment</span>(<span class="kw-2">mut</span> <span class="ident">segment</span>: <span class="ident">MystSegment</span>) {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">close_segment</span>(<span class="ident">segment</span>: <span class="ident">MystSegment</span>) {
     <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Closing&quot;</span>);
     <span class="kw">let</span> <span class="ident">data_path</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from</span>(<span class="string">&quot;./data/&quot;</span>);
     <span class="kw">let</span> <span class="ident">shard_id</span> <span class="op">=</span> <span class="ident">segment</span>.<span class="ident">shard_id</span>;
@@ -720,7 +720,7 @@
 }
 <span class="attribute">#[<span class="ident">test</span>]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">search_timeseries</span>() {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">segment_readers</span> <span class="op">=</span> <span class="ident">write_and_get_segment_readers</span>();
+    <span class="kw">let</span> <span class="ident">segment_readers</span> <span class="op">=</span> <span class="ident">write_and_get_segment_readers</span>();
     <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">build_regex_tag_value_filter</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query</span> <span class="op">=</span> <span class="ident">build_timeseries_query</span>(<span class="ident">filter</span>);
     <span class="ident">query</span>.<span class="ident">start</span> <span class="op">=</span> <span class="ident">segment_readers</span>.<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">unwrap</span>().<span class="ident">created</span>;
@@ -728,7 +728,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">Config</span>::<span class="ident">default</span>();
     <span class="ident">config</span>.<span class="ident">docstore_block_size</span> <span class="op">=</span> <span class="number">200</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query_runner</span> <span class="op">=</span> <span class="ident">QueryRunner</span>::<span class="ident">new</span>(<span class="ident">segment_readers</span>, <span class="kw-2">&amp;</span><span class="ident">query</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="prelude-val">None</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
+    <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
     <span class="kw">let</span> <span class="ident">thread_pool</span> <span class="op">=</span> <span class="ident">rayon</span>::<span class="ident">ThreadPoolBuilder</span>::<span class="ident">new</span>()
         .<span class="ident">num_threads</span>(<span class="ident">num_cpus</span>::<span class="ident">get</span>())
         .<span class="ident">build</span>()
@@ -776,7 +776,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">Config</span>::<span class="ident">default</span>();
     <span class="ident">config</span>.<span class="ident">docstore_block_size</span> <span class="op">=</span> <span class="number">200</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query_runner</span> <span class="op">=</span> <span class="ident">QueryRunner</span>::<span class="ident">new</span>(<span class="ident">segment_readers</span>, <span class="kw-2">&amp;</span><span class="ident">query</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="prelude-val">None</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
+    <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
     <span class="kw">let</span> <span class="ident">thread_pool</span> <span class="op">=</span> <span class="ident">rayon</span>::<span class="ident">ThreadPoolBuilder</span>::<span class="ident">new</span>()
         .<span class="ident">num_threads</span>(<span class="ident">num_cpus</span>::<span class="ident">get</span>())
         .<span class="ident">build</span>()
@@ -822,7 +822,7 @@
     <span class="ident">config</span>.<span class="ident">docstore_block_size</span> <span class="op">=</span> <span class="number">200</span>;
     <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Segment Readers {:?}&quot;</span>, <span class="ident">segment_readers</span>.<span class="ident">len</span>());
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query_runner</span> <span class="op">=</span> <span class="ident">QueryRunner</span>::<span class="ident">new</span>(<span class="ident">segment_readers</span>, <span class="kw-2">&amp;</span><span class="ident">query</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="prelude-val">None</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
+    <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
     <span class="kw">let</span> <span class="ident">thread_pool</span> <span class="op">=</span> <span class="ident">rayon</span>::<span class="ident">ThreadPoolBuilder</span>::<span class="ident">new</span>()
         .<span class="ident">num_threads</span>(<span class="ident">num_cpus</span>::<span class="ident">get</span>())
         .<span class="ident">build</span>()
@@ -855,7 +855,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">Config</span>::<span class="ident">default</span>();
     <span class="ident">config</span>.<span class="ident">docstore_block_size</span> <span class="op">=</span> <span class="number">200</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query_runner</span> <span class="op">=</span> <span class="ident">QueryRunner</span>::<span class="ident">new</span>(<span class="ident">segment_readers</span>, <span class="kw-2">&amp;</span><span class="ident">query</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="prelude-val">None</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
+    <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
     <span class="kw">let</span> <span class="ident">thread_pool</span> <span class="op">=</span> <span class="ident">rayon</span>::<span class="ident">ThreadPoolBuilder</span>::<span class="ident">new</span>()
         .<span class="ident">num_threads</span>(<span class="number">1</span>)
         .<span class="ident">build</span>()
@@ -888,7 +888,7 @@
     <span class="ident">config</span>.<span class="ident">docstore_block_size</span> <span class="op">=</span> <span class="number">200</span>;
     <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">query</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query_runner</span> <span class="op">=</span> <span class="ident">QueryRunner</span>::<span class="ident">new</span>(<span class="ident">segment_readers</span>, <span class="kw-2">&amp;</span><span class="ident">query</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="prelude-val">None</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
+    <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
     <span class="kw">let</span> <span class="ident">thread_pool</span> <span class="op">=</span> <span class="ident">rayon</span>::<span class="ident">ThreadPoolBuilder</span>::<span class="ident">new</span>()
         .<span class="ident">num_threads</span>(<span class="number">1</span>)
         .<span class="ident">build</span>()
@@ -921,7 +921,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">config</span>::<span class="ident">Config</span>::<span class="ident">default</span>();
     <span class="ident">config</span>.<span class="ident">docstore_block_size</span> <span class="op">=</span> <span class="number">200</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query_runner</span> <span class="op">=</span> <span class="ident">QueryRunner</span>::<span class="ident">new</span>(<span class="ident">segment_readers</span>, <span class="kw-2">&amp;</span><span class="ident">query</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>, <span class="prelude-val">None</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
+    <span class="kw">let</span> <span class="ident">curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
     <span class="kw">let</span> <span class="ident">thread_pool</span> <span class="op">=</span> <span class="ident">rayon</span>::<span class="ident">ThreadPoolBuilder</span>::<span class="ident">new</span>()
         .<span class="ident">num_threads</span>(<span class="number">1</span>)
         .<span class="ident">build</span>()
@@ -956,7 +956,7 @@
     <span class="comment">// out of 100 items that are not inserted, expect 1 to return true for contain</span>
     <span class="kw">let</span> <span class="ident">false_positive_rate</span> <span class="op">=</span> <span class="number">0.01</span>;
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Bloom</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>::<span class="ident">compute_bitmap_size</span>(<span class="ident">expected_num_items</span>, <span class="ident">false_positive_rate</span>);
+    <span class="kw">let</span> <span class="ident">filter</span> <span class="op">=</span> <span class="ident">Bloom</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>::<span class="ident">compute_bitmap_size</span>(<span class="ident">expected_num_items</span>, <span class="ident">false_positive_rate</span>);
     <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">filter</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bitmap</span> <span class="op">=</span> <span class="ident">Bitmap</span>::<span class="ident">create_with_capacity</span>(<span class="ident">expected_num_items</span> <span class="kw">as</span> <span class="ident">u32</span>);
     <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">expected_num_items</span> {

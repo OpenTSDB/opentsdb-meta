@@ -142,7 +142,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">segment</span>::<span class="ident">segment_reader</span>::<span class="ident">SegmentReader</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">myst_error</span>::<span class="ident">MystError</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">myst_error</span>::<span class="prelude-ty">Result</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">BufReader</span>, <span class="ident">Seek</span>, <span class="ident">SeekFrom</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">Seek</span>, <span class="ident">SeekFrom</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
 
 <span class="doccomment">/// Stores the dictionary data structure of the segment.</span>
@@ -200,7 +200,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Read</span> <span class="op">+</span> <span class="ident">Seek</span><span class="op">&gt;</span> <span class="ident">Loader</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">Dict</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Dict</span> {
-    <span class="kw">fn</span> <span class="ident">load</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Dict</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">load</span>(<span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Dict</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="ident">buf</span>.<span class="ident">seek</span>(<span class="ident">SeekFrom</span>::<span class="ident">Start</span>(<span class="kw-2">*</span><span class="ident">offset</span> <span class="kw">as</span> <span class="ident">u64</span>))<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">dict_holder</span> <span class="op">=</span> <span class="ident">SegmentReader</span>::<span class="ident">get_dict_from_reader</span>(<span class="ident">buf</span>, <span class="number">0</span>)<span class="question-mark">?</span>;
         <span class="kw">match</span> <span class="ident">Arc</span>::<span class="ident">try_unwrap</span>(<span class="ident">dict_holder</span>) {

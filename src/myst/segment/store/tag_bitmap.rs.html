@@ -201,11 +201,11 @@
             <span class="ident">serialized</span>.<span class="ident">write_u32</span>::<span class="op">&lt;</span><span class="ident">NetworkEndian</span><span class="op">&gt;</span>(<span class="ident">length</span>)<span class="question-mark">?</span>;
 
             <span class="ident">tmp_offset</span> <span class="op">+</span><span class="op">=</span> <span class="ident">length</span>;
-            <span class="ident">serialized</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">v</span>.<span class="ident">serialize</span>());
+            <span class="ident">serialized</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">v</span>.<span class="ident">serialize</span>())<span class="question-mark">?</span>;
         }
 
         <span class="kw-2">*</span><span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="ident">serialized</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>;
-        <span class="ident">buf</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="ident">serialized</span>);
+        <span class="ident">buf</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="ident">serialized</span>)<span class="question-mark">?</span>;
         <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>));
     }
 }
@@ -245,7 +245,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Read</span> <span class="op">+</span> <span class="ident">Seek</span><span class="op">&gt;</span> <span class="ident">Loader</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">TagValuesBitmap</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TagValuesBitmap</span> {
-    <span class="kw">fn</span> <span class="ident">load</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">offset</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TagValuesBitmap</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">load</span>(<span class="self">self</span>, <span class="ident">_buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">R</span>, <span class="ident">_offset</span>: <span class="kw-2">&amp;</span><span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">TagValuesBitmap</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
 }

@@ -117,7 +117,7 @@
     <span class="doccomment">/// Compacts two segments</span>
     <span class="doccomment">/// # Arguments</span>
     <span class="doccomment">/// * `segment` - The segment that is to be current with the current.</span>
-    <span class="kw">fn</span> <span class="ident">compact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">segment</span>: <span class="self">Self</span>)
+    <span class="kw">fn</span> <span class="ident">compact</span>(<span class="ident">segments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">MystError</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="self">Self</span>: <span class="ident">Sized</span>;
 }
