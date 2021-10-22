@@ -42,14 +42,15 @@ use crate::segment::store::myst_fst::MystFST;
 use fasthash::xx::Hash64;
 use fasthash::FastHash;
 
+
 use crate::query::result::{StringGroupedTimeseries, StringTimeseriesResponse};
 
 use crate::segment::store::epoch_bitmap;
 use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
 use crate::utils::config::Config;
 use metrics_reporter::MetricsReporter;
-
 use crate::query::shard_query_runner::TonicResult;
+
 use std::io::{Read, Seek};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -180,8 +181,8 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
             }
         });
 
+
         let _curr_time = SystemTime::now();
-        let it = rx.iter();
         let result: StringTimeseriesResponse = rx.iter().collect();
 
         // Iterate over merged result and form dict and TimeseriesResponse
@@ -297,6 +298,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         );
 
         let epoch_bitmap = segment_reader.get_all_ts_bitmaps()?;
+
         let all_groups: Vec<Result<StringTimeseriesResponse>> = docstore_blocks
                 .par_iter()
                 .map(|(_id, chunk)| {

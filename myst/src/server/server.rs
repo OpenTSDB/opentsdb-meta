@@ -44,6 +44,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::task::{Context, Poll};
 
+
 pub struct TimeseriesService {
     pub thread_pool: rayon::ThreadPool,
     pub cache: Arc<Cache>,
@@ -149,12 +150,13 @@ async fn start_grpc_server(
     config: Config,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut hostname = local_ipaddress::get().unwrap();
-    hostname.push_str(":9999");
+    hostname.push_str(":443");
     let addr = hostname.parse()?;
     // let cert = tokio::fs::read(&config.ssl_cert).await?;
     // let key = tokio::fs::read(&config.ssl_key).await?;
 
     //   let identity = Identity::from_pem(cert, key);
+
     let myst_service = TimeseriesService::new(metrics_reporter, config);
 
     let svc = MystServiceServer::new(myst_service);
@@ -170,5 +172,6 @@ async fn start_grpc_server(
     //     .serve(addr)
     //     .await.unwrap();
     info!("Started server on {:?}", hostname);
+
     Ok(())
 }

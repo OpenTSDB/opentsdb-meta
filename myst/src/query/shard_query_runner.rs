@@ -54,6 +54,7 @@ impl ShardQueryRunner {
         config: &Config,
         metrics_reporter: Option<&Box<dyn MetricsReporter>>,
     ) -> Result<UnboundedReceiver<TonicResult>> {
+
         let shards = ShardQueryRunner::get_num_shards(config)?;
         let (tx, rx) = mpsc::unbounded_channel();
         let num_shards = shards.len();
