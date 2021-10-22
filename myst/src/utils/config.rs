@@ -50,6 +50,7 @@ pub struct Config {
     pub aws_secret: String,
     pub temp_data_path: String,
     pub download_frequency: u64,
+    pub response_size: u32,
 
     pub plugin_path: String,
     pub ssl_for_metrics: bool,
@@ -120,6 +121,7 @@ impl Config {
             container_id: config.get_int("container_id").unwrap_or(1) as usize,
             aws_region: config.get_str("aws_region").unwrap().to_string(),
             aws_endpoint: config.get_str("aws_endpoint").unwrap_or("".to_string()),
+            response_size: config.get_int("response_size").unwrap_or(100000) as u32,
 
             //Rollup
             rollup_size: config.get_int("rollup_size").unwrap_or(7) as u32,
@@ -131,7 +133,7 @@ impl Config {
 }
 
 fn load_config() -> config::Config {
-    let path = PathBuf::from("/etc/myst/myst");
+    let path = PathBuf::from("/etc/myst/myst-1");
     let file = config::File::from(path);
     let mut config = config::Config::new();
     config.merge(file).unwrap();

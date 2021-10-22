@@ -38,6 +38,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::sync::mpsc;
 
 pub fn write_and_get_segment_readers() -> Vec<SegmentReader<File>> {
     let data_path = String::from("./data/");
@@ -126,7 +127,7 @@ pub fn build_regex_tag_value_filter() -> QueryFilter {
     // };
     let tag_filter = QueryFilter::TagValue {
         key: String::from("foo"),
-        filter: String::from("b.*"),
+        filter: String::from(".*"),
         _type: FilterType::Regex,
     };
     let filters = vec![tag_filter];
@@ -248,19 +249,27 @@ pub fn search_timeseries() {
         .build()
         .unwrap();
 
+    let (sender, mut receiver) = mpsc::unbounded_channel();
+    query_runner
+        .search_timeseries(&thread_pool, sender)
+        .unwrap();
     let mut ts = crate::myst_grpc::TimeseriesResponse {
         grouped_timeseries: Vec::new(),
-        dict: None,
+        dict: Some(crate::myst_grpc::Dictionary::default()),
         streams: 0,
     };
-    query_runner
-        .search_timeseries(&thread_pool, &mut ts)
-        .unwrap();
+
+    while let Some(res) = receiver.blocking_recv() {
+        let response = res.unwrap();
+        ts.grouped_timeseries.extend(response.grouped_timeseries);
+        ts.dict = response.dict;
+    }
+    println!("{:?}", ts);
+
     println!(
         "Time to get all metrics {:?}",
         SystemTime::now().duration_since(curr_time).unwrap()
     );
-    println!("{:?}", ts);
     let bitmap_serialized = &ts
         .grouped_timeseries
         .get(0)
@@ -271,7 +280,6 @@ pub fn search_timeseries() {
         .epoch_bitmap;
     let bitmap = Bitmap::deserialize(bitmap_serialized);
     let epoch = query.start as u32;
-
     assert_eq!(bitmap.contains(epoch), true);
     assert_eq!(ts.grouped_timeseries.len(), 1);
     assert_eq!(ts.grouped_timeseries.get(0).unwrap().timeseries.len(), 100)
@@ -296,14 +304,21 @@ pub fn search_timeseries_multiple_segments() {
         .build()
         .unwrap();
 
+    let (sender, mut receiver) = mpsc::unbounded_channel();
+    query_runner
+        .search_timeseries(&thread_pool, sender)
+        .unwrap();
     let mut ts = crate::myst_grpc::TimeseriesResponse {
         grouped_timeseries: Vec::new(),
-        dict: None,
+        dict: Some(crate::myst_grpc::Dictionary::default()),
         streams: 0,
     };
-    query_runner
-        .search_timeseries(&thread_pool, &mut ts)
-        .unwrap();
+
+    while let Some(res) = receiver.blocking_recv() {
+        let response = res.unwrap();
+        ts.grouped_timeseries.extend(response.grouped_timeseries);
+        ts.dict = response.dict;
+    }
     println!(
         "Time to get all metrics {:?}",
         SystemTime::now().duration_since(curr_time).unwrap()
@@ -342,14 +357,21 @@ pub fn search_timeseries_large_segment() {
         .build()
         .unwrap();
 
+    let (sender, mut receiver) = mpsc::unbounded_channel();
+    query_runner
+        .search_timeseries(&thread_pool, sender)
+        .unwrap();
     let mut ts = crate::myst_grpc::TimeseriesResponse {
         grouped_timeseries: Vec::new(),
-        dict: None,
+        dict: Some(crate::myst_grpc::Dictionary::default()),
         streams: 0,
     };
-    query_runner
-        .search_timeseries(&thread_pool, &mut ts)
-        .unwrap();
+
+    while let Some(res) = receiver.blocking_recv() {
+        let response = res.unwrap();
+        ts.grouped_timeseries.extend(response.grouped_timeseries);
+        ts.dict = response.dict;
+    }
     println!(
         "Time to get all metrics {:?}",
         SystemTime::now().duration_since(curr_time).unwrap()
@@ -375,14 +397,21 @@ pub fn search_timeseries_with_not_filter() {
         .build()
         .unwrap();
 
+    let (sender, mut receiver) = mpsc::unbounded_channel();
+    query_runner
+        .search_timeseries(&thread_pool, sender)
+        .unwrap();
     let mut ts = crate::myst_grpc::TimeseriesResponse {
         grouped_timeseries: Vec::new(),
-        dict: None,
+        dict: Some(crate::myst_grpc::Dictionary::default()),
         streams: 0,
     };
-    query_runner
-        .search_timeseries(&thread_pool, &mut ts)
-        .unwrap();
+
+    while let Some(res) = receiver.blocking_recv() {
+        let response = res.unwrap();
+        ts.grouped_timeseries.extend(response.grouped_timeseries);
+        ts.dict = response.dict;
+    }
     println!(
         "Time to get all metrics {:?}",
         SystemTime::now().duration_since(curr_time).unwrap()
@@ -407,14 +436,22 @@ pub fn search_timeseries_with_explicit_filter() {
         .num_threads(1)
         .build()
         .unwrap();
+
+    let (sender, mut receiver) = mpsc::unbounded_channel();
+    query_runner
+        .search_timeseries(&thread_pool, sender)
+        .unwrap();
     let mut ts = crate::myst_grpc::TimeseriesResponse {
         grouped_timeseries: Vec::new(),
-        dict: None,
+        dict: Some(crate::myst_grpc::Dictionary::default()),
         streams: 0,
     };
-    query_runner
-        .search_timeseries(&thread_pool, &mut ts)
-        .unwrap();
+
+    while let Some(res) = receiver.blocking_recv() {
+        let response = res.unwrap();
+        ts.grouped_timeseries.extend(response.grouped_timeseries);
+        ts.dict = response.dict;
+    }
     println!(
         "Time to get all metrics {:?}",
         SystemTime::now().duration_since(curr_time).unwrap()
@@ -441,14 +478,21 @@ pub fn test_groupby_ordering() {
         .build()
         .unwrap();
 
+    let (sender, mut receiver) = mpsc::unbounded_channel();
+    query_runner
+        .search_timeseries(&thread_pool, sender)
+        .unwrap();
     let mut ts = crate::myst_grpc::TimeseriesResponse {
         grouped_timeseries: Vec::new(),
-        dict: None,
+        dict: Some(crate::myst_grpc::Dictionary::default()),
         streams: 0,
     };
-    query_runner
-        .search_timeseries(&thread_pool, &mut ts)
-        .unwrap();
+
+    while let Some(res) = receiver.blocking_recv() {
+        let response = res.unwrap();
+        ts.grouped_timeseries.extend(response.grouped_timeseries);
+        ts.dict = response.dict;
+    }
     println!(
         "Time to get all metrics {:?}",
         SystemTime::now().duration_since(curr_time).unwrap()
@@ -463,9 +507,9 @@ pub fn test_groupby_ordering() {
     assert_eq!("re", dict.dict.get(groups.get(1).unwrap()).unwrap());
 }
 
-//#[test]
+#[test]
 pub fn test_bloom() {
-    let expected_num_items = 100000000000;
+    let expected_num_items = 3;
 
     // out of 100 items that are not inserted, expect 1 to return true for contain
     let false_positive_rate = 0.01;
