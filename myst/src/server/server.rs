@@ -35,9 +35,15 @@ use myst::query::query::Query;
 use myst::setup_logger;
 use std::sync::Arc;
 
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 use tokio_stream::Stream;
 use tonic::transport::{Identity, Server, ServerTlsConfig};
+
+use std::net::SocketAddr;
+
+use std::path::PathBuf;
+use std::task::{Context, Poll};
+
 
 pub struct TimeseriesService {
     pub thread_pool: rayon::ThreadPool,
@@ -74,12 +80,15 @@ impl MystService for TimeseriesService {
         let query = r.query;
         let _curr_time = SystemTime::now();
         info!("Running query {:?}", query);
+
         let batch_query = Query::from_json(&query);
         if batch_query.is_err() {
             return Err(tonic::Status::internal("Unable to parse query"));
         }
+        let batch_query_unwrap = batch_query.unwrap();
+        let start_time = SystemTime::now();
         let res = Query::run_query(
-            &batch_query.unwrap(),
+            &batch_query_unwrap,
             &self.thread_pool,
             self.cache.clone(),
             &self.config,
@@ -87,9 +96,17 @@ impl MystService for TimeseriesService {
         );
 
         match res {
-            Ok(res) => Ok(Response::new(Box::pin(
-                tokio_stream::wrappers::ReceiverStream::new(res),
-            ))),
+            Ok(res) => {
+                info!(
+                    "Time took for query {:?} is {:?} in thread {:?} ",
+                    &batch_query_unwrap,
+                    SystemTime::now().duration_since(start_time).unwrap(),
+                    std::thread::current().id()
+                );
+                Ok(Response::new(Box::pin(
+                    tokio_stream::wrappers::UnboundedReceiverStream::new(res),
+                )))
+            }
 
             Err(_) => {
                 error!("Error querying {:?} ", res);
@@ -124,8 +141,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger(String::from(&config.log_file))?;
 
     start_download().await.unwrap();
-
-    start_grpc_server(metrics_reporter, config).await
+    start_grpc_server(metrics_reporter, config).await.unwrap();
+    Ok(())
 }
 
 async fn start_grpc_server(
@@ -135,20 +152,26 @@ async fn start_grpc_server(
     let mut hostname = local_ipaddress::get().unwrap();
     hostname.push_str(":443");
     let addr = hostname.parse()?;
-    let cert = tokio::fs::read(&config.ssl_cert).await?;
-    let key = tokio::fs::read(&config.ssl_key).await?;
+    // let cert = tokio::fs::read(&config.ssl_cert).await?;
+    // let key = tokio::fs::read(&config.ssl_key).await?;
 
-    let identity = Identity::from_pem(cert, key);
+    //   let identity = Identity::from_pem(cert, key);
+
     let myst_service = TimeseriesService::new(metrics_reporter, config);
 
     let svc = MystServiceServer::new(myst_service);
-
     info!("Starting server on {:?}", hostname);
 
-    Server::builder()
-        .tls_config(ServerTlsConfig::new().identity(identity))?
-        .add_service(svc)
-        .serve(addr)
-        .await?;
+    Server::builder().add_service(svc).serve(addr).await?;
+
+    // let tls_config = ServerTlsConfig::new().identity(identity);
+
+    // Server::builder()
+    //    // .tls_config(tls_config).unwrap()
+    //     .add_service(svc)
+    //     .serve(addr)
+    //     .await.unwrap();
+    info!("Started server on {:?}", hostname);
+
     Ok(())
 }

@@ -133,7 +133,7 @@ impl Query {
         config: &Config,
         metrics_reporter: Option<&Box<dyn MetricsReporter>>,
     ) -> Result<
-        tokio::sync::mpsc::Receiver<
+        tokio::sync::mpsc::UnboundedReceiver<
             std::result::Result<crate::myst_grpc::TimeseriesResponse, tonic::Status>,
         >,
         MystError,

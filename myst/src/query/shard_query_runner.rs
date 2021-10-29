@@ -23,9 +23,9 @@ use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 use std::{fs, path::Path, thread, time::SystemTime};
 
-use log::{error, info};
+use log::{debug, error, info};
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, UnboundedReceiver};
 
 use crate::query::cache::Cache;
 use crate::segment::myst_segment::MystSegment;
@@ -39,7 +39,7 @@ use tonic::Code;
 
 /// Runs a query for all shards
 pub struct ShardQueryRunner {}
-
+pub type TonicResult = std::result::Result<crate::myst_grpc::TimeseriesResponse, tonic::Status>;
 impl ShardQueryRunner {
     /// Run query for all shards and returns a receiver side of the channel with a TimeseriesResponse and Status
     /// # Arguments
@@ -53,17 +53,17 @@ impl ShardQueryRunner {
         cache: Arc<Cache>,
         config: &Config,
         metrics_reporter: Option<&Box<dyn MetricsReporter>>,
-    ) -> Result<Receiver<std::result::Result<crate::myst_grpc::TimeseriesResponse, tonic::Status>>>
-    {
+    ) -> Result<UnboundedReceiver<TonicResult>> {
+
         let shards = ShardQueryRunner::get_num_shards(config)?;
-        let (tx, rx) = mpsc::channel(shards.len());
+        let (tx, rx) = mpsc::unbounded_channel();
         let num_shards = shards.len();
         let num_streams = Arc::new(AtomicU32::new(0));
         shard_pool.scope(move |s| {
             for shard_id in shards {
                 let _ns = num_streams.clone();
                 let c = cache.clone();
-                let sender = tx.clone();
+                let mut sender = tx.clone();
                 s.spawn(move |_s| {
                     info!(
                         "Creating new thread to run shard query {:?} for shard {}",
@@ -82,23 +82,17 @@ impl ShardQueryRunner {
                         c,
                         config,
                         metrics_reporter,
-                        &mut timeseries_response,
+                        sender.clone(),
                     ); // TODO: panic_handler
                     if res.is_err() {
                         let message = format!("Error running query {:?}", res);
-                        sender.try_send(Err(tonic::Status::new(Code::Internal, message)));
+                        sender.send(Err(tonic::Status::new(Code::Internal, message)));
                         error!(
                             "Error running query for shard {} {:?} {:?}",
                             shard_id,
                             timeseries_response,
                             res.err()
                         );
-                    } else {
-                        timeseries_response.streams = num_shards as i32;
-                        let res = sender.try_send(Ok(timeseries_response));
-                        if res.is_err() {
-                            error!("Error sending query response {:?}", res);
-                        }
                     }
                 });
             }
@@ -130,7 +124,7 @@ impl ShardQueryRunner {
         cache: Arc<Cache>,
         config: &Config,
         metrics_reporter: Option<&Box<dyn MetricsReporter>>,
-        timeseries_response: &mut crate::myst_grpc::TimeseriesResponse,
+        sender: mpsc::UnboundedSender<TonicResult>,
     ) -> Result<()> {
         let curr_time = SystemTime::now();
         let s_time = SystemTime::now();
@@ -155,7 +149,7 @@ impl ShardQueryRunner {
                             dur_file.read_to_string(&mut dur_str)?;
                             //If a duration file is present, it should have the right format.
                             let fduration = dur_str.parse()?;
-                            info!(
+                            debug!(
                                 "Read duration: {} for file: {:?}",
                                 fduration, &duration_file
                             );
@@ -172,7 +166,7 @@ impl ShardQueryRunner {
                 } else {
                     0
                 };
-                info!("Duration read for {:?} as {}", &duration_file, duration);
+                debug!("Duration read for {:?} as {}", &duration_file, duration);
 
                 if query.start <= created && query.end >= created
                     || (duration > 0
@@ -194,23 +188,21 @@ impl ShardQueryRunner {
                         duration,
                     )?;
                     segment_readers.push(segment_reader);
-                    timeseries_response.streams = segment_readers.len() as i32;
+                    //timeseries_response.streams = segment_readers.len() as i32;
                 }
             }
         }
-        info!(
-            "Time before starting segment query runner for shard {} is {:?}",
-            shard_id,
-            SystemTime::now().duration_since(s_time).unwrap()
-        );
 
         if segment_readers.is_empty() {
             return Err(MystError::new_query_error(
                 "No valid segments found for this time range",
             ));
         }
+
+        info!("Running query in segments {:?}", segment_readers);
+
         let mut query_runner = QueryRunner::new(segment_readers, query, config, metrics_reporter);
-        query_runner.search_timeseries(segment_pool, timeseries_response)?;
+        query_runner.search_timeseries(segment_pool, sender)?;
         if metrics_reporter.is_some() {
             metrics_reporter.unwrap().gauge(
                 "shard.query.latency",

@@ -37,6 +37,7 @@ use regex_automata::dense;
 use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
 use lz4::Decoder;
 use num::ToPrimitive;
+use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::{
@@ -58,6 +59,15 @@ pub struct SegmentReader<R> {
     pub cache: Arc<Cache>,
     pub file_path: String,
     pub duration: i32,
+}
+
+impl<R: Read + Seek> Debug for SegmentReader<R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("SegmentReader")
+            .field(&self.shard_id)
+            .field(&self.created)
+            .finish()
+    }
 }
 
 impl<R: Read + Seek> SegmentReader<R> {

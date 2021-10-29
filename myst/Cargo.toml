@@ -39,8 +39,14 @@ strum = "0.20"
 strum_macros = "0.20"
 once_cell = "1.8.0"
 
-tonic = {version = "0.4.0", features = ["tls"]}
-prost = "0.7"
+tonic = {version = "0.5.2", features = ["tls"]}
+hyper = { version = "0.14", features = ["full"] }
+warp = "0.3"
+http = "0.2"
+http-body = "0.4.2"
+pin-project = "1.0"
+prost = "0.8"
+
 local_ipaddress = "0.1.3"
 
 zstd = "0.6.1+zstd.1.4.9"
@@ -68,13 +74,10 @@ sys-info = "0.9.0"
 libloading = "0.5"
 metrics-reporter = { path = "../metrics-reporter", version = "*" }
 
+
 [build-dependencies]
-tonic-build = { version = "0.4.0", features = ["prost"] }
+tonic-build = { version = "0.5.2", features = ["prost"] }
 
-
-#[[bin]]
-#name="client"
-#path= "src/client/client.rs"
 
 [[bin]]
 name="server"

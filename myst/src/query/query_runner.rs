@@ -42,16 +42,19 @@ use crate::segment::store::myst_fst::MystFST;
 use fasthash::xx::Hash64;
 use fasthash::FastHash;
 
-use crate::query::result::StringGroupedTimeseries;
+
+use crate::query::result::{StringGroupedTimeseries, StringTimeseriesResponse};
 
 use crate::segment::store::epoch_bitmap;
 use crate::segment::store::epoch_bitmap::EpochBitmapHolder;
 use crate::utils::config::Config;
 use metrics_reporter::MetricsReporter;
+use crate::query::shard_query_runner::TonicResult;
 
 use std::io::{Read, Seek};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use tokio::sync::mpsc;
 
 const METRIC_PREFIX: &str = crate::utils::config::METRIC;
 const TAG_KEY_PREFIX: &str = crate::utils::config::TAG_KEYS;
@@ -80,10 +83,17 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         }
     }
 
+    /// Search timeseries in all segments and sends to response to the provided `Sender`
+    /// Process:
+    /// - Get the segment timeseries id's by processing the filters and looking up the Bitmaps
+    /// - Fetch the timeseries from the Docstore
+    /// # Arguments
+    /// * `segment_pool` - Rayon thread-pool to use for the query
+    /// * `sender` - Sender part of the channel where the response is sent
     pub fn search_timeseries(
         &mut self,
         segment_pool: &rayon::ThreadPool,
-        timeseries_response: &mut crate::myst_grpc::TimeseriesResponse,
+        sender: mpsc::UnboundedSender<TonicResult>,
     ) -> Result<()> {
         let curr_time = SystemTime::now();
         QueryRunner::searh_timeseries_in_segments(
@@ -95,7 +105,8 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
             segment_pool,
             &self.config.cache,
             self.config.docstore_block_size,
-            timeseries_response,
+            self.config.response_size as usize,
+            sender,
         )?;
         if self.metrics_reporter.is_some() {
             self.metrics_reporter.unwrap().gauge(
@@ -127,7 +138,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         Ok(())
     }
 
-    pub fn searh_timeseries_in_segments(
+    fn searh_timeseries_in_segments(
         filter: &QueryFilter,
         query_start: &u64,
         query_end: &u64,
@@ -136,7 +147,8 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         segment_pool: &rayon::ThreadPool,
         cache: &Vec<String>,
         docstore_block_size: usize,
-        timeseries_response: &mut crate::myst_grpc::TimeseriesResponse,
+        response_size: usize,
+        sender: mpsc::UnboundedSender<TonicResult>,
     ) -> Result<()> {
         let _query_time = SystemTime::now();
         let (tx, rx) = std::sync::mpsc::channel();
@@ -146,7 +158,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                 let tx = tx.clone();
                 s.spawn(move |_s| {
                     let _curr_time = SystemTime::now();
-                    let mut grouped_timeseries = HashMap::new();
+                    let mut grouped_timeseries = StringTimeseriesResponse::default();
                     let result = <QueryRunner<'a, R>>::timeseries_for_segment(
                         &filter,
                         query_start,
@@ -164,35 +176,18 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                         Ok(_t) => {}
                     }
 
-                    tx.send(grouped_timeseries).unwrap();
+                    tx.send(grouped_timeseries).unwrap()
                 });
             }
         });
-        info!(
-            "Waiting for all segment threads with thread {:?}",
-            thread::current()
-        );
+
+
         let _curr_time = SystemTime::now();
-        let segment_results: Vec<HashMap<u64, crate::query::result::StringGroupedTimeseries>> =
-            rx.iter().collect();
-
-        let mut result: HashMap<u64, crate::query::result::StringGroupedTimeseries> =
-            HashMap::new();
-        for segment_result in segment_results {
-            for (k, v) in segment_result {
-                if !result.contains_key(&k) {
-                    result.insert(k, crate::query::result::StringGroupedTimeseries::default());
-                    result.get_mut(&k).unwrap().group.extend(v.group);
-                }
-
-                result.get_mut(&k).unwrap().add_all(v.timeseries);
-            }
-        }
+        let result: StringTimeseriesResponse = rx.iter().collect();
 
         // Iterate over merged result and form dict and TimeseriesResponse
         let mut grouped_timeseries = Vec::new();
         let mut dict = HashMap::new();
-        let _id = 0;
         for (_k, mut v) in result {
             let mut hashes = Vec::with_capacity(v.group.len());
             for tagval in &v.group {
@@ -201,26 +196,34 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                 dict.entry(hash).or_insert(tval);
                 hashes.push(hash);
             }
+            let grpc_timeseries = v.convert(response_size);
+            for grpc_ts in grpc_timeseries {
+                grouped_timeseries.push(GroupedTimeseries {
+                    group: hashes.clone(),
+                    timeseries: grpc_ts,
+                });
+                let mut timeseries_response = crate::myst_grpc::TimeseriesResponse {
+                    grouped_timeseries,
+                    dict: None,
+                    streams: 0,
+                };
 
-            grouped_timeseries.push(GroupedTimeseries {
-                group: hashes,
-                timeseries: v.convert(),
-            });
+                grouped_timeseries = Vec::new();
+                sender.send(Ok(timeseries_response));
+            }
         }
 
-        timeseries_response.grouped_timeseries = grouped_timeseries;
+        let mut timeseries_response = crate::myst_grpc::TimeseriesResponse {
+            grouped_timeseries: Vec::new(),
+            dict: None,
+            streams: 0,
+        };
         timeseries_response.dict = Some(Dictionary { dict });
-        timeseries_response.streams = 0;
-
-        // info!(
-        //     "Time took to merge all segment results shard: {:?} is {:?}",
-        //     segment_readers.get(0).unwrap().shard_id,
-        //     SystemTime::now().duration_since(curr_time).unwrap(),
-        // );
-
+        sender.send(Ok(timeseries_response));
         Ok(())
     }
 
+    /// Query the timeseries for a segment
     fn timeseries_for_segment(
         filter: &QueryFilter,
         query_start: &u64,
@@ -229,10 +232,10 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         segment_reader: &mut SegmentReader<R>,
         cache: &Vec<String>,
         docstore_block_size: usize,
-        result: &mut HashMap<u64, crate::query::result::StringGroupedTimeseries>,
+        result: &mut StringTimeseriesResponse,
     ) -> Result<()> {
         info!(
-            "##### Running each segment query for shard {:?} and {} with thread {:?}",
+            "Running segment query for shard {:?} and {} with thread {:?}",
             segment_reader.shard_id,
             segment_reader.created,
             thread::current().id()
@@ -243,7 +246,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
             true => segment_reader.get_dict_from_cache()?,
             false => segment_reader.get_dict()?,
         };
-        info!(
+        debug!(
             "Time to get dict {:?} for shard: {} segment: {}",
             SystemTime::now().duration_since(dict_time).unwrap(),
             segment_reader.shard_id,
@@ -261,7 +264,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         if filtered_bitmap.cardinality() == 0 {
             return Ok(());
         }
-        info!(
+        debug!(
             "Time to get filter bitmap {:?} for shard: {} segment: {}",
             SystemTime::now().duration_since(fil_time).unwrap(),
             segment_reader.shard_id,
@@ -295,11 +298,12 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         );
 
         let epoch_bitmap = segment_reader.get_all_ts_bitmaps()?;
-        let all_groups: Vec<Result<HashMap<u64, StringGroupedTimeseries>>> = docstore_blocks
+
+        let all_groups: Vec<Result<StringTimeseriesResponse>> = docstore_blocks
                 .par_iter()
                 .map(|(_id, chunk)| {
                     let curr_time = SystemTime::now();
-                    let mut groups = HashMap::new();
+                    let mut groups = StringTimeseriesResponse::default();
                     QueryRunner::process_docstore_block(
                         chunk,
                         segment_reader,
@@ -332,15 +336,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         );
 
         for groups in all_groups {
-            for (k, v) in groups?.into_iter() {
-                if result.contains_key(&k) {
-                    for (xxhash, ts) in v.timeseries {
-                        result.get_mut(&k).unwrap().timeseries.insert(xxhash, ts);
-                    }
-                } else {
-                    result.insert(k, v);
-                }
-            }
+            result.extend(groups?);
         }
 
         info!(
@@ -353,6 +349,10 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         Ok(())
     }
 
+    /// Get the Docstore blocks based on the elements.
+    /// # Arguments
+    /// * `elements` - Vec containing the segment timeseries id's
+    /// * `docstore_block_size` - Size of each docstore block
     fn get_docstore_blocks(
         elements: Vec<u32>,
         docstore_block_size: usize,
@@ -379,7 +379,7 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         docstore_block_size: usize,
         ts_data_time: Arc<AtomicU32>,
         epoch_bitmap: &HashMap<u64, Arc<EpochBitmapHolder>>,
-        groups: &mut HashMap<u64, StringGroupedTimeseries>,
+        groups: &mut StringTimeseriesResponse,
     ) -> Result<()> {
         let mut docstore = Arc::new(DeserializedDocStore::default()); //TODO: Don't initialize
         let mut docstore_result = &Vec::new(); //TODO: Don't initialize
@@ -411,6 +411,8 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                 docstore_result = docstore.data.as_ref().unwrap();
                 docstore_offsetlen = docstore.offset_len.as_ref().unwrap();
             }
+
+            let mut count = 0;
 
             let e = element % docstore_block_size as u32;
             if let Some(offset_len) = docstore_offsetlen.get(e as usize) {
@@ -446,14 +448,19 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                     let mut hasher = DefaultHasher::new();
                     Hash::hash_slice(&group_strs_vec, &mut hasher);
                     let hash = hasher.finish();
-                    if !groups.contains_key(&hash) {
-                        groups.insert(
+                    if !groups.groups.contains_key(&hash) {
+                        groups.groups.insert(
                             hash,
                             crate::query::result::StringGroupedTimeseries::default(),
                         );
-                        groups.get_mut(&hash).unwrap().group.extend(group_strs_vec);
+                        groups
+                            .groups
+                            .get_mut(&hash)
+                            .unwrap()
+                            .group
+                            .extend(group_strs_vec);
                     }
-                    groups.get_mut(&hash).unwrap().timeseries.insert(
+                    groups.groups.get_mut(&hash).unwrap().timeseries.insert(
                         timeseries.timeseries_id as i64,
                         crate::query::result::Timeseries {
                             xxhash: timeseries.timeseries_id as i64,
@@ -465,9 +472,10 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
                     // let mut group = GroupedTimeseries::default();
                     //group.timeseries.insert(timeseries.timeseries_id);
                     groups
+                        .groups
                         .entry(0)
                         .or_insert(crate::query::result::StringGroupedTimeseries::default());
-                    groups.get_mut(&0).unwrap().timeseries.insert(
+                    groups.groups.get_mut(&0).unwrap().timeseries.insert(
                         timeseries.timeseries_id as i64,
                         crate::query::result::Timeseries {
                             xxhash: timeseries.timeseries_id as i64,
@@ -736,6 +744,11 @@ impl<'a, R: Read + Seek + Send + Sync> QueryRunner<'a, R> {
         _type: &FilterType,
         field_type: &str,
     ) -> Result<Bitmap> {
+        if *_type == FilterType::Regex && filter.eq(".*") {
+            let terms = segment_reader.search_literal(TAG_KEY_PREFIX, key)?;
+            let mut bitmaps = segment_reader.get_bitmaps(field_type, true, terms)?;
+            return QueryRunner::<R>::union(&mut bitmaps);
+        }
         let terms = match _type {
             FilterType::Literal => segment_reader.search_literal(key, filter)?,
             FilterType::Regex => segment_reader.search_regex(key, filter)?,
