@@ -4,7 +4,7 @@
                 <a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="in-band">Struct <a href="index.html">h2</a>::<wbr><a class="struct" href="">SendStream</a></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/h2/share.rs.html#98-100" title="goto source code">[src]</a></span></h1><div class="docblock type-decl hidden-by-usual-hider"><pre class="rust struct">pub struct SendStream&lt;B:&nbsp;<a class="trait" href="../bytes/buf/buf_impl/trait.Buf.html" title="trait bytes::buf::buf_impl::Buf">Buf</a>&gt; { /* fields omitted */ }</pre></div><div class="docblock"><p>Sends the body stream and trailers to the remote peer.</p>
 <h1 id="overview" class="section-header"><a href="#overview">Overview</a></h1>
 <p>A <code>SendStream</code> is provided by <a href="client/struct.SendRequest.html"><code>SendRequest</code></a> and <a href="server/struct.SendResponse.html"><code>SendResponse</code></a> once the
-HTTP/2.0 message header has been sent sent. It is used to stream the message
+HTTP/2 message header has been sent sent. It is used to stream the message
 body and send the message trailers. See method level documentation for more
 details.</p>
 <p>The <code>SendStream</code> instance is also used to manage outbound flow control.</p>
@@ -19,7 +19,7 @@ response exchange.</p>
 <li>Explicitly reset the stream with <a href="#method.send_reset"><code>send_reset</code></a>.</li>
 </ul>
 <h1 id="flow-control" class="section-header"><a href="#flow-control">Flow control</a></h1>
-<p>In HTTP/2.0, data cannot be sent to the remote peer unless there is
+<p>In HTTP/2, data cannot be sent to the remote peer unless there is
 available window capacity on both the stream and the connection. When a data
 frame is sent, both the stream window and the connection window are
 decremented. When the stream level window reaches zero, no further data can
@@ -27,7 +27,7 @@ be sent on that stream. When the connection level window reaches zero, no
 further data can be sent on any stream for that connection.</p>
 <p>When the remote peer is ready to receive more data, it sends <code>WINDOW_UPDATE</code>
 frames. These frames increment the windows. See the <a href="http://httpwg.org/specs/rfc7540.html#FlowControl">specification</a> for more
-details on the principles of HTTP/2.0 flow control.</p>
+details on the principles of HTTP/2 flow control.</p>
 <p>The implications for sending data are that the caller <strong>should</strong> ensure that
 both the stream and the connection has available window capacity before
 loading the data to send into memory. The <code>SendStream</code> instance provides the

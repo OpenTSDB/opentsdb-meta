@@ -25,7 +25,7 @@ methods found on the <a href="../../tokio/io/trait.AsyncReadExt.html"><code>Asyn
 
 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">create</span>(<span class="string">&quot;foo.txt&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>;
 <span class="ident">file</span>.<span class="ident">write_all</span>(<span class="string">b&quot;hello, world!&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>;</pre></div>
-<p>Read the contents of a file into a buffer</p>
+<p>Read the contents of a file into a buffer:</p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered">
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::<span class="ident">File</span>;
@@ -130,7 +130,7 @@ writing.</p>
 <span class="kw">let</span> <span class="ident">metadata</span> <span class="op">=</span> <span class="ident">file</span>.<span class="ident">metadata</span>().<span class="kw">await</span><span class="question-mark">?</span>;
 
 <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">metadata</span>);</pre></div>
-</div><h4 id="method.try_clone" class="method"><code>pub async fn <a href="#method.try_clone" class="fnname">try_clone</a>(&amp;self) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="struct" href="../../tokio/fs/struct.File.html" title="struct tokio::fs::File">File</a>&gt;</code><a class="srclink" href="../../src/tokio/fs/file.rs.html#401-405" title="goto source code">[src]</a></h4><div class="docblock"><p>Create a new <code>File</code> instance that shares the same underlying file handle
+</div><h4 id="method.try_clone" class="method"><code>pub async fn <a href="#method.try_clone" class="fnname">try_clone</a>(&amp;self) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="struct" href="../../tokio/fs/struct.File.html" title="struct tokio::fs::File">File</a>&gt;</code><a class="srclink" href="../../src/tokio/fs/file.rs.html#401-405" title="goto source code">[src]</a></h4><div class="docblock"><p>Creates a new <code>File</code> instance that shares the same underlying file handle
 as the existing <code>File</code> instance. Reads, writes, and seeks will affect both
 File instances simultaneously.</p>
 <h1 id="examples-8" class="section-header"><a href="#examples-8">Examples</a></h1>

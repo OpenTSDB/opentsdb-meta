@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["ShardQueryRunner","Runs a query for all shards"]]});
+initSidebarItems({"struct":[["ShardQueryRunner","Runs a query for all shards"]],"type":[["TonicResult",""]]});

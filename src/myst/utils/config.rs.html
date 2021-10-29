@@ -151,6 +151,9 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -204,6 +207,7 @@
     <span class="kw">pub</span> <span class="ident">aws_secret</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">temp_data_path</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">download_frequency</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">response_size</span>: <span class="ident">u32</span>,
 
     <span class="kw">pub</span> <span class="ident">plugin_path</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">ssl_for_metrics</span>: <span class="ident">bool</span>,
@@ -274,6 +278,8 @@
             <span class="ident">container_id</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;container_id&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">1</span>) <span class="kw">as</span> <span class="ident">usize</span>,
             <span class="ident">aws_region</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;aws_region&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
             <span class="ident">aws_endpoint</span>: <span class="ident">config</span>.<span class="ident">get_str</span>(<span class="string">&quot;aws_endpoint&quot;</span>).<span class="ident">unwrap_or</span>(<span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>()),
+            <span class="ident">response_size</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;response_size&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">100000</span>) <span class="kw">as</span> <span class="ident">u32</span>,
+
 
             <span class="comment">//Rollup</span>
             <span class="ident">rollup_size</span>: <span class="ident">config</span>.<span class="ident">get_int</span>(<span class="string">&quot;rollup_size&quot;</span>).<span class="ident">unwrap_or</span>(<span class="number">7</span>) <span class="kw">as</span> <span class="ident">u32</span>,

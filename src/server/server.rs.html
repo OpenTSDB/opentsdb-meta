@@ -155,6 +155,29 @@
 <span id="152">152</span>
 <span id="153">153</span>
 <span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">/*
  *
@@ -193,9 +216,15 @@
 <span class="kw">use</span> <span class="ident">myst</span>::<span class="ident">setup_logger</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">SystemTime</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>};
 <span class="kw">use</span> <span class="ident">tokio_stream</span>::<span class="ident">Stream</span>;
 <span class="kw">use</span> <span class="ident">tonic</span>::<span class="ident">transport</span>::{<span class="ident">Identity</span>, <span class="ident">Server</span>, <span class="ident">ServerTlsConfig</span>};
+
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">net</span>::<span class="ident">SocketAddr</span>;
+
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>};
+
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TimeseriesService</span> {
     <span class="kw">pub</span> <span class="ident">thread_pool</span>: <span class="ident">rayon</span>::<span class="ident">ThreadPool</span>,
@@ -232,12 +261,15 @@
         <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">query</span>;
         <span class="kw">let</span> <span class="ident">_curr_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Running query {:?}&quot;</span>, <span class="ident">query</span>);
+
         <span class="kw">let</span> <span class="ident">batch_query</span> <span class="op">=</span> <span class="ident">Query</span>::<span class="ident">from_json</span>(<span class="kw-2">&amp;</span><span class="ident">query</span>);
         <span class="kw">if</span> <span class="ident">batch_query</span>.<span class="ident">is_err</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">tonic</span>::<span class="ident">Status</span>::<span class="ident">internal</span>(<span class="string">&quot;Unable to parse query&quot;</span>));
         }
+        <span class="kw">let</span> <span class="ident">batch_query_unwrap</span> <span class="op">=</span> <span class="ident">batch_query</span>.<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">start_time</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>();
         <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Query</span>::<span class="ident">run_query</span>(
-            <span class="kw-2">&amp;</span><span class="ident">batch_query</span>.<span class="ident">unwrap</span>(),
+            <span class="kw-2">&amp;</span><span class="ident">batch_query_unwrap</span>,
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">thread_pool</span>,
             <span class="self">self</span>.<span class="ident">cache</span>.<span class="ident">clone</span>(),
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>,
@@ -245,9 +277,17 @@
         );
 
         <span class="kw">match</span> <span class="ident">res</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">res</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">Box</span>::<span class="ident">pin</span>(
-                <span class="ident">tokio_stream</span>::<span class="ident">wrappers</span>::<span class="ident">ReceiverStream</span>::<span class="ident">new</span>(<span class="ident">res</span>),
-            ))),
+            <span class="prelude-val">Ok</span>(<span class="ident">res</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">info</span><span class="macro">!</span>(
+                    <span class="string">&quot;Time took for query {:?} is {:?} in thread {:?} &quot;</span>,
+                    <span class="kw-2">&amp;</span><span class="ident">batch_query_unwrap</span>,
+                    <span class="ident">SystemTime</span>::<span class="ident">now</span>().<span class="ident">duration_since</span>(<span class="ident">start_time</span>).<span class="ident">unwrap</span>(),
+                    <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">current</span>().<span class="ident">id</span>()
+                );
+                <span class="prelude-val">Ok</span>(<span class="ident">Response</span>::<span class="ident">new</span>(<span class="ident">Box</span>::<span class="ident">pin</span>(
+                    <span class="ident">tokio_stream</span>::<span class="ident">wrappers</span>::<span class="ident">UnboundedReceiverStream</span>::<span class="ident">new</span>(<span class="ident">res</span>),
+                )))
+            }
 
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error querying {:?} &quot;</span>, <span class="ident">res</span>);
@@ -282,8 +322,8 @@
     <span class="ident">setup_logger</span>(<span class="ident">String</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">log_file</span>))<span class="question-mark">?</span>;
 
     <span class="ident">start_download</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
-
-    <span class="ident">start_grpc_server</span>(<span class="ident">metrics_reporter</span>, <span class="ident">config</span>).<span class="kw">await</span>
+    <span class="ident">start_grpc_server</span>(<span class="ident">metrics_reporter</span>, <span class="ident">config</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_grpc_server</span>(
@@ -293,21 +333,27 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hostname</span> <span class="op">=</span> <span class="ident">local_ipaddress</span>::<span class="ident">get</span>().<span class="ident">unwrap</span>();
     <span class="ident">hostname</span>.<span class="ident">push_str</span>(<span class="string">&quot;:443&quot;</span>);
     <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">hostname</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">cert</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">ssl_cert</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="ident">tokio</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">ssl_key</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="comment">// let cert = tokio::fs::read(&amp;config.ssl_cert).await?;</span>
+    <span class="comment">// let key = tokio::fs::read(&amp;config.ssl_key).await?;</span>
 
-    <span class="kw">let</span> <span class="ident">identity</span> <span class="op">=</span> <span class="ident">Identity</span>::<span class="ident">from_pem</span>(<span class="ident">cert</span>, <span class="ident">key</span>);
+    <span class="comment">//   let identity = Identity::from_pem(cert, key);</span>
+
     <span class="kw">let</span> <span class="ident">myst_service</span> <span class="op">=</span> <span class="ident">TimeseriesService</span>::<span class="ident">new</span>(<span class="ident">metrics_reporter</span>, <span class="ident">config</span>);
 
     <span class="kw">let</span> <span class="ident">svc</span> <span class="op">=</span> <span class="ident">MystServiceServer</span>::<span class="ident">new</span>(<span class="ident">myst_service</span>);
-
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Starting server on {:?}&quot;</span>, <span class="ident">hostname</span>);
 
-    <span class="ident">Server</span>::<span class="ident">builder</span>()
-        .<span class="ident">tls_config</span>(<span class="ident">ServerTlsConfig</span>::<span class="ident">new</span>().<span class="ident">identity</span>(<span class="ident">identity</span>))<span class="question-mark">?</span>
-        .<span class="ident">add_service</span>(<span class="ident">svc</span>)
-        .<span class="ident">serve</span>(<span class="ident">addr</span>)
-        .<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="ident">Server</span>::<span class="ident">builder</span>().<span class="ident">add_service</span>(<span class="ident">svc</span>).<span class="ident">serve</span>(<span class="ident">addr</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="comment">// let tls_config = ServerTlsConfig::new().identity(identity);</span>
+
+    <span class="comment">// Server::builder()</span>
+    <span class="comment">//    // .tls_config(tls_config).unwrap()</span>
+    <span class="comment">//     .add_service(svc)</span>
+    <span class="comment">//     .serve(addr)</span>
+    <span class="comment">//     .await.unwrap();</span>
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Started server on {:?}&quot;</span>, <span class="ident">hostname</span>);
+
     <span class="prelude-val">Ok</span>(())
 }
 </pre></div>

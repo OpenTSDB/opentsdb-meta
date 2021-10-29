@@ -34,7 +34,7 @@ the <code>OwnedPermit</code> was reserved.</p>
     <span class="comment">// We may now reuse `tx` to send another message.</span>
     <span class="ident">tx</span>.<span class="ident">send</span>(<span class="number">789</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
 }</pre></div>
-</div><h4 id="method.release" class="method"><code>pub fn <a href="#method.release" class="fnname">release</a>(self) -&gt; <a class="struct" href="../../../tokio/sync/mpsc/struct.Sender.html" title="struct tokio::sync::mpsc::Sender">Sender</a>&lt;T&gt;</code><a class="srclink" href="../../../src/tokio/sync/mpsc/bounded.rs.html#1150-1160" title="goto source code">[src]</a></h4><div class="docblock"><p>Release the reserved capacity <em>without</em> sending a message, returning the
+</div><h4 id="method.release" class="method"><code>pub fn <a href="#method.release" class="fnname">release</a>(self) -&gt; <a class="struct" href="../../../tokio/sync/mpsc/struct.Sender.html" title="struct tokio::sync::mpsc::Sender">Sender</a>&lt;T&gt;</code><a class="srclink" href="../../../src/tokio/sync/mpsc/bounded.rs.html#1150-1160" title="goto source code">[src]</a></h4><div class="docblock"><p>Releases the reserved capacity <em>without</em> sending a message, returning the
 <a href="../../../tokio/sync/mpsc/struct.Sender.html"><code>Sender</code></a>.</p>
 <h1 id="examples-1" class="section-header"><a href="#examples-1">Examples</a></h1>
 <div class="example-wrap"><pre class="rust rust-example-rendered">

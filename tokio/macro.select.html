@@ -38,7 +38,7 @@
     ( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">p</span>:<span class="ident">pat</span> <span class="op">=</span> $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">t</span>:<span class="ident">tt</span>)<span class="op">*</span> ) <span class="op">=</span><span class="op">&gt;</span> { ... };
     () <span class="op">=</span><span class="op">&gt;</span> { ... };
 }</pre></div>
-</div><div class="docblock"><p>Wait on multiple concurrent branches, returning when the <strong>first</strong> branch
+</div><div class="docblock"><p>Waits on multiple concurrent branches, returning when the <strong>first</strong> branch
 completes, cancelling the remaining branches.</p>
 <p>The <code>select!</code> macro must be used inside of async functions, closures, and
 blocks.</p>

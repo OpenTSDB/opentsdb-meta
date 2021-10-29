@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/usr/local/cargo/registry/src/github.com-1ecc6299db9ec823/h2-0.3.6/src/proto/streams/streams.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>streams.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/usr/local/cargo/registry/src/github.com-1ecc6299db9ec823/h2-0.3.7/src/proto/streams/streams.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>streams.rs - source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled ><script id="default-settings"></script><script src="../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png">
 <link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../../h2/index.html'><div class='logo-container rust-logo'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
                 <a id="settings-menu" href="../../../../settings.html"><img src="../../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">   1</span>
@@ -1542,6 +1542,24 @@
 <span id="1539">1539</span>
 <span id="1540">1540</span>
 <span id="1541">1541</span>
+<span id="1542">1542</span>
+<span id="1543">1543</span>
+<span id="1544">1544</span>
+<span id="1545">1545</span>
+<span id="1546">1546</span>
+<span id="1547">1547</span>
+<span id="1548">1548</span>
+<span id="1549">1549</span>
+<span id="1550">1550</span>
+<span id="1551">1551</span>
+<span id="1552">1552</span>
+<span id="1553">1553</span>
+<span id="1554">1554</span>
+<span id="1555">1555</span>
+<span id="1556">1556</span>
+<span id="1557">1557</span>
+<span id="1558">1558</span>
+<span id="1559">1559</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">recv</span>::<span class="ident">RecvHeaderBlockError</span>;
 <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">store</span>::{<span class="self">self</span>, <span class="ident">Entry</span>, <span class="ident">Resolve</span>, <span class="ident">Store</span>};
@@ -1566,7 +1584,7 @@
     <span class="ident">P</span>: <span class="ident">Peer</span>,
 {
     <span class="doccomment">/// Holds most of the connection and stream related state for processing</span>
-    <span class="doccomment">/// HTTP/2.0 frames associated with streams.</span>
+    <span class="doccomment">/// HTTP/2 frames associated with streams.</span>
     <span class="ident">inner</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">Inner</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 
     <span class="doccomment">/// This is the queue of frames to be written to the wire. This is split out</span>
@@ -2410,6 +2428,24 @@
         <span class="kw">let</span> <span class="ident">key</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">store</span>.<span class="ident">find_entry</span>(<span class="ident">id</span>) {
             <span class="ident">Entry</span>::<span class="ident">Occupied</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>.<span class="ident">key</span>(),
             <span class="ident">Entry</span>::<span class="ident">Vacant</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="comment">// Resetting a stream we don&#39;t know about? That could be OK...</span>
+                <span class="comment">//</span>
+                <span class="comment">// 1. As a server, we just received a request, but that request</span>
+                <span class="comment">//    was bad, so we&#39;re resetting before even accepting it.</span>
+                <span class="comment">//    This is totally fine.</span>
+                <span class="comment">//</span>
+                <span class="comment">// 2. The remote may have sent us a frame on new stream that</span>
+                <span class="comment">//    it&#39;s *not* supposed to have done, and thus, we don&#39;t know</span>
+                <span class="comment">//    the stream. In that case, sending a reset will &quot;open&quot; the</span>
+                <span class="comment">//    stream in our store. Maybe that should be a connection</span>
+                <span class="comment">//    error instead? At least for now, we need to update what</span>
+                <span class="comment">//    our vision of the next stream is.</span>
+                <span class="kw">if</span> <span class="self">self</span>.<span class="ident">counts</span>.<span class="ident">peer</span>().<span class="ident">is_local_init</span>(<span class="ident">id</span>) {
+                    <span class="comment">// We normally would open this stream, so update our</span>
+                    <span class="comment">// next-send-id record.</span>
+                    <span class="self">self</span>.<span class="ident">actions</span>.<span class="ident">send</span>.<span class="ident">maybe_reset_next_stream_id</span>(<span class="ident">id</span>);
+                }
+
                 <span class="kw">let</span> <span class="ident">stream</span> <span class="op">=</span> <span class="ident">Stream</span>::<span class="ident">new</span>(<span class="ident">id</span>, <span class="number">0</span>, <span class="number">0</span>);
 
                 <span class="ident">e</span>.<span class="ident">insert</span>(<span class="ident">stream</span>)
