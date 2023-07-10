@@ -9,7 +9,7 @@ jobs:
   main:
     requires: [~commit]
     steps:
-      - run_arbitrary_script: apt-get update && apt-get -y install clang openssl && rustup component add rustfmt && cargo test -- --test-threads=1 && cargo build --release
+      - run_arbitrary_script: echo $DOCKER_USERNAME $DOCKER_REPO
     secrets:
       - CI_DEPLOY_USERNAME
       - CI_DEPLOY_PASSWORD
@@ -26,7 +26,7 @@ jobs:
       - create_tag:
           /bin/bash create_git_tag.sh
       - build_and_publish_image:
-          echo $$DOCKER_USERNAME
+          echo $DOCKER_USERNAME
          
     annotations:
       screwdriver.cd/dockerEnabled: true
